@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { SplashScreen } from "@/components/splash-screen";
 import { Toaster } from "@/components/toaster";
@@ -7,7 +7,7 @@ import { brand } from "@/lib/brand";
 import { siteUrl } from "@/lib/site";
 import { splashScript, splashStyle } from "@/lib/splash";
 
-const font = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-app" });
+const font = DM_Sans({ subsets: ["latin"], variable: "--font-app" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),

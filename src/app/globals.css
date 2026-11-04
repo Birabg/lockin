@@ -11,7 +11,6 @@
   --subtle-foreground: #8f9db3;
   --border: #263248;
   --border-shadow: #1a2436;
-  --sidebar: #0b111d;
   --sidebar-foreground: #b4c0d3;
 
   --primary: #4f8ff7;
@@ -28,7 +27,12 @@
   --live: #4ade80;
   --danger: #e85a6e;
 
-  --radius: 16px;
+  --radius: 20px;
+
+  /* Dashboard proportions, measured in docs/design-reference.md */
+  --sidebar-width: 220px;
+  --feed-width: 672px;
+  --rail-width: 288px;
 }
 
 @theme inline {
@@ -39,7 +43,6 @@
   --color-muted: var(--muted-foreground);
   --color-subtle: var(--subtle-foreground);
   --color-border: var(--border);
-  --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -481,18 +484,27 @@ html[data-splash-phase="end"] .splash-word {
   }
 }
 
+/* Slightly raised, like the 3D buttons */
 @utility panel {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: 0 2px 0 var(--border-shadow);
 }
 
-/* Feed cards: slightly raised, like the 3D buttons */
-@utility post-panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  box-shadow: 0 3px 0 var(--border-shadow);
+/* Feed and rail side by side. The window's spare width goes mostly to the gaps either side of the feed. */
+@utility dash-columns {
+  @media (width >= 80rem) {
+    display: flex;
+    &::before {
+      content: "";
+      flex: 221 1 20px;
+    }
+    &::after {
+      content: "";
+      flex: 52 1 58px;
+    }
+  }
 }
 
 @utility tabular {

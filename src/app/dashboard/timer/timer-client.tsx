@@ -13,7 +13,7 @@ import { ImmersiveTimer } from "@/components/immersive-timer";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
 import { ScenePicker } from "@/components/scene-picker";
 import { toast } from "@/components/toaster";
-import { GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { ClockDigits, GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
 import { activeSeconds } from "@/lib/session-math";
@@ -392,7 +392,9 @@ export function TimerClient(props: Props) {
             <div className="mt-4">
               <GoalRing pct={pct} size={280} stroke={14} color={scene.accent} track="rgb(255 255 255 / 0.2)">
                 <div className="text-center">
-                  <p className="text-[44px] leading-none font-extrabold tracking-tight tabular">{formatTimer(elapsed)}</p>
+                  <p className="text-[44px] leading-none font-extrabold tabular">
+                    <ClockDigits value={formatTimer(elapsed)} />
+                  </p>
                   <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold">
                     <span className="size-2 rounded-full" style={{ background: scene.accent }} aria-hidden />
                     {paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}

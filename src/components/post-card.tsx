@@ -114,53 +114,55 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   if (removed) return null;
 
   return (
-    <article ref={card} className="post-panel @container overflow-hidden">
-      <header className="flex items-center gap-3 p-4 pb-0">
-        <Link href={`/dashboard/u/${post.user.username}`} aria-label={`${post.user.name}’s profile`}>
-          <Avatar name={post.user.name} src={post.user.avatar} size={48} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 text-[15px] font-bold">
-            <Link href={`/dashboard/u/${post.user.username}`} className="truncate hover:underline">
-              {post.user.name}
-            </Link>
-            {/* a verified badge goes here once accounts can earn one */}
-            <span className="truncate text-sm font-medium text-subtle">@{post.user.username}</span>
-          </p>
-          <p className="flex items-center gap-1.5 text-[13px] text-muted">
-            <time dateTime={createdAt.toISOString()} suppressHydrationWarning>
-              {timeAgo(createdAt).replace(" ago", "")}
-            </time>
-            {post.streak > 0 && (
-              <>
-                <span aria-hidden>·</span>
-                <span className="flex items-center gap-0.5 font-bold text-streak tabular">
-                  <Flame className="size-3.5" fill="currentColor" />
-                  {post.streak}d
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-        {mine && (
-          <button
-            onClick={onDelete}
-            aria-label="Delete post"
-            className="grid size-9 shrink-0 place-items-center rounded-full text-subtle hover:bg-inset hover:text-danger"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        )}
-      </header>
+    <article ref={card} className="panel @container overflow-hidden">
+      <div className="px-5 pt-5 pb-4">
+        <header className="flex items-center gap-3">
+          <Link href={`/dashboard/u/${post.user.username}`} aria-label={`${post.user.name}’s profile`}>
+            <Avatar name={post.user.name} src={post.user.avatar} size={40} />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-baseline gap-1.5 text-[14.5px] leading-[21.75px] font-semibold tracking-[-0.01em]">
+              <Link href={`/dashboard/u/${post.user.username}`} className="truncate hover:underline">
+                {post.user.name}
+              </Link>
+              {/* a verified badge goes here once accounts can earn one */}
+              <span className="truncate text-[11.5px] leading-[17.25px] font-normal tracking-normal text-muted">@{post.user.username}</span>
+            </p>
+            <p className="flex items-center gap-1.5 text-[11px] leading-4 text-muted tabular-nums">
+              <time dateTime={createdAt.toISOString()} suppressHydrationWarning>
+                {timeAgo(createdAt).replace(" ago", "")}
+              </time>
+              {post.streak > 0 && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="flex items-center gap-0.5 font-bold text-streak tabular">
+                    <Flame className="size-3" fill="currentColor" />
+                    {post.streak}d
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+          {mine && (
+            <button
+              onClick={onDelete}
+              aria-label="Delete post"
+              className="grid size-9 shrink-0 place-items-center rounded-full text-subtle hover:bg-inset hover:text-danger"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          )}
+        </header>
 
-      <p className="px-4 pt-3 text-[15px] whitespace-pre-wrap">{post.body}</p>
-      {s && <SessionBody post={post} session={s} timeZone={timeZone} />}
+        {s && <SessionBody post={post} session={s} timeZone={timeZone} />}
+        <p className="mt-3.5 text-[14.5px] leading-[1.55] whitespace-pre-wrap">{post.body}</p>
+      </div>
 
-      <footer className="mt-3 flex items-center gap-1 border-t border-border px-2 py-1.5">
+      <footer className="flex h-[53px] items-center gap-1 border-t border-border/60 px-3 py-2">
         <button
           onClick={onLike}
           disabled={pending}
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold hover:bg-inset ${like.liked ? "text-danger" : "text-muted"}`}
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-inset ${like.liked ? "text-danger" : "text-muted"}`}
           aria-pressed={like.liked}
           aria-label={`Like, ${like.count} so far`}
         >
@@ -169,11 +171,11 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
         <button
           onClick={() => setShowComments((v) => !v)}
           aria-expanded={showComments}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-muted hover:bg-inset"
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-muted hover:bg-inset"
         >
           <MessageCircle className="size-4" /> Comment {commentCount > 0 && <span className="tabular">{commentCount}</span>}
         </button>
-        <span className="ml-auto flex items-center gap-1.5 px-2 text-sm font-semibold text-muted tabular">
+        <span className="ml-auto flex items-center gap-1.5 px-2 text-[13px] text-muted tabular">
           <ChartNoAxesColumn className="size-4" aria-hidden />
           <span className="sr-only">Views:</span> {formatCount(post.views)}
         </span>

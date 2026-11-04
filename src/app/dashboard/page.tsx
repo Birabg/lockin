@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clapperboard, Globe, RotateCw, Users } from "lucide-react";
+import { Clapperboard, Globe, RotateCw, Search, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getFeed, getFocusingNow, getLeaderboard, getStreak, getTodaySeconds, getWeekStrip, type FeedTab } from "@/lib/queries";
 import { brand } from "@/lib/brand";
@@ -31,18 +31,29 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   ]);
 
   return (
-    <div className="mx-auto flex max-w-[1080px] gap-6 lg:pt-6">
-      <main className="min-w-0 flex-1 space-y-4">
+    <div className="dash-columns mx-auto max-w-(--feed-width) lg:pt-4 xl:max-w-none">
+      <main className="min-w-0 xl:w-(--feed-width) xl:shrink-[0.1]">
+        {/* TODO(stories): a "Your story" avatar row goes on the left of this row */}
+        <div className="mb-2 hidden justify-end lg:flex">
+          <Link
+            href="/dashboard/people"
+            aria-label="Find people"
+            className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-inset hover:text-foreground"
+          >
+            <Search className="size-5" aria-hidden />
+          </Link>
+        </div>
+
         {user ? <Composer name={user.name} avatar={user.avatar} /> : <GuestBanner />}
 
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 rounded-full border border-border bg-card p-1">
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="flex max-w-[360px] flex-1 rounded-[20px] bg-inset/60 p-1">
             {TABS.map(({ id, label, icon: Icon }) => (
               <Link
                 key={id}
                 href={id === "global" ? "/dashboard" : `/dashboard?tab=${id}`}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-sm font-bold transition-colors ${
-                  tab === id ? "bg-background text-foreground" : "text-muted hover:text-foreground"
+                className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-2xl px-2 text-[13px] leading-[19.5px] transition-colors ${
+                  tab === id ? "bg-background font-extrabold text-foreground" : "font-semibold text-muted hover:text-foreground"
                 }`}
               >
                 <Icon className="hidden size-4 sm:block" /> {label}
@@ -51,7 +62,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
           </div>
           <Link
             href={tab === "global" ? "/dashboard" : `/dashboard?tab=${tab}`}
-            className="grid size-10 place-items-center rounded-full border border-border bg-card text-muted hover:text-foreground"
+            className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
           >
             <RotateCw className="size-4" />
@@ -59,13 +70,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         </div>
 
         {/* rail cards inline on small screens */}
-        <div className="grid gap-3 sm:grid-cols-2 xl:hidden">
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:hidden">
           {user && <StreakCard streak={streak.current} todaySec={todaySec} goalMin={goalMin} week={week} />}
           <FocusingNowCard count={live.count} sessions={live.sessions} />
         </div>
 
         {tab === "following" && !user ? (
           <EmptyState
+            className="mt-5"
             title="Follow people to fill this feed"
             body="Sign in, then follow friends from the leaderboard."
             action={
@@ -76,6 +88,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
           />
         ) : feed.posts.length === 0 ? (
           <EmptyState
+            className="mt-5"
             title="Nothing here yet"
             body={
               tab === "following"
@@ -95,10 +108,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         )}
       </main>
 
-      <aside className="sticky top-6 hidden h-fit w-[288px] shrink-0 space-y-3 xl:block">
-        <StreakCard streak={streak.current} todaySec={todaySec} goalMin={goalMin} week={week} />
-        <FocusingNowCard count={live.count} sessions={live.sessions} />
-        <LeaderboardCard rows={board.rows} />
+      {/* this box also holds the gap before the rail, so it shares the spare width with the page's side gaps */}
+      <aside className="hidden min-w-[calc(var(--rail-width)+24px)] flex-[188_1_calc(var(--rail-width)+60px)] justify-end xl:flex">
+        <div className="sticky top-4 h-fit w-(--rail-width) space-y-2.5 pr-1">
+          <StreakCard streak={streak.current} todaySec={todaySec} goalMin={goalMin} week={week} />
+          <FocusingNowCard count={live.count} sessions={live.sessions} />
+          <LeaderboardCard rows={board.rows} />
+        </div>
       </aside>
     </div>
   );

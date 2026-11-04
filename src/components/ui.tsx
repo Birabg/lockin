@@ -116,8 +116,21 @@ export function GoalRing({
   );
 }
 
+/** DM Sans has no equal-width digits, so a ticking clock gives each digit its own fixed slot to stop it jittering. */
+export function ClockDigits({ value }: { value: string }) {
+  return [...value].map((char, i) =>
+    /\d/.test(char) ? (
+      <span key={i} className="inline-block w-[0.66em] text-center">
+        {char}
+      </span>
+    ) : (
+      char
+    ),
+  );
+}
+
 export function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="px-1 pt-5 pb-2 text-[11px] font-bold tracking-[0.08em] text-subtle uppercase">{children}</h2>;
+  return <h2 className="px-1 pt-5 pb-2.5 text-[10.5px] leading-[15.75px] font-bold tracking-[0.16em] text-muted uppercase">{children}</h2>;
 }
 
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -129,9 +142,11 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
   );
 }
 
-export function EmptyState({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
+type EmptyStateProps = { title: string; body: string; action?: React.ReactNode; className?: string };
+
+export function EmptyState({ title, body, action, className = "" }: EmptyStateProps) {
   return (
-    <div className="panel flex flex-col items-center gap-2 px-6 py-12 text-center">
+    <div className={`panel flex flex-col items-center gap-2 px-6 py-12 text-center ${className}`}>
       <p className="font-bold">{title}</p>
       <p className="max-w-sm text-sm text-muted">{body}</p>
       {action && <div className="mt-3">{action}</div>}

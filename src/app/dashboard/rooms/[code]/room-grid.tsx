@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Avatar, GoalRing } from "@/components/ui";
+import { Avatar, ClockDigits, GoalRing } from "@/components/ui";
 import { activeSeconds } from "@/lib/session-math";
 import type { RoomView } from "@/lib/social-features";
 import { formatDuration, formatTimer } from "@/lib/time";
@@ -35,7 +35,7 @@ export function RoomGrid({ members, serverNow }: { members: RoomView["members"];
               <span className="truncate">{user.name}</span>
             </Link>
             <GoalRing pct={session ? sec / (session.goalMin * 60) : 0} size={116} stroke={8}>
-              <span className="text-lg font-extrabold tabular">{session ? formatTimer(sec) : "—"}</span>
+              <span className="text-lg font-extrabold tabular">{session ? <ClockDigits value={formatTimer(sec)} /> : "—"}</span>
             </GoalRing>
             <p className="min-h-4 truncate text-xs text-muted">
               {!session

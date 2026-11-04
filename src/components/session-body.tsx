@@ -16,7 +16,9 @@ const hasPauses = (s: Session) => s.pausedSec >= 60;
 const goalShare = (s: Session) => s.durationSec / (s.goalMin * 60);
 
 // The media column stretches to match the stat panels, so the two always line up.
-const mediaShell = "relative aspect-[16/10] w-full overflow-hidden rounded-2xl @xl:aspect-auto @xl:min-h-60";
+const mediaShell = "relative aspect-[16/10] w-full overflow-hidden rounded-[20px] @xl:aspect-[4/3]";
+const statPanel = "flex flex-1 flex-col rounded-[20px] bg-inset/40 px-3.5";
+const statLabel = "text-[11.5px] leading-[17.25px] font-semibold text-muted";
 const pill = "absolute rounded-full bg-black/65 px-3 py-1 text-xs font-bold text-white";
 
 function LabelPill({ label }: { label: string | null }) {
@@ -90,31 +92,31 @@ function SessionPanel({ session, timeZone }: { session: Session; timeZone: strin
   const end = session.endedAt ? new Date(session.endedAt) : new Date(start.getTime() + (session.durationSec + session.pausedSec) * 1000);
   const { leftPct, widthPct, ticks } = sessionWindow(start, end, timeZone);
   return (
-    <section className="rounded-2xl bg-inset p-3">
+    <section className={`${statPanel} py-2.5`}>
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-muted">Session</h3>
-        <p className="font-extrabold tabular">{formatDuration(session.durationSec)}</p>
+        <h3 className={statLabel}>Session</h3>
+        <p className="text-xs leading-[18px] tabular">{formatDuration(session.durationSec)}</p>
       </div>
       <div
         role="img"
         aria-label={`From ${formatClock(start, timeZone)} to ${formatClock(end, timeZone)}`}
-        className="relative mt-2 h-2 overflow-hidden rounded-full bg-background"
+        className="relative mt-auto h-2 overflow-hidden rounded-full bg-background"
       >
         <div className="absolute inset-y-0 rounded-full bg-primary" style={{ left: `${leftPct}%`, width: `${widthPct}%` }} />
       </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-subtle tabular">
+      <div className="mt-1.5 mb-auto flex justify-between text-[11.5px] leading-[17.25px] text-muted/80 tabular">
         {ticks.map((tick, i) => (
           <span key={i}>{tick}</span>
         ))}
       </div>
-      {hasPauses(session) && <p className="mt-1 text-xs text-muted">{formatDuration(session.pausedSec)} paused</p>}
+      {hasPauses(session) && <p className="mt-1 text-[11.5px] text-muted">{formatDuration(session.pausedSec)} paused</p>}
     </section>
   );
 }
 
 function LegendRow({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <p className="flex items-center gap-2 text-sm font-bold tabular">
+    <p className="flex items-center gap-2 text-xs tabular">
       <span className="size-2.5 rounded-full" style={{ background: color }} aria-hidden />
       {children}
     </p>
@@ -124,11 +126,11 @@ function LegendRow({ color, children }: { color: string; children: React.ReactNo
 function GoalPanel({ session }: { session: Session }) {
   const pct = goalShare(session);
   return (
-    <section className="rounded-2xl bg-inset p-3">
-      <h3 className="text-sm font-semibold text-muted">Goal</h3>
-      <div className="mt-2 flex items-center gap-3">
-        <GoalRing pct={pct} size={64} stroke={8} minArc={0.06} track="var(--border)">
-          <span className="text-[13px] leading-none font-extrabold tabular">{Math.round(Math.min(pct, 9.99) * 100)}%</span>
+    <section className={`${statPanel} py-1.5`}>
+      <h3 className={`${statLabel} pt-1`}>Goal</h3>
+      <div className="my-auto flex items-center gap-3">
+        <GoalRing pct={pct} size={56} stroke={7} minArc={0.06} track="var(--border)">
+          <span className="text-[11.5px] leading-none font-extrabold tabular">{Math.round(Math.min(pct, 9.99) * 100)}%</span>
         </GoalRing>
         {hasPauses(session) ? (
           <div className="min-w-0 space-y-1">
@@ -137,8 +139,8 @@ function GoalPanel({ session }: { session: Session }) {
           </div>
         ) : (
           <div className="min-w-0">
-            <p className="text-2xl leading-tight font-extrabold tabular">{formatDuration(session.durationSec)}</p>
-            <p className="text-xs text-muted">of {formatDuration(session.goalMin * 60)} target</p>
+            <p className="text-[20px] leading-5 font-extrabold tracking-[-0.5px] tabular">{formatDuration(session.durationSec)}</p>
+            <p className="mt-1 text-[11.5px] leading-[17.25px] text-muted">of {formatDuration(session.goalMin * 60)} target</p>
           </div>
         )}
       </div>
@@ -155,7 +157,7 @@ function ItemsRow({ session }: { session: Session }) {
   const items = sessionItems(session);
   if (items.length === 0) return null;
   return (
-    <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-inset px-3 py-2">
+    <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[20px] bg-inset/40 px-3.5 py-2">
       {items.map((item) => (
         <li key={item.name} title={item.name} className="flex items-center gap-1.5 text-xs font-bold tabular">
           <span
@@ -176,9 +178,9 @@ function ItemsRow({ session }: { session: Session }) {
 /** Stacks until the card itself is wide enough, so it fits wherever the feed is shown. */
 export function SessionBody({ post, session, timeZone }: { post: FeedPost; session: Session; timeZone: string }) {
   return (
-    <div className="mt-3 grid gap-2 px-4 @xl:grid-cols-[3fr_2fr]">
+    <div className="mt-3 grid gap-3 @xl:grid-cols-[3fr_2fr]">
       <SessionMedia post={post} session={session} />
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2.5">
         <SessionPanel session={session} timeZone={timeZone} />
         <GoalPanel session={session} />
         <ItemsRow session={session} />

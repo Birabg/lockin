@@ -5,28 +5,30 @@ import { formatDuration } from "@/lib/time";
 import type { WeekDay } from "@/lib/queries";
 import { brand } from "@/lib/brand";
 
+const railTitle = "text-[14.5px] leading-[21.75px] font-semibold tracking-[-0.025em]";
+
 export function StreakCard({ streak, todaySec, goalMin, week }: { streak: number; todaySec: number; goalMin: number; week: WeekDay[] }) {
   return (
-    <section className="panel p-4">
-      <div className="flex items-center gap-3">
+    <section className="panel p-3.5">
+      <div className="flex items-center gap-2.5">
         <span className={`grid size-10 place-items-center rounded-xl ${streak > 0 ? "bg-streak-bg text-streak" : "bg-inset text-subtle"}`}>
           <Flame className="size-5" fill={streak > 0 ? "currentColor" : "none"} />
         </span>
         <div>
-          <p className="text-lg leading-tight font-extrabold">
-            {streak} <span className="text-sm font-semibold text-muted">day streak</span>
+          <p className="text-[18px] leading-[18px] font-extrabold tracking-[-0.45px]">
+            {streak} <span className="text-[12.5px] font-bold tracking-normal text-muted">day streak</span>
           </p>
-          <p className="text-xs text-muted tabular">
+          <p className="mt-1 text-[12.5px] leading-[18.75px] text-muted tabular-nums">
             Today {formatDuration(todaySec)} / {formatDuration(goalMin * 60)}
           </p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-7 gap-1.5">
+      <div className="mt-3 grid grid-cols-7 gap-1.5 border-t border-border/50 pt-2.5">
         {week.map((d) => (
-          <div key={d.key} className="flex flex-col items-center gap-1.5">
+          <div key={d.key} className="flex flex-col items-center gap-1">
             <span
               title={`${d.key}: ${formatDuration(d.sec)}`}
-              className={`aspect-square w-full rounded-lg border ${
+              className={`h-[30px] w-full rounded-xl border ${
                 d.hit
                   ? "border-transparent bg-primary"
                   : d.sec > 0
@@ -50,12 +52,12 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
   return (
     <Link href="/dashboard/focusing" className="panel block p-4 transition-colors hover:border-primary/40">
       <div className="flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-inset text-live">
-          <Radio className="size-5" />
+        <span className="grid size-9 place-items-center rounded-xl bg-inset text-live">
+          <Radio className="size-[18px]" />
         </span>
         <div className="flex-1">
-          <p className="font-bold">Focusing now</p>
-          <p className="text-xs text-muted">
+          <p className={railTitle}>Focusing now</p>
+          <p className="text-[12.5px] leading-[18.75px] text-muted">
             {count === 0 ? "Nobody yet — be the first" : `${count} ${count === 1 ? "person" : "people"} in a session`}
           </p>
         </div>
@@ -85,23 +87,23 @@ type Row = { rank: number; sec: number; user: { id: string; username: string; na
 
 export function LeaderboardCard({ rows }: { rows: Row[] }) {
   return (
-    <section className="panel p-4">
-      <Link href="/dashboard/leaderboard" className="flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-inset text-gold">
-          <Crown className="size-5" />
+    <section className="panel p-3.5">
+      <Link href="/dashboard/leaderboard" className="flex items-center gap-2.5 border-b border-border/50 pb-2.5">
+        <span className="grid size-8 place-items-center rounded-xl bg-inset text-gold">
+          <Crown className="size-4" />
         </span>
-        <p className="flex-1 font-bold">Today’s leaderboard</p>
+        <p className={`${railTitle} flex-1`}>Today’s leaderboard</p>
         <ChevronRight className="size-4 text-subtle" />
       </Link>
-      <ul className="mt-3 flex flex-col gap-1">
-        {rows.length === 0 && <li className="py-2 text-sm text-muted">No focus logged today yet.</li>}
+      <ul className="-mx-1.5 mt-1 flex flex-col">
+        {rows.length === 0 && <li className="px-1.5 py-2 text-[13.5px] text-muted">No focus logged today yet.</li>}
         {rows.map((r) => (
           <li key={r.user.id}>
-            <Link href={`/dashboard/u/${r.user.username}`} className="flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-inset">
+            <Link href={`/dashboard/u/${r.user.username}`} className="flex h-11 items-center gap-2.5 rounded-2xl p-1.5 hover:bg-inset">
               <RankIcon rank={r.rank} />
-              <Avatar name={r.user.name} src={r.user.avatar} size={28} />
-              <span className="flex-1 truncate text-sm font-semibold">{r.user.name}</span>
-              <span className="text-xs text-muted tabular">{formatDuration(r.sec)}</span>
+              <Avatar name={r.user.name} src={r.user.avatar} size={32} />
+              <span className="flex-1 truncate text-[13.5px] leading-[20.25px] font-semibold tracking-[-0.025em]">{r.user.name}</span>
+              <span className="text-[12.5px] leading-[18.75px] text-muted tabular">{formatDuration(r.sec)}</span>
             </Link>
           </li>
         ))}
@@ -112,18 +114,21 @@ export function LeaderboardCard({ rows }: { rows: Row[] }) {
 
 export function GuestBanner({ next = "/dashboard" }: { next?: string }) {
   return (
-    <div className="panel flex items-center gap-3 p-3 pl-4">
+    <div className="panel flex items-center gap-3 px-3.5 py-3">
       <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-light text-primary">
         <Flame className="size-[18px]" />
       </span>
-      <p className="flex-1 text-[15px] font-bold">{brand.tagline} Start free.</p>
+      <p className="flex-1 text-sm font-bold">{brand.tagline} Start free.</p>
       <Link
         href={`/login?next=${encodeURIComponent(next)}`}
-        className="hidden px-3 text-sm font-semibold text-muted hover:text-foreground sm:block"
+        className="hidden px-3 text-[12.5px] font-semibold text-muted hover:text-foreground sm:block"
       >
         Sign in
       </Link>
-      <Link href="/signup" className="btn-3d rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
+      <Link
+        href="/signup"
+        className="btn-3d flex h-9 items-center rounded-full bg-primary px-4 text-[12.5px] font-semibold text-primary-foreground"
+      >
         Join free
       </Link>
     </div>

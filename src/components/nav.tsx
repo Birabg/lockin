@@ -2,24 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BarChart3,
   Bell,
+  ChevronLeft,
+  ChevronRight,
   DoorOpen,
+  Ellipsis,
+  Flame,
   Handshake,
   Home,
-  PanelLeftClose,
-  PanelLeftOpen,
+  LogOut,
   Play,
   Radio,
+  Settings,
   Timer,
   Trophy,
   User,
   Users,
 } from "lucide-react";
 import { Avatar, Logo, btnPrimary } from "./ui";
-import { SIDEBAR_COLLAPSED, SIDEBAR_COOKIE } from "@/lib/sidebar";
+import { logout } from "@/app/actions/auth";
+import { useSidebarCollapsed } from "@/lib/use-sidebar";
 
 const SIDEBAR = [
   { href: "/dashboard", label: "Home", icon: Home },
@@ -44,7 +49,7 @@ function isActive(path: string, href: string) {
   return href === "/dashboard" ? path === href : path.startsWith(href);
 }
 
-type NavUser = { name: string; username: string; avatar: string | null } | null;
+type NavUser = { name: string; username: string; avatar: string | null; streak: number } | null;
 
 function UnreadBadge({ count, compact }: { count: number; compact: boolean }) {
   if (count === 0) return null;
@@ -61,39 +66,98 @@ function UnreadBadge({ count, compact }: { count: number; compact: boolean }) {
 
 type SidebarProps = { user: NavUser; unread: number; initialCollapsed: boolean };
 
+const navItem =
+  "relative flex h-12 shrink-0 items-center gap-4 rounded-full text-[15.5px] leading-[23.25px] tracking-[-0.025em] transition-colors";
+const navIcon = "size-[23px] shrink-0";
+
+function UserMenu({ username }: { username: string }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const row = "flex h-10 w-full items-center gap-3 rounded-2xl px-3 text-sm font-medium hover:bg-inset";
+  return (
+    <div ref={box} className="shrink-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Account menu"
+        aria-expanded={open}
+        className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-inset hover:text-foreground"
+      >
+        <Ellipsis className="size-[18px]" aria-hidden />
+      </button>
+      {open && (
+        <div className="panel absolute inset-x-0 bottom-full z-20 mb-2 p-1.5">
+          <Link href={`/dashboard/u/${username}`} onClick={() => setOpen(false)} className={row}>
+            <User className="size-[18px]" aria-hidden /> Profile
+          </Link>
+          <Link href="/dashboard/settings" onClick={() => setOpen(false)} className={row}>
+            <Settings className="size-[18px]" aria-hidden /> Settings
+          </Link>
+          <form action={logout}>
+            <button className={row}>
+              <LogOut className="size-[18px]" aria-hidden /> Sign out
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StreakLine({ days }: { days: number }) {
+  if (days === 0) return <span className="block truncate text-[12.5px] leading-[18.75px] text-muted">No streak yet</span>;
+  return (
+    <span className="flex items-center gap-1 truncate text-[12.5px] leading-[18.75px] text-muted tabular-nums">
+      <Flame className="size-3.5 shrink-0 text-streak" fill="currentColor" aria-hidden />
+      {days} day streak
+    </span>
+  );
+}
+
+const userName = "block truncate text-[14.5px] leading-[21.75px] font-extrabold tracking-[-0.025em]";
+
 export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
   const path = usePathname();
-  const [collapsed, setCollapsed] = useState(initialCollapsed);
-  const item = collapsed ? "justify-center px-0" : "px-3";
-
-  function toggle() {
-    const next = !collapsed;
-    setCollapsed(next);
-    document.cookie = `${SIDEBAR_COOKIE}=${next ? SIDEBAR_COLLAPSED : "open"}; path=/; max-age=31536000; samesite=lax`;
-  }
-
-  const Toggle = collapsed ? PanelLeftOpen : PanelLeftClose;
+  const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed);
+  const inset = collapsed ? "justify-center px-0" : "pr-3 pl-3.5";
   const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  const Toggle = collapsed ? ChevronRight : ChevronLeft;
 
   return (
     <aside
-      className={`sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-clip border-r border-border bg-sidebar px-3 py-5 whitespace-nowrap transition-[width] duration-200 lg:flex ${
-        collapsed ? "w-[72px]" : "w-[220px]"
+      className={`sticky top-0 ml-[min(4vw,76.8px)] hidden h-dvh shrink-0 flex-col overflow-x-hidden overflow-y-auto px-3 py-4 whitespace-nowrap transition-[width] duration-200 [scrollbar-width:none] lg:flex ${
+        collapsed ? "w-[72px]" : "w-(--sidebar-width)"
       }`}
     >
-      <div className={`flex items-center ${collapsed ? "flex-col gap-3" : "justify-between pl-3"}`}>
+      <div className={`flex shrink-0 items-center ${collapsed ? "flex-col gap-3" : "h-8 justify-between pl-3.5"}`}>
         <Logo compact={collapsed} />
         <button
-          onClick={toggle}
+          onClick={() => setCollapsed(!collapsed)}
           aria-label={toggleLabel}
           aria-expanded={!collapsed}
           title={toggleLabel}
-          className="grid size-9 shrink-0 place-items-center rounded-xl text-sidebar-foreground transition-colors hover:bg-inset/60 hover:text-foreground"
+          className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-inset/60 hover:text-foreground"
         >
-          <Toggle className="size-[19px]" strokeWidth={2.2} aria-hidden />
+          <Toggle className="size-[18px]" strokeWidth={2.2} aria-hidden />
         </button>
       </div>
-      <nav aria-label="Main" className={`flex flex-col gap-1 ${collapsed ? "mt-4" : "mt-7"}`}>
+      <nav aria-label="Main" className="mt-4 flex flex-col gap-0.5">
         {SIDEBAR.map(({ href, label, icon: Icon }) => {
           const active = isActive(path, href);
           return (
@@ -102,11 +166,13 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
               href={href}
               aria-current={active ? "page" : undefined}
               title={collapsed ? label : undefined}
-              className={`flex items-center gap-3 rounded-xl py-2.5 text-[15px] font-semibold transition-colors ${item} ${
-                active ? "bg-inset text-foreground" : "text-sidebar-foreground hover:bg-inset/60 hover:text-foreground"
+              className={`${navItem} ${inset} ${
+                active
+                  ? "bg-inset font-extrabold text-foreground"
+                  : "font-medium text-foreground/80 hover:bg-inset/60 hover:text-foreground"
               }`}
             >
-              <Icon className={`size-[19px] shrink-0 ${active ? "text-primary" : ""}`} strokeWidth={2.2} />
+              <Icon className={`${navIcon} ${active ? "text-primary" : ""}`} strokeWidth={2} />
               <span className={collapsed ? "sr-only" : ""}>{label}</span>
             </Link>
           );
@@ -117,9 +183,13 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
             aria-current={path === "/dashboard/notifications" ? "page" : undefined}
             aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
             title={collapsed ? "Notifications" : undefined}
-            className={`relative flex items-center gap-3 rounded-xl py-2.5 text-[15px] font-semibold text-sidebar-foreground transition-colors hover:bg-inset/60 hover:text-foreground ${item}`}
+            className={`${navItem} ${inset} ${
+              path === "/dashboard/notifications"
+                ? "bg-inset font-extrabold text-foreground"
+                : "font-medium text-foreground/80 hover:bg-inset/60 hover:text-foreground"
+            }`}
           >
-            <Bell className="size-[19px] shrink-0" strokeWidth={2.2} />
+            <Bell className={`${navIcon} ${path === "/dashboard/notifications" ? "text-primary" : ""}`} strokeWidth={2} />
             {!collapsed && "Notifications"}
             <UnreadBadge count={unread} compact={collapsed} />
           </Link>
@@ -128,30 +198,33 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
       <Link
         href="/dashboard/timer"
         title={collapsed ? "Start focus" : undefined}
-        className={`${btnPrimary} mt-6 h-12 text-[15px] ${collapsed ? "px-0!" : ""}`}
+        className={`${btnPrimary} mt-3.5 h-12 shrink-0 text-[15.5px] font-extrabold ${collapsed ? "px-0!" : ""}`}
       >
-        <Play className="size-4 shrink-0 fill-current" /> <span className={collapsed ? "sr-only" : ""}>Start focus</span>
+        <Play className="size-[18px] shrink-0 fill-current" /> <span className={collapsed ? "sr-only" : ""}>Start focus</span>
       </Link>
 
-      <div className="mt-auto">
+      <div className="relative mt-auto pt-4">
         {user ? (
-          <Link
-            href="/dashboard/settings"
-            title={collapsed ? user.name : undefined}
-            className={`flex items-center gap-3 rounded-xl py-2 hover:bg-inset ${collapsed ? "justify-center" : "px-2"}`}
-          >
-            <Avatar name={user.name} src={user.avatar} size={34} />
-            <span className={collapsed ? "sr-only" : "min-w-0"}>
-              <span className="block truncate text-sm font-bold">{user.name}</span>
-              <span className="block truncate text-xs text-muted">@{user.username}</span>
-            </span>
-          </Link>
+          <div className={`flex h-14 items-center ${collapsed ? "justify-center" : "gap-1 rounded-full p-2 hover:bg-inset/60"}`}>
+            <Link
+              href="/dashboard/settings"
+              title={collapsed ? user.name : undefined}
+              className={`flex min-w-0 items-center gap-3 rounded-full ${collapsed ? "" : "flex-1"}`}
+            >
+              <Avatar name={user.name} src={user.avatar} size={40} />
+              <span className={collapsed ? "sr-only" : "min-w-0"}>
+                <span className={userName}>{user.name}</span>
+                <StreakLine days={user.streak} />
+              </span>
+            </Link>
+            {!collapsed && <UserMenu username={user.username} />}
+          </div>
         ) : (
-          <div className={`flex items-center gap-3 py-2 ${collapsed ? "justify-center" : "px-2"}`} title={collapsed ? "Guest" : undefined}>
-            <span className="grid size-[34px] shrink-0 place-items-center rounded-full bg-inset text-sm font-bold text-muted">G</span>
+          <div className={`flex h-14 items-center gap-3 ${collapsed ? "justify-center" : "p-2"}`} title={collapsed ? "Guest" : undefined}>
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-inset text-sm font-bold text-muted">G</span>
             <span className={collapsed ? "sr-only" : ""}>
-              <span className="block text-sm font-bold">Guest</span>
-              <span className="block text-xs text-muted">Public preview</span>
+              <span className={userName}>Guest</span>
+              <span className="block text-[12.5px] leading-[18.75px] text-muted">Public preview</span>
             </span>
           </div>
         )}

@@ -82,13 +82,15 @@ export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, gr
 
   return (
     <>
-      {posting && <div className="panel p-4 text-[15px] whitespace-pre-wrap opacity-60">{posting}</div>}
+      {posting && <div className="panel mt-5 p-5 text-[14.5px] leading-[1.55] whitespace-pre-wrap opacity-60">{posting}</div>}
       {groups.map((g) => (
-        <section key={g.key} className="space-y-3">
+        <section key={g.key}>
           {grouped && <SectionTitle>{g.heading}</SectionTitle>}
-          {g.posts.map((p) => (
-            <PostCard key={p.id} post={p} viewer={viewer} timeZone={timeZone} />
-          ))}
+          <div className="flex flex-col gap-6">
+            {g.posts.map((p) => (
+              <PostCard key={p.id} post={p} viewer={viewer} timeZone={timeZone} />
+            ))}
+          </div>
         </section>
       ))}
       {more && (

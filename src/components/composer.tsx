@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Send } from "lucide-react";
 import { createPost } from "@/app/actions/social";
 import { toast } from "./toaster";
 import { Avatar } from "./ui";
@@ -8,9 +9,10 @@ import { Avatar } from "./ui";
 export function Composer({ name, avatar }: { name: string; avatar: string | null }) {
   const [text, setText] = useState("");
   const [pending, start] = useTransition();
+  const firstName = name.trim().split(/\s+/)[0];
   return (
     <form
-      className="panel p-3"
+      className="panel px-3.5 py-3"
       onSubmit={(e) => {
         e.preventDefault();
         const body = text;
@@ -26,22 +28,23 @@ export function Composer({ name, avatar }: { name: string; avatar: string | null
         });
       }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <Avatar name={name} src={avatar} size={36} />
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           aria-label="Write a post"
-          placeholder="What are you working on today?"
+          placeholder={`What did you lock in today, ${firstName}?`}
           rows={1}
           maxLength={280}
-          className="min-h-9 flex-1 resize-none bg-transparent py-2 text-[15px] outline-none placeholder:text-subtle"
+          className="h-10 min-w-0 flex-1 resize-none rounded-2xl border border-border/60 bg-inset/60 px-4 py-2 text-[14.5px] leading-[22px] outline-none placeholder:truncate placeholder:text-subtle focus:border-primary"
         />
         <button
           disabled={!text.trim() || pending}
-          className="btn-3d mt-0.5 rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground disabled:opacity-40"
+          aria-label="Post"
+          className="btn-3d grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
         >
-          Post
+          <Send className="size-[18px]" aria-hidden />
         </button>
       </div>
     </form>
