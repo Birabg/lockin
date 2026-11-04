@@ -92,6 +92,17 @@ export async function getFocusingNow(limit = 12) {
   };
 }
 
+/** What someone works on most, for one-tap picking. Discarded sessions don't count. */
+export async function getTopLabels(userId: string, limit = 5): Promise<string[]> {
+  const rows = await db.focusSession.groupBy({
+    by: ["label"],
+    where: { userId, label: { not: null }, status: { not: "ABANDONED" } },
+    orderBy: [{ _count: { label: "desc" } }, { _max: { startedAt: "desc" } }],
+    take: limit,
+  });
+  return rows.flatMap((r) => (r.label ? [r.label] : []));
+}
+
 export type Range = "today" | "week" | "all";
 
 /** Ranked by each person's own calendar days, for the period as the viewer's time zone sees it. */

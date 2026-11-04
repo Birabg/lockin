@@ -20,6 +20,14 @@ async function signUp(browser: Browser, name: string, username: string): Promise
   return page;
 }
 
+/** Sessions start by holding the button down, and letting go early does nothing. */
+async function holdToStart(page: Page) {
+  await page.getByRole("button", { name: "Hold to lock in" }).hover();
+  await page.mouse.down();
+  await page.locator("[data-immersive-view]").waitFor();
+  await page.mouse.up();
+}
+
 test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   const focuser = `f${run}`;
   const liker = `l${run}`;
@@ -28,7 +36,18 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   const page = await signUp(browser, `Focus ${run}`, focuser);
 
   await page.goto("/dashboard/timer");
-  await page.getByRole("button", { name: "Start focus" }).click();
+
+  const dial = page.getByRole("slider", { name: "Session length" });
+  await dial.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(dial).toHaveAttribute("aria-valuenow", "30");
+  await page.getByRole("button", { name: "Set to 1h 30m" }).click();
+  await expect(dial).toHaveAttribute("aria-valuenow", "90");
+  await page.getByRole("button", { name: "Set to 25 min" }).click();
+
+  await page.getByRole("button", { name: "Hold to lock in" }).click(); // a quick press isn't a hold
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+  await holdToStart(page);
   await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden(); // the session owns the screen
 
   // sessions under a minute aren't posted, so move this one 20 minutes into the past instead of waiting
@@ -43,7 +62,7 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   await page.getByRole("button", { name: "Finish session" }).click();
   await page.getByPlaceholder(/how did it go/i).fill(note);
   await page.getByRole("button", { name: "Save session" }).click();
-  await expect(page.getByRole("button", { name: "Start focus" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hold to lock in" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
 
   await page.goto("/dashboard");

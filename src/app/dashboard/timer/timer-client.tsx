@@ -6,12 +6,15 @@ import { Check, ImagePlus, Maximize2, Pause, Play, Radio, Square, Trash2, X } fr
 import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
 import { attachPhoto, attachTimelapse } from "@/app/actions/media";
 import { saveScene } from "@/app/actions/scene";
+import { prefersReducedMotion } from "@/components/focus-dial";
 import { FocusScene } from "@/components/focus-scene";
+import { FocusSetup } from "@/components/focus-setup";
 import { ImmersiveTimer } from "@/components/immersive-timer";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
 import { ScenePicker } from "@/components/scene-picker";
 import { toast } from "@/components/toaster";
 import { GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
 import { activeSeconds } from "@/lib/session-math";
 import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
@@ -20,11 +23,12 @@ import { useWakeLock } from "@/lib/use-wake-lock";
 import { formatDuration, formatTimer } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
-const PRESETS = [25, 50, 90, 120];
 const SCENE_KEY = "lockin-scene";
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const FADE_MS = 400;
+/** Long enough for the lock to click shut and its pulse to play before the session takes over. */
+const LOCK_MS = 600;
 
 const elapsedSeconds = (s: ActiveSession, now: number) =>
   activeSeconds(
@@ -61,6 +65,8 @@ type Props = {
   todaySec: number;
   dailyGoalMin: number;
   liveCount: number;
+  liveUsers: { id: string; name: string; avatar: string | null }[];
+  labels: string[];
   serverNow: number;
   savedSceneId: string | null;
   streak: number;
@@ -68,10 +74,11 @@ type Props = {
   timeZone: string;
 };
 
-export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverNow, savedSceneId, streak, user, timeZone }: Props) {
+export function TimerClient(props: Props) {
+  const { active, todaySec, dailyGoalMin, liveCount, liveUsers, labels, serverNow, savedSceneId, streak, user, timeZone } = props;
   const router = useRouter();
   const [session, setSession] = useState<ActiveSession | null>(active);
-  const [goal, setGoal] = useState(active?.goalMin ?? 25);
+  const [goal, setGoal] = useState(snapMinutes(active?.goalMin ?? 25)); // the dial has no 37 or 8h, and a running session keeps its own
   const [label, setLabel] = useState(active?.label ?? "");
   const [now, setNow] = useState(serverNow); // same value on server and client, so hydration matches
   const [finishing, setFinishing] = useState(false);
@@ -152,19 +159,18 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
       .catch(() => toast("Couldn't save your background", "error"));
   }
 
-  // space starts and finishes, escape backs out of wrapping up
-  const keys = useRef({ onStart, onConfirmFinish, setFinishing, session, finishing, pending, immersive });
-  keys.current = { onStart, onConfirmFinish, setFinishing, session, finishing, pending, immersive };
+  // space finishes, escape backs out of wrapping up. Holding space to start lives with the dial.
+  const keys = useRef({ onConfirmFinish, setFinishing, session, finishing, pending, immersive });
+  keys.current = { onConfirmFinish, setFinishing, session, finishing, pending, immersive };
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const k = keys.current;
       if (k.immersive) return; // the immersive view has its own keys
       if (e.key === "Escape" && k.finishing) return k.setFinishing(false);
-      if (e.code !== "Space" || e.repeat || k.pending) return;
+      if (e.code !== "Space" || e.repeat || k.pending || !k.session) return;
       if ((e.target as HTMLElement).closest("input, textarea, select, button, a")) return;
       e.preventDefault();
-      if (!k.session) k.onStart();
-      else if (!k.finishing) k.setFinishing(true);
+      if (!k.finishing) k.setFinishing(true);
       else k.onConfirmFinish();
     }
     window.addEventListener("keydown", onKey);
@@ -210,7 +216,8 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
           await startRecording().catch(() => toast("No screen shared, so this session won't have a timelapse"));
           setRecording(isRecording());
         }
-        const s = await startFocus(goal, label);
+        const lockPlayed = new Promise((done) => setTimeout(done, prefersReducedMotion() ? 0 : LOCK_MS));
+        const [s] = await Promise.all([startFocus(goal, label), lockPlayed]);
         notified.current = false;
         setNow(Date.now());
         setSession(s);
@@ -369,87 +376,64 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         <ScenePicker current={scene} onPick={onPickScene} />
       </div>
 
-      <FocusScene scene={scene}>
-        <div className="flex flex-col items-center px-4 py-5">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <Radio className="size-4 animate-live" style={{ color: scene.accent }} /> {liveCount} focusing right now
-          </p>
-
-          <div className="mt-4">
-            <GoalRing pct={session ? pct : 0} size={280} stroke={14} color={scene.accent} track="rgb(255 255 255 / 0.2)">
-              <div className="text-center">
-                <p className="text-[44px] leading-none font-extrabold tracking-tight tabular">
-                  {session ? formatTimer(elapsed) : formatTimer(goal * 60)}
-                </p>
-                <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold">
-                  <span className="size-2 rounded-full" style={{ background: scene.accent }} aria-hidden />
-                  {!session ? "Ready" : paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
-                </p>
-                {session?.label && <p className="mt-1 text-xs font-bold">{session.label}</p>}
-                {recording && <p className="mt-1 text-xs font-bold">● Recording screen</p>}
-              </div>
-            </GoalRing>
-          </div>
-        </div>
-      </FocusScene>
-
       {done !== null && !session && (
-        <div className="mt-6 flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-bold text-primary-text">
+        <div className="mb-4 flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-bold text-primary-text">
           <Check className="size-4" /> Logged {formatDuration(done)} · today {formatDuration(todaySec)}
         </div>
       )}
 
-      {!session && (
-        <div className="mt-8 w-full space-y-4">
-          <div>
-            <p className="mb-2 text-xs font-bold tracking-wide text-subtle uppercase">Goal</p>
-            <div className="grid grid-cols-5 gap-2">
-              {PRESETS.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setGoal(m)}
-                  className={`rounded-xl border-2 py-2.5 text-sm font-bold ${goal === m ? "border-primary bg-primary-light text-primary-text" : "border-border bg-card text-muted"}`}
-                >
-                  {formatDuration(m * 60)}
-                </button>
-              ))}
-              <input
-                type="number"
-                min={5}
-                max={720}
-                value={goal}
-                onChange={(e) => setGoal(Number(e.target.value))}
-                aria-label="Custom goal in minutes"
-                className="rounded-xl border-2 border-border bg-card text-center text-sm font-bold outline-none focus:border-primary"
-              />
+      {session ? (
+        <FocusScene scene={scene}>
+          <div className="flex flex-col items-center px-4 py-5">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <Radio className="size-4 animate-live" style={{ color: scene.accent }} /> {liveCount} focusing right now
+            </p>
+
+            <div className="mt-4">
+              <GoalRing pct={pct} size={280} stroke={14} color={scene.accent} track="rgb(255 255 255 / 0.2)">
+                <div className="text-center">
+                  <p className="text-[44px] leading-none font-extrabold tracking-tight tabular">{formatTimer(elapsed)}</p>
+                  <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold">
+                    <span className="size-2 rounded-full" style={{ background: scene.accent }} aria-hidden />
+                    {paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
+                  </p>
+                  {session.label && <p className="mt-1 text-xs font-bold">{session.label}</p>}
+                  {recording && <p className="mt-1 text-xs font-bold">● Recording screen</p>}
+                </div>
+              </GoalRing>
             </div>
           </div>
-          {recordable && (
-            <label className="flex items-center gap-2 text-sm font-semibold text-muted">
-              <input
-                type="checkbox"
-                checked={record}
-                onChange={(e) => setRecord(e.target.checked)}
-                className="size-4 accent-[var(--primary)]"
-              />
-              Record a timelapse of my screen
-            </label>
-          )}
-          <input
-            aria-label="What are you working on?"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="What are you working on? (optional)"
-            maxLength={40}
-            className={inputCls}
-          />
-          <button onClick={onStart} disabled={pending} className={`${btnPrimary} h-14 w-full text-base`}>
-            <Play className="size-5 fill-current" /> Start focus
-          </button>
-          <p className="text-center text-xs text-subtle">
-            Press space to start. Today {formatDuration(todaySec)} of {formatDuration(dailyGoalMin * 60)} daily goal
-          </p>
-        </div>
+        </FocusScene>
+      ) : (
+        <FocusSetup
+          scene={scene}
+          goal={goal}
+          onGoal={setGoal}
+          label={label}
+          onLabel={setLabel}
+          labels={labels}
+          liveCount={liveCount}
+          liveUsers={liveUsers}
+          todaySec={todaySec}
+          dailyGoalMin={dailyGoalMin}
+          serverNow={serverNow}
+          timeZone={timeZone}
+          starting={pending}
+          onStart={onStart}
+          footer={
+            recordable && (
+              <label className="flex items-center gap-2 text-sm font-semibold text-muted">
+                <input
+                  type="checkbox"
+                  checked={record}
+                  onChange={(e) => setRecord(e.target.checked)}
+                  className="size-4 accent-[var(--primary)]"
+                />
+                Record a timelapse of my screen
+              </label>
+            )
+          }
+        />
       )}
 
       {session && !finishing && (
