@@ -4,9 +4,13 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Pause, Play, Radio, Square, Trash2 } from "lucide-react";
 import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
+import { attachTimelapse } from "@/app/actions/media";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
+import { toast } from "@/components/toaster";
 import { GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { activeSeconds } from "@/lib/session-math";
+import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
+import { uploadBlob } from "@/lib/upload";
 import { formatDuration, formatTimer } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
@@ -17,6 +21,18 @@ const elapsedSeconds = (s: ActiveSession, now: number) =>
     { startedAt: new Date(s.startedAt), pausedSec: s.pausedSec, pausedAt: s.pausedAt ? new Date(s.pausedAt) : null },
     new Date(now),
   );
+
+async function publishTimelapse(postId: string) {
+  try {
+    toast("Building your timelapse…");
+    const video = await buildTimelapse();
+    if (!video) return toast("Not enough footage for a timelapse", "error");
+    await attachTimelapse(postId, await uploadBlob("timelapse", video));
+    toast("Timelapse added to your post");
+  } catch (e) {
+    toast(e instanceof Error ? e.message : "Couldn't save the timelapse", "error");
+  }
+}
 
 const stateKey = (s: ActiveSession | null) => (s ? `${s.id}:${s.pausedSec}:${s.pausedAt}` : "");
 
@@ -31,6 +47,9 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
   const [finishing, setFinishing] = useState(false);
   const [note, setNote] = useState("");
   const [share, setShare] = useState(true);
+  const [record, setRecord] = useState(false);
+  const [recordable, setRecordable] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [done, setDone] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -40,6 +59,29 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
   const paused = !!session?.pausedAt;
   const goalSec = (session?.goalMin ?? goal) * 60;
   const pct = elapsed / goalSec;
+
+  useEffect(() => {
+    setRecordable(canRecordScreen());
+    setRecording(isRecording());
+  }, []);
+
+  // space starts and finishes, escape backs out of wrapping up
+  const keys = useRef({ onStart, onConfirmFinish, setFinishing, session, finishing, pending });
+  keys.current = { onStart, onConfirmFinish, setFinishing, session, finishing, pending };
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const k = keys.current;
+      if (e.key === "Escape" && k.finishing) return k.setFinishing(false);
+      if (e.code !== "Space" || e.repeat || k.pending) return;
+      if ((e.target as HTMLElement).closest("input, textarea, select, button, a")) return;
+      e.preventDefault();
+      if (!k.session) k.onStart();
+      else if (!k.finishing) k.setFinishing(true);
+      else k.onConfirmFinish();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // tick
   useEffect(() => {
@@ -75,6 +117,10 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
     if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
     start(async () => {
       try {
+        if (record) {
+          await startRecording().catch(() => toast("No screen shared, so this session won't have a timelapse"));
+          setRecording(isRecording());
+        }
         const s = await startFocus(goal, label);
         notified.current = false;
         setNow(Date.now());
@@ -98,6 +144,10 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         setNote("");
         setDone(res.ok ? res.durationSec : null);
         if (!res.ok) setError("That session was already discarded.");
+        stopRecording();
+        setRecording(false);
+        if (res.ok && res.postId && hasFrames()) void publishTimelapse(res.postId);
+        else discardRecording();
         notifyFocusChange();
         router.refresh();
       } catch {
@@ -127,6 +177,8 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
     start(async () => {
       try {
         await discardFocus(session.id);
+        discardRecording();
+        setRecording(false);
         setSession(null);
         setFinishing(false);
         notifyFocusChange();
@@ -153,6 +205,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
               {!session ? "Ready" : paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
             </p>
             {session?.label && <p className="mt-1 text-xs font-bold text-primary-text">{session.label}</p>}
+            {recording && <p className="mt-1 text-xs font-bold text-danger">● Recording screen</p>}
           </div>
         </GoalRing>
       </div>
@@ -188,7 +241,19 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
               />
             </div>
           </div>
+          {recordable && (
+            <label className="flex items-center gap-2 text-sm font-semibold text-muted">
+              <input
+                type="checkbox"
+                checked={record}
+                onChange={(e) => setRecord(e.target.checked)}
+                className="size-4 accent-[var(--primary)]"
+              />
+              Record a timelapse of my screen
+            </label>
+          )}
           <input
+            aria-label="What are you working on?"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="What are you working on? (optional)"
@@ -199,7 +264,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
             <Play className="size-5 fill-current" /> Start focus
           </button>
           <p className="text-center text-xs text-subtle">
-            Today {formatDuration(todaySec)} of {formatDuration(dailyGoalMin * 60)} daily goal
+            Press space to start. Today {formatDuration(todaySec)} of {formatDuration(dailyGoalMin * 60)} daily goal
           </p>
         </div>
       )}
@@ -227,6 +292,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         <div className="panel mt-8 w-full space-y-3 p-4">
           <p className="font-bold">Wrap up · {formatDuration(elapsed)}</p>
           <textarea
+            aria-label="Note for your post"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={session.label ?? "How did it go?"}

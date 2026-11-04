@@ -79,7 +79,7 @@ export async function getFocusingNow(limit = 12) {
       pausedAt: true,
       label: true,
       goalMin: true,
-      user: { select: { id: true, username: true, name: true } },
+      user: { select: { id: true, username: true, name: true, avatar: true } },
     },
   });
   const now = new Date();
@@ -127,7 +127,7 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
   const slice = ranked.slice(offset, offset + pageSize);
   const users = await db.user.findMany({
     where: { id: { in: slice.map(([id]) => id) } },
-    select: { id: true, username: true, name: true },
+    select: { id: true, username: true, name: true, avatar: true },
   });
   const byId = new Map(users.map((u) => [u.id, u]));
   const rows = slice.flatMap(([id, sec], i) => {
@@ -137,19 +137,21 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
   return { rows, hasNext: ranked.length > offset + pageSize };
 }
 
-export type FeedTab = "global" | "following";
+export type FeedTab = "global" | "following" | "timelapses";
 
 const FEED_PAGE = 20;
 
 export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { take?: number; authorId?: string; cursor?: string } = {}) {
   const take = opts.take ?? FEED_PAGE;
-  let where: { userId?: string | { in: string[] } } = {};
+  let where: { userId?: string | { in: string[] }; timelapseUrl?: { not: null } } = {};
   if (opts.authorId) {
     where = { userId: opts.authorId };
   } else if (tab === "following") {
     if (!viewerId) return { posts: [], hasMore: false };
     const follows = await db.follow.findMany({ where: { followerId: viewerId }, select: { followingId: true } });
     where = { userId: { in: [viewerId, ...follows.map((f) => f.followingId)] } };
+  } else if (tab === "timelapses") {
+    where = { timelapseUrl: { not: null } };
   }
   const rows = await db.post.findMany({
     where,
@@ -157,14 +159,14 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
     take: take + 1,
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     include: {
-      user: { select: { id: true, username: true, name: true, timeZone: true } },
+      user: { select: { id: true, username: true, name: true, avatar: true, timeZone: true } },
       session: { select: { goalMin: true, startedAt: true, endedAt: true, durationSec: true, label: true } },
       _count: { select: { likes: true, comments: true } },
       likes: { where: { userId: viewerId ?? "__guest__" }, select: { userId: true } },
       comments: {
         orderBy: { createdAt: "desc" },
         take: 20,
-        select: { id: true, body: true, createdAt: true, user: { select: { username: true, name: true } } },
+        select: { id: true, body: true, createdAt: true, user: { select: { username: true, name: true, avatar: true } } },
       },
     },
   });
@@ -173,8 +175,9 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
   const posts = page.map((p) => ({
     id: p.id,
     body: p.body,
+    timelapseUrl: p.timelapseUrl,
     createdAt: p.createdAt,
-    user: { id: p.user.id, username: p.user.username, name: p.user.name },
+    user: { id: p.user.id, username: p.user.username, name: p.user.name, avatar: p.user.avatar },
     streak: streaks.get(p.user.id) ?? 0,
     session: p.session,
     likeCount: p._count.likes,
@@ -228,6 +231,7 @@ export async function getProfile(username: string, viewerId: string | null) {
       username: true,
       name: true,
       bio: true,
+      avatar: true,
       timeZone: true,
       createdAt: true,
       _count: { select: { followers: true, following: true } },
@@ -249,7 +253,7 @@ export async function searchPeople(q: string, page: number) {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     skip: (page - 1) * PEOPLE_PAGE,
     take: PEOPLE_PAGE + 1,
-    select: { id: true, name: true, username: true, bio: true },
+    select: { id: true, name: true, username: true, bio: true, avatar: true },
   });
   return { people: rows.slice(0, PEOPLE_PAGE), hasNext: rows.length > PEOPLE_PAGE };
 }

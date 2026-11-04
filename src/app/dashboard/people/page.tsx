@@ -22,14 +22,14 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     <div className="mx-auto max-w-[680px] lg:pt-6">
       <PageHeader title="People" subtitle="Find friends to focus with." />
       <form className="mb-4">
-        <input name="q" defaultValue={q} placeholder="Search by name or @username" className={inputCls} />
+        <input name="q" defaultValue={q} aria-label="Search people" placeholder="Search by name or @username" className={inputCls} />
       </form>
       <ul className="panel divide-y divide-border/60">
         {people.length === 0 && <li className="p-4 text-sm text-muted">No one matches “{q}”.</li>}
         {people.map((p) => (
           <li key={p.id} className="flex items-center gap-3 px-4 py-3">
             <Link href={`/dashboard/u/${p.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-              <Avatar name={p.name} size={40} />
+              <Avatar name={p.name} src={p.avatar} size={40} />
               <span className="min-w-0">
                 <span className="block truncate font-bold">{p.name}</span>
                 <span className="block truncate text-xs text-muted">{p.bio || `@${p.username}`}</span>

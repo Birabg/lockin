@@ -8,7 +8,7 @@
   --card: #141416;
   --inset: #1c1c1f;
   --muted-foreground: #9a9a9d;
-  --subtle-foreground: #6b6b70;
+  --subtle-foreground: #909096;
   --border: #2a2a2d;
   --border-shadow: #1f1f22;
   --sidebar: #0c0c0d;
@@ -58,6 +58,20 @@
 
 html {
   color-scheme: dark;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {

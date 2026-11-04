@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { Avatar, PageHeader, btnGhost } from "@/components/ui";
+import { AvatarForm } from "./avatar-form";
 import { ProfileForm } from "./profile-form";
 
 export const metadata = { title: "Profile" };
@@ -12,12 +13,13 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-[560px] lg:pt-6">
       <PageHeader title="Profile" />
       <Link href={`/dashboard/u/${user.username}`} className="panel mb-4 flex items-center gap-3 p-4 hover:border-primary/40">
-        <Avatar name={user.name} size={48} />
+        <Avatar name={user.name} src={user.avatar} size={48} />
         <span>
           <span className="block font-bold">{user.name}</span>
           <span className="block text-sm text-muted">@{user.username} · view public profile</span>
         </span>
       </Link>
+      <AvatarForm name={user.name} avatar={user.avatar} />
       <ProfileForm
         user={{ name: user.name, bio: user.bio ?? "", dailyGoalMin: user.dailyGoalMin, timeZone: user.timeZone }}
         timeZones={[...new Set([user.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])].sort()}

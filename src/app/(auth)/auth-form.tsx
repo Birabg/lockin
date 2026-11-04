@@ -19,11 +19,12 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
       {isSignup && <input type="hidden" name="timeZone" value={timeZone} />}
       {isSignup ? (
         <>
-          <input name="name" placeholder="Name" autoComplete="name" required className={inputCls} />
-          <input name="username" placeholder="Username" autoComplete="username" required className={inputCls} />
-          <input name="email" type="email" placeholder="Email" autoComplete="email" required className={inputCls} />
+          <input name="name" aria-label="Name" placeholder="Name" autoComplete="name" required className={inputCls} />
+          <input name="username" aria-label="Username" placeholder="Username" autoComplete="username" required className={inputCls} />
+          <input name="email" aria-label="Email" type="email" placeholder="Email" autoComplete="email" required className={inputCls} />
           <input
             name="password"
+            aria-label="Password"
             type="password"
             placeholder="Password (8+ characters)"
             autoComplete="new-password"
@@ -35,8 +36,23 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
         </>
       ) : (
         <>
-          <input name="identifier" placeholder="Email or username" autoComplete="username" required className={inputCls} />
-          <input name="password" type="password" placeholder="Password" autoComplete="current-password" required className={inputCls} />
+          <input
+            name="identifier"
+            aria-label="Email or username"
+            placeholder="Email or username"
+            autoComplete="username"
+            required
+            className={inputCls}
+          />
+          <input
+            name="password"
+            aria-label="Password"
+            type="password"
+            placeholder="Password"
+            autoComplete="current-password"
+            required
+            className={inputCls}
+          />
         </>
       )}
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}

@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { Flame, Heart, MessageCircle, Send, Share2 } from "lucide-react";
+import { toast } from "./toaster";
 import { Avatar, GoalRing } from "./ui";
 import { addComment, toggleLike, type NewComment } from "@/app/actions/social";
 import { formatClock, formatDuration, timeAgo } from "@/lib/time";
 import type { FeedPost } from "@/lib/queries";
 
-export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedIn: boolean; timeZone: string }) {
+export type Viewer = { username: string; name: string; avatar: string | null };
+
+export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: Viewer | null; timeZone: string }) {
+  const signedIn = !!viewer;
   const [pending, start] = useTransition();
   const [like, setLike] = useState({ liked: post.liked, count: post.likeCount });
   const [added, setAdded] = useState<NewComment[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
   // Pages loaded by scrolling never get new props, so this state is what keeps their likes correct.
   useEffect(() => setLike({ liked: post.liked, count: post.likeCount }), [post.liked, post.likeCount]);
@@ -29,12 +32,11 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
     if (!signedIn) return (window.location.href = "/signup");
     const before = like;
     setLike({ liked: !before.liked, count: before.count + (before.liked ? -1 : 1) });
-    setError(null);
     start(async () => {
       const res = await toggleLike(post.id);
       if (res.error) {
         setLike(before);
-        setError(res.error);
+        toast(res.error, "error");
       }
     });
   }
@@ -43,15 +45,15 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
     e.preventDefault();
     const body = draft;
     setDraft("");
-    setError(null);
+    if (!viewer) return;
+    const temp: NewComment = { id: `temp-${Date.now()}`, body, createdAt: new Date(), user: viewer };
+    setAdded((list) => [...list, temp]);
     start(async () => {
       const res = await addComment(post.id, body);
-      if (res.comment) {
-        const comment = res.comment;
-        setAdded((list) => [...list, comment]);
-      } else if (res.error) {
+      setAdded((list) => list.flatMap((c) => (c.id !== temp.id ? [c] : res.comment ? [res.comment] : [])));
+      if (res.error) {
         setDraft(body);
-        setError(res.error);
+        toast(res.error, "error");
       }
     });
   }
@@ -65,8 +67,8 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
   return (
     <article className="panel overflow-hidden">
       <header className="flex items-center gap-3 p-4 pb-3">
-        <Link href={`/dashboard/u/${post.user.username}`}>
-          <Avatar name={post.user.name} size={40} />
+        <Link href={`/dashboard/u/${post.user.username}`} aria-label={`${post.user.name}’s profile`}>
+          <Avatar name={post.user.name} src={post.user.avatar} size={40} />
         </Link>
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[15px] font-bold">
@@ -121,6 +123,18 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
       )}
 
       <p className="px-4 pt-3 text-[15px] whitespace-pre-wrap">{post.body}</p>
+      {post.timelapseUrl && (
+        <video
+          src={post.timelapseUrl}
+          controls
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-label="Session timelapse"
+          className="mt-3 w-full bg-black"
+        />
+      )}
 
       <footer className="mt-2 flex items-center gap-1 border-t border-border/60 px-2 py-1.5">
         <button
@@ -137,18 +151,17 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
         >
           <MessageCircle className="size-4" /> {commentCount || "Comment"}
         </button>
-        <button onClick={onShare} className="ml-auto rounded-full p-2 text-muted hover:bg-inset" aria-label="Share">
+        <button onClick={onShare} className="ml-auto rounded-full p-2 text-muted hover:bg-inset" aria-label="Copy a link to this profile">
           <Share2 className="size-4" />
         </button>
       </footer>
-      {error && <p className="px-4 pb-2 text-sm text-danger">{error}</p>}
 
       {showComments && (
         <div className="border-t border-border/60 px-4 py-3">
           <ul className="flex flex-col gap-2.5">
             {comments.map((c) => (
               <li key={c.id} className="flex gap-2.5 text-sm">
-                <Avatar name={c.user.name} size={26} />
+                <Avatar name={c.user.name} src={c.user.avatar} size={26} />
                 <p>
                   <Link href={`/dashboard/u/${c.user.username}`} className="font-bold hover:underline">
                     {c.user.name}
@@ -162,6 +175,7 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
           {signedIn ? (
             <form onSubmit={onComment} className="mt-3 flex items-center gap-2">
               <input
+                aria-label="Add a comment"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Add a comment…"
@@ -169,7 +183,7 @@ export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedI
                 className="flex-1 rounded-full border border-border bg-inset px-4 py-2 text-sm outline-none focus:border-primary"
               />
               <button
-                disabled={!draft.trim() || pending}
+                disabled={!draft.trim()}
                 className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
                 aria-label="Send"
               >

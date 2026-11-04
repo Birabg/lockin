@@ -2,6 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 import { toggleFollow } from "@/app/actions/social";
+import { toast } from "./toaster";
 
 export function FollowButton({ userId, following, signedIn }: { userId: string; following: boolean; signedIn: boolean }) {
   const [pending, start] = useTransition();
@@ -9,11 +10,13 @@ export function FollowButton({ userId, following, signedIn }: { userId: string; 
   return (
     <button
       disabled={pending}
+      aria-pressed={on}
       onClick={() => {
         if (!signedIn) return void (window.location.href = "/signup");
         start(async () => {
           setOn(null);
-          await toggleFollow(userId);
+          const res = await toggleFollow(userId);
+          if (res.error) toast(res.error, "error");
         });
       }}
       className={`rounded-full px-4 py-1.5 text-sm font-bold ${

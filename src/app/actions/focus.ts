@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { notifySessionStart } from "@/lib/notifications";
 import { finishSession, reapStaleSessions } from "@/lib/sessions";
 import { isExpired } from "@/lib/session-math";
 
@@ -61,6 +62,7 @@ export async function startFocus(goalMin: number, label: string): Promise<Active
     const s = await db.focusSession.create({
       data: { userId: user.id, activeKey: user.id, goalMin: input.goalMin, label: input.label || null },
     });
+    await notifySessionStart(user.id, s.id);
     revalidatePath("/dashboard", "layout");
     return toActive(s);
   } catch (e) {
@@ -132,12 +134,14 @@ export async function stopFocus(sessionId: string, opts: { share: boolean; note:
   const durationSec =
     s.status === "ACTIVE" ? await finishSession(s, isExpired(s) ? s.lastBeatAt : new Date(), user.timeZone) : s.durationSec;
 
+  let postId: string | null = null;
   if (share && durationSec >= 60) {
     const body = note || s.label || "Session done";
-    await db.post.upsert({ where: { sessionId: s.id }, create: { userId: user.id, sessionId: s.id, body }, update: {} });
+    const post = await db.post.upsert({ where: { sessionId: s.id }, create: { userId: user.id, sessionId: s.id, body }, update: {} });
+    postId = post.id;
   }
   revalidatePath("/dashboard", "layout");
-  return { ok: true as const, durationSec };
+  return { ok: true as const, durationSec, postId };
 }
 
 export async function discardFocus(sessionId: string) {

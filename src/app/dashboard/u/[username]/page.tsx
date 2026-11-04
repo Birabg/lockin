@@ -36,7 +36,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     <div className="mx-auto max-w-[680px] lg:pt-6">
       <section className="panel p-5">
         <div className="flex items-start gap-4">
-          <Avatar name={profile.name} size={72} />
+          <Avatar name={profile.name} src={profile.avatar} size={72} />
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-xl font-extrabold">{profile.name}</h1>
             <p className="text-sm text-muted">@{profile.username}</p>
@@ -66,7 +66,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             hasMore={feed.hasMore}
             tab="global"
             authorId={profile.id}
-            signedIn={!!viewer}
+            viewer={viewer}
             timeZone={viewer?.timeZone ?? brand.timeZone}
           />
         )}

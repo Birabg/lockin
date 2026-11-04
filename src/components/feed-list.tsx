@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadMoreFeed } from "@/app/actions/social";
-import { PostCard } from "./post-card";
+import { PostCard, type Viewer } from "./post-card";
 import { SectionTitle, btnGhost } from "./ui";
 import type { FeedPost, FeedTab } from "@/lib/queries";
 import { dayKey, formatDayHeading } from "@/lib/time";
@@ -12,7 +12,7 @@ type Props = {
   hasMore: boolean;
   tab: FeedTab;
   authorId?: string;
-  signedIn: boolean;
+  viewer: Viewer | null;
   timeZone: string;
   grouped?: boolean;
 };
@@ -20,15 +20,24 @@ type Props = {
 const newestFirst = (a: FeedPost, b: FeedPost) =>
   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id.localeCompare(a.id);
 
-export function FeedList({ initial, hasMore, tab, authorId, signedIn, timeZone, grouped = false }: Props) {
+export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, grouped = false }: Props) {
   const [posts, setPosts] = useState(initial);
   const [more, setMore] = useState(hasMore);
   const [failed, setFailed] = useState(false);
+  const [posting, setPosting] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const sentinel = useRef<HTMLDivElement>(null);
 
+  // the composer announces a post right away, and the real one arrives with the next server data
+  useEffect(() => {
+    const onPosting = (e: Event) => setPosting((e as CustomEvent<string | null>).detail);
+    window.addEventListener("lockin:posting", onPosting);
+    return () => window.removeEventListener("lockin:posting", onPosting);
+  }, []);
+
   // fresh server data wins, and pages already scrolled in stay put
   useEffect(() => {
+    setPosting(null);
     setPosts((current) => {
       const fresh = new Set(initial.map((p) => p.id));
       return [...initial, ...current.filter((p) => !fresh.has(p.id))].sort(newestFirst);
@@ -73,11 +82,12 @@ export function FeedList({ initial, hasMore, tab, authorId, signedIn, timeZone, 
 
   return (
     <>
+      {posting && <div className="panel p-4 text-[15px] whitespace-pre-wrap opacity-60">{posting}</div>}
       {groups.map((g) => (
         <section key={g.key} className="space-y-3">
           {grouped && <SectionTitle>{g.heading}</SectionTitle>}
           {g.posts.map((p) => (
-            <PostCard key={p.id} post={p} signedIn={signedIn} timeZone={timeZone} />
+            <PostCard key={p.id} post={p} viewer={viewer} timeZone={timeZone} />
           ))}
         </section>
       ))}

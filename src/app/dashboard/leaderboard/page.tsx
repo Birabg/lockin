@@ -60,7 +60,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
                 <RankIcon rank={row.rank} />
               </span>
               <Link href={`/dashboard/u/${row.user.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-                <Avatar name={row.user.name} size={38} />
+                <Avatar name={row.user.name} src={row.user.avatar} size={38} />
                 <span className="min-w-0">
                   <span className="block truncate font-bold">{row.user.name}</span>
                   <span className="block truncate text-xs text-muted">@{row.user.username}</span>

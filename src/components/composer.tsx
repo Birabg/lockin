@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { createPost } from "@/app/actions/social";
+import { toast } from "./toaster";
 import { Avatar } from "./ui";
 
-export function Composer({ name }: { name: string }) {
+export function Composer({ name, avatar }: { name: string; avatar: string | null }) {
   const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   return (
     <form
@@ -15,21 +15,23 @@ export function Composer({ name }: { name: string }) {
         e.preventDefault();
         const body = text;
         setText("");
-        setError(null);
+        window.dispatchEvent(new CustomEvent("lockin:posting", { detail: body }));
         start(async () => {
           const res = await createPost(body);
           if (res.error) {
+            window.dispatchEvent(new CustomEvent("lockin:posting", { detail: null }));
             setText(body);
-            setError(res.error);
+            toast(res.error, "error");
           }
         });
       }}
     >
       <div className="flex items-start gap-3">
-        <Avatar name={name} size={36} />
+        <Avatar name={name} src={avatar} size={36} />
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
+          aria-label="Write a post"
           placeholder="What are you working on today?"
           rows={1}
           maxLength={280}
@@ -42,7 +44,6 @@ export function Composer({ name }: { name: string }) {
           Post
         </button>
       </div>
-      {error && <p className="mt-2 pl-12 text-sm text-danger">{error}</p>}
     </form>
   );
 }

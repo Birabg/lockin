@@ -11,6 +11,7 @@ export const limits = {
   comment: { max: 60, windowSec: 60 * 60 },
   like: { max: 60, windowSec: 60 },
   follow: { max: 60, windowSec: 60 },
+  upload: { max: 20, windowSec: 60 * 60 },
 } as const;
 
 type Limit = { max: number; windowSec: number };

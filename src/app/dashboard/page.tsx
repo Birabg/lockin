@@ -22,7 +22,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const timeZone = user?.timeZone ?? brand.timeZone;
 
   const [feed, live, board, streak, todaySec, week] = await Promise.all([
-    tab === "timelapses" ? Promise.resolve({ posts: [], hasMore: false }) : getFeed(user?.id ?? null, tab as FeedTab),
+    getFeed(user?.id ?? null, tab as FeedTab),
     getFocusingNow(),
     getLeaderboard("today", timeZone, { pageSize: 3 }),
     user ? getStreak(user) : Promise.resolve({ current: 0, best: 0 }),
@@ -33,7 +33,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   return (
     <div className="mx-auto flex max-w-[1080px] gap-6 lg:pt-6">
       <main className="min-w-0 flex-1 space-y-4">
-        {user ? <Composer name={user.name} /> : <GuestBanner />}
+        {user ? <Composer name={user.name} avatar={user.avatar} /> : <GuestBanner />}
 
         <div className="flex items-center gap-2">
           <div className="flex flex-1 rounded-full border border-border bg-card p-1">
@@ -64,12 +64,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
           <FocusingNowCard count={live.count} sessions={live.sessions} />
         </div>
 
-        {tab === "timelapses" ? (
-          <EmptyState
-            title="Timelapses are coming"
-            body="Screen-recorded session timelapses need media storage. This tab lights up once uploads are wired in."
-          />
-        ) : tab === "following" && !user ? (
+        {tab === "following" && !user ? (
           <EmptyState
             title="Follow people to fill this feed"
             body="Sign in, then follow friends from the leaderboard."
@@ -85,7 +80,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             body={
               tab === "following"
                 ? "Follow people from the leaderboard or People page."
-                : "Finish a focus session and share it to start the feed."
+                : tab === "timelapses"
+                  ? "Tick “Record a timelapse” when you start a session, then share it."
+                  : "Finish a focus session and share it to start the feed."
             }
             action={
               <Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>
@@ -94,15 +91,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             }
           />
         ) : (
-          <FeedList
-            key={tab}
-            initial={feed.posts}
-            hasMore={feed.hasMore}
-            tab={tab as FeedTab}
-            signedIn={!!user}
-            timeZone={timeZone}
-            grouped
-          />
+          <FeedList key={tab} initial={feed.posts} hasMore={feed.hasMore} tab={tab as FeedTab} viewer={user} timeZone={timeZone} grouped />
         )}
       </main>
 

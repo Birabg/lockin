@@ -27,7 +27,7 @@ export default async function FocusingPage() {
             return (
               <li key={s.user.id}>
                 <Link href={`/dashboard/u/${s.user.username}`} className="panel flex items-center gap-3 p-4 hover:border-primary/40">
-                  <Avatar name={s.user.name} size={44} live />
+                  <Avatar name={s.user.name} src={s.user.avatar} size={44} live />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">{s.user.name}</span>
                     <span className="block truncate text-xs text-muted">{s.label ?? "Deep work"}</span>

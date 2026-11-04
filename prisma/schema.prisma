@@ -14,18 +14,21 @@ model User {
   email        String   @unique
   passwordHash String
   bio          String?
+  avatar       String?
   dailyGoalMin Int      @default(60)
   /// IANA zone from the browser at signup. "Today", streaks and day totals use it.
   timeZone     String   @default("UTC")
   createdAt    DateTime @default(now())
 
-  dailyStats DailyStat[]
-  sessions   FocusSession[]
-  posts      Post[]
-  likes      Like[]
-  comments   Comment[]
-  following  Follow[]       @relation("follower")
-  followers  Follow[]       @relation("following")
+  dailyStats    DailyStat[]
+  sessions      FocusSession[]
+  posts         Post[]
+  likes         Like[]
+  comments      Comment[]
+  following     Follow[]       @relation("follower")
+  followers     Follow[]       @relation("following")
+  notifications Notification[] @relation("recipient")
+  actions       Notification[] @relation("actor")
 }
 
 /// One timer run. status: ACTIVE | DONE | ABANDONED
@@ -67,6 +70,23 @@ model DailyStat {
   @@index([day, seconds])
 }
 
+/// type: LIKE | COMMENT | FOLLOW | SESSION_START | NUDGE | BUDDY_REQUEST | BUDDY_ACCEPT
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  actorId   String
+  type      String
+  postId    String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user  User @relation("recipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User @relation("actor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
 /// Fixed-window counters. In the database so limits hold across serverless instances.
 model RateLimit {
   key     String   @id
@@ -77,11 +97,12 @@ model RateLimit {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  userId    String
-  sessionId String?  @unique
-  body      String
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  sessionId    String?  @unique
+  timelapseUrl String?
+  body         String
+  createdAt    DateTime @default(now())
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   session  FocusSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)

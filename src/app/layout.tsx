@@ -1,10 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Toaster } from "@/components/toaster";
 import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
+  applicationName: brand.name,
+  appleWebApp: { capable: true, title: brand.name, statusBarStyle: "black-translucent" },
+  icons: { apple: "/pwa-icon/192" },
 };
 
 export const viewport: Viewport = {
@@ -17,7 +21,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-dvh font-sans">{children}</body>
+      <body className="min-h-dvh font-sans">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

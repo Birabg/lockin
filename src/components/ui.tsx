@@ -16,7 +16,9 @@ export function Logo({ className = "" }: { className?: string }) {
 
 const PALETTE = ["#8b80f9", "#4ade80", "#f5b366", "#6ec9d4", "#e85a6e", "#d4b06f", "#a78bfa", "#60a5fa"];
 
-export function Avatar({ name, size = 36, live = false }: { name: string; size?: number; live?: boolean }) {
+type AvatarProps = { name: string; src?: string | null; size?: number; live?: boolean };
+
+export function Avatar({ name, src, size = 36, live = false }: AvatarProps) {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const bg = PALETTE[h % PALETTE.length];
@@ -28,12 +30,18 @@ export function Avatar({ name, size = 36, live = false }: { name: string; size?:
     .toUpperCase();
   return (
     <span className="relative inline-block shrink-0" style={{ width: size, height: size }}>
-      <span
-        className="grid size-full place-items-center rounded-full font-bold text-[#0a0a0b]"
-        style={{ background: bg, fontSize: size * 0.38 }}
-      >
-        {initials}
-      </span>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- remote hosts vary by deployment, and these are already 256px
+        <img src={src} alt="" width={size} height={size} className="size-full rounded-full object-cover" />
+      ) : (
+        <span
+          className="grid size-full place-items-center rounded-full font-bold text-[#0a0a0b]"
+          style={{ background: bg, fontSize: size * 0.38 }}
+          aria-hidden
+        >
+          {initials}
+        </span>
+      )}
       {live && (
         <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-card bg-live" aria-label="focusing now" />
       )}
@@ -96,6 +104,17 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
       <p className="font-bold">{title}</p>
       <p className="max-w-sm text-sm text-muted">{body}</p>
       {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
+}
+
+export function PageSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="mx-auto max-w-[720px] animate-pulse space-y-3 lg:pt-6" role="status" aria-label="Loading">
+      <div className="h-8 w-40 rounded-lg bg-inset" />
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="panel h-24" />
+      ))}
     </div>
   );
 }

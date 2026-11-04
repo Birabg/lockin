@@ -44,7 +44,7 @@ export function StreakCard({ streak, todaySec, goalMin, week }: { streak: number
   );
 }
 
-type LiveSession = { label: string | null; user: { id: string; username: string; name: string } };
+type LiveSession = { label: string | null; user: { id: string; username: string; name: string; avatar: string | null } };
 
 export function FocusingNowCard({ count, sessions }: { count: number; sessions: LiveSession[] }) {
   return (
@@ -65,7 +65,7 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
         <div className="mt-3 flex -space-x-1.5 overflow-hidden">
           {sessions.slice(0, 9).map((s) => (
             <span key={s.user.id} className="rounded-full ring-2 ring-card">
-              <Avatar name={s.user.name} size={32} live />
+              <Avatar name={s.user.name} src={s.user.avatar} size={32} live />
             </span>
           ))}
         </div>
@@ -81,7 +81,7 @@ export function RankIcon({ rank }: { rank: number }) {
   return <span className="w-4 text-center text-xs font-bold text-subtle tabular">{rank}</span>;
 }
 
-type Row = { rank: number; sec: number; user: { id: string; username: string; name: string } };
+type Row = { rank: number; sec: number; user: { id: string; username: string; name: string; avatar: string | null } };
 
 export function LeaderboardCard({ rows }: { rows: Row[] }) {
   return (
@@ -99,7 +99,7 @@ export function LeaderboardCard({ rows }: { rows: Row[] }) {
           <li key={r.user.id}>
             <Link href={`/dashboard/u/${r.user.username}`} className="flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-inset">
               <RankIcon rank={r.rank} />
-              <Avatar name={r.user.name} size={28} />
+              <Avatar name={r.user.name} src={r.user.avatar} size={28} />
               <span className="flex-1 truncate text-sm font-semibold">{r.user.name}</span>
               <span className="text-xs text-muted tabular">{formatDuration(r.sec)}</span>
             </Link>
