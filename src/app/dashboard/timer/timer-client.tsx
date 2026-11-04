@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ImagePlus, Maximize2, Pause, Play, Radio, Square, Trash2, X } from "lucide-react";
 import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
 import { attachPhoto, attachTimelapse } from "@/app/actions/media";
 import { saveScene } from "@/app/actions/scene";
@@ -13,6 +12,7 @@ import { ImmersiveTimer } from "@/components/immersive-timer";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
 import { ScenePicker } from "@/components/scene-picker";
 import { toast } from "@/components/toaster";
+import { Icon } from "@/components/icon";
 import { ClockDigits, GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
@@ -316,13 +316,13 @@ export function TimerClient(props: Props) {
       {share && elapsed >= 60 && !recording && (
         <div className="flex items-center gap-2 text-sm font-semibold text-muted">
           <label className="flex min-w-0 cursor-pointer items-center gap-2 hover:text-foreground">
-            <ImagePlus className="size-4 shrink-0" />
+            <Icon name="image" size={18} />
             <span className="truncate">{photo ? photo.name : "Add a photo"}</span>
             <input type="file" accept={PHOTO_TYPES.join(",")} onChange={onPickPhoto} className="sr-only" />
           </label>
           {photo && (
             <button onClick={() => setPhoto(null)} aria-label="Remove photo" className="rounded-full p-1 hover:bg-inset">
-              <X className="size-4" />
+              <Icon name="close" size={18} weight="regular" />
             </button>
           )}
         </div>
@@ -378,7 +378,7 @@ export function TimerClient(props: Props) {
 
       {done !== null && !session && (
         <div className="mb-4 flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-bold text-primary-text">
-          <Check className="size-4" /> Logged {formatDuration(done)} · today {formatDuration(todaySec)}
+          <Icon name="check" size={18} weight="regular" /> Logged {formatDuration(done)} · today {formatDuration(todaySec)}
         </div>
       )}
 
@@ -386,7 +386,7 @@ export function TimerClient(props: Props) {
         <FocusScene scene={scene}>
           <div className="flex flex-col items-center px-4 py-5">
             <p className="flex items-center gap-2 text-sm font-semibold">
-              <Radio className="size-4 animate-live" style={{ color: scene.accent }} /> {liveCount} focusing right now
+              <Icon name="focusingNow" size={18} className="animate-live" style={{ color: scene.accent }} /> {liveCount} focusing right now
             </p>
 
             <div className="mt-4">
@@ -441,7 +441,7 @@ export function TimerClient(props: Props) {
       {session && !finishing && (
         <div className="mt-10 flex w-full gap-3">
           <button onClick={onDiscard} disabled={pending} className={`${btnGhost} h-14 px-5`} aria-label="Discard session">
-            <Trash2 className="size-5 text-muted" />
+            <Icon name="delete" className="text-muted" />
           </button>
           <button
             onClick={onTogglePause}
@@ -449,7 +449,7 @@ export function TimerClient(props: Props) {
             className={`${btnGhost} h-14 px-5`}
             aria-label={paused ? "Resume session" : "Pause session"}
           >
-            {paused ? <Play className="size-5 fill-current" /> : <Pause className="size-5 fill-current" />}
+            <Icon name={paused ? "startFocus" : "pause"} weight="fill" />
           </button>
           <button
             onClick={() => {
@@ -459,10 +459,10 @@ export function TimerClient(props: Props) {
             className={`${btnGhost} h-14 px-5`}
             aria-label="Back to the full screen view"
           >
-            <Maximize2 className="size-5" />
+            <Icon name="fullscreen" />
           </button>
           <button onClick={() => setFinishing(true)} disabled={pending} className={`${btnPrimary} h-14 flex-1 text-base`}>
-            <Square className="size-4 fill-current" /> Finish session
+            <Icon name="stop" size={18} weight="fill" /> Finish session
           </button>
         </div>
       )}

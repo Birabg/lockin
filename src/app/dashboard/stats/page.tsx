@@ -1,4 +1,4 @@
-import { Clock, Flame, Target, Trophy } from "lucide-react";
+import { Icon, type IconName } from "@/components/icon";
 import { requireUser } from "@/lib/auth";
 import { getStats, getWeeklyRecap } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
@@ -17,11 +17,18 @@ export default async function StatsPage() {
   const daysHit = s.last30.filter((d) => d.sec >= goalSec).length;
   const labelMax = Math.max(...s.byLabel.map((l) => l.sec), 1);
 
-  const tiles = [
-    { label: "Today", value: formatDuration(s.today), icon: Clock, tone: "text-primary" },
-    { label: "This week", value: formatDuration(s.week), icon: Target, tone: "text-live" },
-    { label: "Current streak", value: `${s.streak.current}d`, sub: `Best ${s.streak.best}d`, icon: Flame, tone: "text-streak" },
-    { label: "All time", value: formatDuration(s.allTime), sub: `${s.sessionsCount} sessions`, icon: Trophy, tone: "text-gold" },
+  const tiles: { label: string; value: string; sub?: string; icon: IconName; tone: string; lit?: boolean }[] = [
+    { label: "Today", value: formatDuration(s.today), icon: "time", tone: "text-primary" },
+    { label: "This week", value: formatDuration(s.week), icon: "target", tone: "text-live" },
+    {
+      label: "Current streak",
+      value: `${s.streak.current}d`,
+      sub: `Best ${s.streak.best}d`,
+      icon: "streak",
+      tone: "text-streak",
+      lit: s.streak.current > 0,
+    },
+    { label: "All time", value: formatDuration(s.allTime), sub: `${s.sessionsCount} sessions`, icon: "leaderboard", tone: "text-gold" },
   ];
 
   return (
@@ -29,9 +36,9 @@ export default async function StatsPage() {
       <PageHeader title="Stats" subtitle={`Daily goal ${formatDuration(goalSec)} · hit on ${daysHit} of the last 30 days`} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {tiles.map(({ label, value, sub, icon: Icon, tone }) => (
+        {tiles.map(({ label, value, sub, icon, tone, lit }) => (
           <div key={label} className="panel p-4">
-            <Icon className={`size-5 ${tone}`} />
+            <Icon name={icon} size={22} weight={lit ? "fill" : "duotone"} className={`${tone} ${lit ? "streak-glow" : ""}`} />
             <p className="mt-3 text-2xl font-extrabold tabular">{value}</p>
             <p className="text-xs font-semibold text-muted">{label}</p>
             {sub && <p className="mt-0.5 text-[11px] text-subtle">{sub}</p>}

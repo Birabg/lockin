@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Check, Image as ImageIcon, X } from "lucide-react";
+import { Icon } from "./icon";
 import { DrawnBackdrop } from "./focus-scene";
 import { scenes, type Scene } from "@/lib/scenes";
 
@@ -24,7 +24,7 @@ function Thumb({ scene, selected, onPick }: { scene: Scene; selected: boolean; o
       </span>
       {selected && (
         <span className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
-          <Check className="size-3.5" aria-hidden />
+          <Icon name="check" size={14} weight="regular" />
         </span>
       )}
     </button>
@@ -70,7 +70,7 @@ export function ScenePanel({ current, onPick, onClose, centered = false }: Panel
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-bold">Background</h2>
           <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-full text-muted hover:bg-inset">
-            <X className="size-4" aria-hidden />
+            <Icon name="close" size={18} weight="regular" />
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -96,7 +96,7 @@ export function ScenePicker({ current, onPick }: { current: Scene; onPick: (id: 
         aria-haspopup="dialog"
         className="flex items-center gap-1.5 rounded-full border-2 border-border bg-card px-3 py-1.5 text-sm font-bold text-muted hover:text-foreground"
       >
-        <ImageIcon className="size-4" aria-hidden /> Background
+        <Icon name="image" size={18} /> Background
       </button>
       {open && (
         <ScenePanel

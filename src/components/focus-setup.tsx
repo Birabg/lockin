@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Lock, LockOpen, Plus, Radio, Volume2, VolumeX } from "lucide-react";
 import { FocusDial, prefersReducedMotion } from "./focus-dial";
+import { Icon } from "./icon";
 import { FocusScene } from "./focus-scene";
 import { Avatar } from "./ui";
 import { reachesDailyGoal } from "@/lib/dial";
@@ -107,7 +107,7 @@ function LabelChips({ labels, label, onChange }: { labels: string[]; label: stri
           aria-label="Add something new to work on"
           className="flex h-9 items-center gap-1 rounded-full border border-dashed border-white/40 bg-black/30 px-3 text-sm font-bold text-white backdrop-blur-sm hover:bg-black/60"
         >
-          <Plus className="size-4" aria-hidden /> new
+          <Icon name="add" size={16} weight="regular" /> new
         </button>
       )}
     </div>
@@ -202,7 +202,7 @@ export function FocusSetup(props: Props) {
 
   const buttonText = (
     <>
-      {starting ? <Lock className="animate-lock-snap size-5" aria-hidden /> : <LockOpen className="size-5" aria-hidden />}
+      {starting ? <Icon name="lock" weight="fill" className="animate-lock-snap" /> : <Icon name="unlock" />}
       {starting ? "Locked in" : "Hold to lock in"}
     </>
   );
@@ -215,7 +215,7 @@ export function FocusSetup(props: Props) {
             href="/dashboard/focusing"
             className="flex h-9 items-center gap-2 rounded-full border border-white/20 bg-black/35 pr-3.5 pl-2.5 text-sm font-semibold backdrop-blur-sm hover:bg-black/55"
           >
-            <Radio className="size-4 shrink-0 animate-live" style={{ color: scene.accent }} aria-hidden />
+            <Icon name="focusingNow" size={18} className="animate-live" style={{ color: scene.accent }} />
             {liveUsers.length > 0 && (
               <span className="flex -space-x-1.5" aria-hidden>
                 {liveUsers.map((u) => (
@@ -232,7 +232,7 @@ export function FocusSetup(props: Props) {
             title={muted ? "Turn sounds on" : "Mute sounds"}
             className="absolute top-4 right-3 grid size-9 place-items-center rounded-full border border-white/20 bg-black/35 backdrop-blur-sm hover:bg-black/55"
           >
-            {muted ? <VolumeX className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />}
+            <Icon name={muted ? "mute" : "sound"} size={18} />
           </button>
 
           <FocusDial value={goal} onChange={onGoal} label={label} now={now} timeZone={timeZone} accent={scene.accent} locked={starting} />

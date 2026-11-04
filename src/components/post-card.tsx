@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ChartNoAxesColumn, Flame, Heart, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
+import { Icon } from "./icon";
 import { SessionBody } from "./session-body";
 import { toast } from "./toaster";
 import { Avatar } from "./ui";
@@ -22,6 +22,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   const [goneComments, setGoneComments] = useState<string[]>([]);
   const [pending, start] = useTransition();
   const [like, setLike] = useState({ liked: post.liked, count: post.likeCount });
+  const [popping, setPopping] = useState(false);
   const [added, setAdded] = useState<NewComment[]>([]);
 
   // Pages loaded by scrolling never get new props, so this state is what keeps their likes correct.
@@ -55,6 +56,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   function onLike() {
     if (!signedIn) return router.push("/signup");
     const before = like;
+    setPopping(!before.liked);
     setLike({ liked: !before.liked, count: before.count + (before.liked ? -1 : 1) });
     start(async () => {
       const res = await toggleLike(post.id);
@@ -136,7 +138,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                 <>
                   <span aria-hidden>·</span>
                   <span className="flex items-center gap-0.5 font-bold text-streak tabular">
-                    <Flame className="size-3" fill="currentColor" />
+                    <Icon name="streak" size={13} weight="fill" className="streak-glow" />
                     {post.streak}d
                   </span>
                 </>
@@ -149,7 +151,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
               aria-label="Delete post"
               className="grid size-9 shrink-0 place-items-center rounded-full text-subtle hover:bg-inset hover:text-danger"
             >
-              <Trash2 className="size-4" />
+              <Icon name="delete" size={18} />
             </button>
           )}
         </header>
@@ -166,21 +168,22 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
           aria-pressed={like.liked}
           aria-label={`Like, ${like.count} so far`}
         >
-          <Heart className="size-4" fill={like.liked ? "currentColor" : "none"} /> <span className="tabular">{like.count}</span>
+          <Icon name="like" size={18} weight={like.liked ? "fill" : "regular"} className={popping ? "animate-like-pop" : ""} />{" "}
+          <span className="tabular">{like.count}</span>
         </button>
         <button
           onClick={() => setShowComments((v) => !v)}
           aria-expanded={showComments}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-muted hover:bg-inset"
         >
-          <MessageCircle className="size-4" /> Comment {commentCount > 0 && <span className="tabular">{commentCount}</span>}
+          <Icon name="comment" size={18} /> Comment {commentCount > 0 && <span className="tabular">{commentCount}</span>}
         </button>
         <span className="ml-auto flex items-center gap-1.5 px-2 text-[13px] text-muted tabular">
-          <ChartNoAxesColumn className="size-4" aria-hidden />
+          <Icon name="views" size={18} />
           <span className="sr-only">Views:</span> {formatCount(post.views)}
         </span>
         <button onClick={onShare} className="rounded-full p-2 text-muted hover:bg-inset" aria-label="Copy a link to this profile">
-          <Share2 className="size-4" />
+          <Icon name="share" size={18} />
         </button>
       </footer>
 
@@ -202,7 +205,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                     aria-label="Delete comment"
                     className="ml-auto grid size-6 shrink-0 place-items-center rounded-full text-subtle hover:text-danger"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Icon name="delete" size={15} />
                   </button>
                 )}
               </li>
@@ -224,7 +227,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                 className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
                 aria-label="Send"
               >
-                <Send className="size-4" />
+                <Icon name="send" size={18} weight="fill" />
               </button>
             </form>
           ) : (

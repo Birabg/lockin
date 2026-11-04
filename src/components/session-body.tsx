@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
 import { FocusScene } from "./focus-scene";
+import { Icon } from "./icon";
 import { GoalRing, colorFor } from "./ui";
 import { resolveScene } from "@/lib/scenes";
 import { formatClock, formatDuration, sessionWindow } from "@/lib/time";
@@ -51,7 +51,7 @@ function Timelapse({ src, label }: { src: string; label: string | null }) {
         className="absolute inset-0 size-full object-cover"
       />
       <span className={`${pill} top-3 right-3 flex items-center gap-1`}>
-        {playing ? <Pause className="size-3 fill-current" /> : <Play className="size-3 fill-current" />} Timelapse
+        <Icon name={playing ? "pause" : "startFocus"} size={12} weight="fill" /> Timelapse
       </span>
       <LabelPill label={label} />
     </button>

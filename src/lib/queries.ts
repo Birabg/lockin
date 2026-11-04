@@ -70,6 +70,28 @@ export async function getTodaySeconds(person: Person) {
   return (await dayTotalsFor([person], today)).get(person.id)?.get(today) ?? 0;
 }
 
+/** What the nav dots show: is a buddy, or someone in one of this user's rooms, focusing right now? */
+export async function getNavActivity(userId: string) {
+  const live = { sessions: { some: { status: "ACTIVE", pausedAt: null, lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) } } } };
+  const [buddy, roommate] = await Promise.all([
+    db.buddy.findFirst({
+      where: {
+        status: "ACCEPTED",
+        OR: [
+          { requesterId: userId, addressee: live },
+          { addresseeId: userId, requester: live },
+        ],
+      },
+      select: { id: true },
+    }),
+    db.roomMember.findFirst({
+      where: { userId: { not: userId }, user: live, room: { members: { some: { userId } } } },
+      select: { roomId: true },
+    }),
+  ]);
+  return { buddies: !!buddy, rooms: !!roommate };
+}
+
 export async function getFocusingNow(limit = 12) {
   const live = await db.focusSession.findMany({
     where: { status: "ACTIVE", pausedAt: null, lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) } },

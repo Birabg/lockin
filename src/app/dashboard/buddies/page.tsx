@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flame } from "lucide-react";
+import { Icon } from "@/components/icon";
 import { requireUser } from "@/lib/auth";
 import { getBuddies } from "@/lib/social-features";
 import { Avatar, EmptyState, PageHeader, SectionTitle, btnPrimary } from "@/components/ui";
@@ -58,7 +58,7 @@ export default async function BuddiesPage() {
                     </span>
                   </Link>
                   <span className="flex items-center gap-1 text-sm font-bold text-streak tabular">
-                    <Flame className="size-4" fill="currentColor" aria-hidden />
+                    <Icon name="streak" size={16} weight="fill" className={b.streak > 0 ? "streak-glow" : ""} />
                     <span className="sr-only">Streak</span>
                     {b.streak}d
                   </span>

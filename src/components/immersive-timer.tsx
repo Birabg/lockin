@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Flame, Image as ImageIcon, Maximize, Minimize, Minimize2, Pause, Play, Square, Trash2 } from "lucide-react";
 import { FocusScene } from "./focus-scene";
+import { Icon } from "./icon";
 import { ScenePanel } from "./scene-picker";
 import { Avatar, GoalRing } from "./ui";
 import { brand } from "@/lib/brand";
@@ -185,7 +185,7 @@ export function ImmersiveTimer(props: Props) {
               <p className="mt-[0.5em] flex items-center gap-[0.4em] font-semibold portrait:justify-center">
                 {streak > 0 && (
                   <>
-                    <Flame className="size-[1em]" style={{ color: "var(--streak)" }} fill="currentColor" aria-hidden />
+                    <Icon name="streak" size="1em" weight="fill" className="streak-glow text-streak" />
                     <span className="tabular">{streak}d</span>
                     <span aria-hidden>·</span>
                   </>
@@ -228,16 +228,16 @@ export function ImmersiveTimer(props: Props) {
             title={paused ? "Resume" : "Pause"}
             className={barButton}
           >
-            {paused ? <Play className="size-5 fill-current" /> : <Pause className="size-5 fill-current" />}
+            <Icon name={paused ? "startFocus" : "pause"} weight="fill" />
           </button>
           <button onClick={onFinish} disabled={pending} aria-label="Finish session" title="Finish" className={barButton}>
-            <Square className="size-4 fill-current" />
+            <Icon name="stop" weight="fill" />
           </button>
           <button onClick={onDiscard} disabled={pending} aria-label="Discard session" title="Discard" className={barButton}>
-            <Trash2 className="size-5" />
+            <Icon name="delete" />
           </button>
           <button onClick={() => setPicking(true)} aria-label="Change background" title="Background" className={barButton}>
-            <ImageIcon className="size-5" />
+            <Icon name="image" />
           </button>
           {canFullscreen && (
             <button
@@ -246,11 +246,11 @@ export function ImmersiveTimer(props: Props) {
               title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
               className={barButton}
             >
-              {fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
+              <Icon name={fullscreen ? "exitFullscreen" : "fullscreen"} />
             </button>
           )}
           <button onClick={onMinimize} aria-label="Minimize" title="Minimize" className={barButton}>
-            <Minimize2 className="size-5" />
+            <Icon name="minimize" />
           </button>
         </div>
 

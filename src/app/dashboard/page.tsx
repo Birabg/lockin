@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { Clapperboard, Globe, RotateCw, Search, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getFeed, getFocusingNow, getLeaderboard, getStreak, getTodaySeconds, getWeekStrip, type FeedTab } from "@/lib/queries";
 import { brand } from "@/lib/brand";
 import { FeedList } from "@/components/feed-list";
 import { Composer } from "@/components/composer";
+import { Icon } from "@/components/icon";
 import { FocusingNowCard, GuestBanner, LeaderboardCard, StreakCard } from "@/components/rail";
 import { EmptyState, btnPrimary } from "@/components/ui";
 
 const TABS = [
-  { id: "global", label: "Global", icon: Globe },
-  { id: "following", label: "Following", icon: Users },
-  { id: "timelapses", label: "Timelapses", icon: Clapperboard },
+  { id: "global", label: "Global", icon: "global" },
+  { id: "following", label: "Following", icon: "following" },
+  { id: "timelapses", label: "Timelapses", icon: "timelapses" },
 ] as const;
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
@@ -40,7 +40,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             aria-label="Find people"
             className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-inset hover:text-foreground"
           >
-            <Search className="size-5" aria-hidden />
+            <Icon name="search" size={22} />
           </Link>
         </div>
 
@@ -48,7 +48,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
 
         <div className="mt-5 flex items-center justify-between gap-3">
           <div className="flex max-w-[360px] flex-1 rounded-[20px] bg-inset/60 p-1">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {TABS.map(({ id, label, icon }) => (
               <Link
                 key={id}
                 href={id === "global" ? "/dashboard" : `/dashboard?tab=${id}`}
@@ -56,7 +56,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                   tab === id ? "bg-background font-extrabold text-foreground" : "font-semibold text-muted hover:text-foreground"
                 }`}
               >
-                <Icon className="hidden size-4 sm:block" /> {label}
+                <Icon name={icon} size={18} active={tab === id} className="hidden sm:block" /> {label}
               </Link>
             ))}
           </div>
@@ -65,7 +65,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
           >
-            <RotateCw className="size-4" />
+            <Icon name="refresh" size={18} weight="regular" />
           </Link>
         </div>
 

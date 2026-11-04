@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Flame } from "lucide-react";
+import { Icon } from "@/components/icon";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { brand } from "@/lib/brand";
@@ -59,7 +59,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             <div key={x.k} className="flex flex-col-reverse rounded-xl bg-inset py-3">
               <dt className="text-[11px] font-semibold text-muted">{x.k}</dt>
               <dd className="flex items-center justify-center gap-1 font-extrabold tabular">
-                {x.flame && <Flame className="size-4 text-streak" fill="currentColor" />}
+                {x.flame && <Icon name="streak" size={16} weight="fill" className="streak-glow text-streak" />}
                 {x.v}
               </dd>
             </div>

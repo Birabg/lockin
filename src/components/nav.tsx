@@ -3,46 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  BarChart3,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
-  DoorOpen,
-  Ellipsis,
-  Flame,
-  Handshake,
-  Home,
-  LogOut,
-  Play,
-  Radio,
-  Settings,
-  Timer,
-  Trophy,
-  User,
-  Users,
-} from "lucide-react";
+import { Icon, type IconName } from "./icon";
 import { Avatar, Logo, btnPrimary } from "./ui";
 import { logout } from "@/app/actions/auth";
 import { useSidebarCollapsed } from "@/lib/use-sidebar";
 
-const SIDEBAR = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/dashboard/timer", label: "Focus", icon: Timer },
-  { href: "/dashboard/focusing", label: "Focusing now", icon: Radio },
-  { href: "/dashboard/stats", label: "Stats", icon: BarChart3 },
-  { href: "/dashboard/leaderboard", label: "Leaderboard", icon: Trophy },
-  { href: "/dashboard/people", label: "People", icon: Users },
-  { href: "/dashboard/buddies", label: "Buddies", icon: Handshake },
-  { href: "/dashboard/rooms", label: "Live rooms", icon: DoorOpen },
+type Activity = { buddies: boolean; rooms: boolean };
+
+const SIDEBAR: { href: string; label: string; icon: IconName; signal?: keyof Activity }[] = [
+  { href: "/dashboard", label: "Home", icon: "home" },
+  { href: "/dashboard/timer", label: "Focus", icon: "focus" },
+  { href: "/dashboard/focusing", label: "Focusing now", icon: "focusingNow" },
+  { href: "/dashboard/stats", label: "Stats", icon: "stats" },
+  { href: "/dashboard/leaderboard", label: "Leaderboard", icon: "leaderboard" },
+  { href: "/dashboard/people", label: "People", icon: "people" },
+  { href: "/dashboard/buddies", label: "Buddies", icon: "buddies", signal: "buddies" },
+  { href: "/dashboard/rooms", label: "Live rooms", icon: "liveRooms", signal: "rooms" },
 ];
 
-const BOTTOM = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/dashboard/timer", label: "Focus", icon: Timer },
-  { href: "/dashboard/stats", label: "Stats", icon: BarChart3 },
-  { href: "/dashboard/leaderboard", label: "Ranks", icon: Trophy },
-  { href: "/dashboard/settings", label: "Profile", icon: User },
+const BOTTOM: { href: string; label: string; icon: IconName }[] = [
+  { href: "/dashboard", label: "Home", icon: "home" },
+  { href: "/dashboard/timer", label: "Focus", icon: "focus" },
+  { href: "/dashboard/stats", label: "Stats", icon: "stats" },
+  { href: "/dashboard/leaderboard", label: "Ranks", icon: "leaderboard" },
+  { href: "/dashboard/settings", label: "Profile", icon: "profile" },
 ];
 
 function isActive(path: string, href: string) {
@@ -51,24 +35,19 @@ function isActive(path: string, href: string) {
 
 type NavUser = { name: string; username: string; avatar: string | null; streak: number } | null;
 
-function UnreadBadge({ count, compact }: { count: number; compact: boolean }) {
+function UnreadCount({ count }: { count: number }) {
   if (count === 0) return null;
   return (
-    <span
-      className={`grid min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-extrabold text-primary-foreground ${
-        compact ? "absolute top-0.5 right-0.5" : "ml-auto"
-      }`}
-    >
+    <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-extrabold text-primary-foreground">
       {count > 99 ? "99+" : count}
     </span>
   );
 }
 
-type SidebarProps = { user: NavUser; unread: number; initialCollapsed: boolean };
+type SidebarProps = { user: NavUser; unread: number; activity: Activity; initialCollapsed: boolean };
 
 const navItem =
-  "relative flex h-12 shrink-0 items-center gap-4 rounded-full text-[15.5px] leading-[23.25px] tracking-[-0.025em] transition-colors";
-const navIcon = "size-[23px] shrink-0";
+  "icon-lift relative flex h-12 shrink-0 items-center gap-4 rounded-full text-[15.5px] leading-[23.25px] tracking-[-0.025em] transition-colors";
 
 function UserMenu({ username }: { username: string }) {
   const [open, setOpen] = useState(false);
@@ -99,19 +78,19 @@ function UserMenu({ username }: { username: string }) {
         aria-expanded={open}
         className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-inset hover:text-foreground"
       >
-        <Ellipsis className="size-[18px]" aria-hidden />
+        <Icon name="more" size={20} weight="regular" />
       </button>
       {open && (
         <div className="panel absolute inset-x-0 bottom-full z-20 mb-2 p-1.5">
           <Link href={`/dashboard/u/${username}`} onClick={() => setOpen(false)} className={row}>
-            <User className="size-[18px]" aria-hidden /> Profile
+            <Icon name="profile" size={18} /> Profile
           </Link>
           <Link href="/dashboard/settings" onClick={() => setOpen(false)} className={row}>
-            <Settings className="size-[18px]" aria-hidden /> Settings
+            <Icon name="settings" size={18} /> Settings
           </Link>
           <form action={logout}>
             <button className={row}>
-              <LogOut className="size-[18px]" aria-hidden /> Sign out
+              <Icon name="logout" size={18} /> Sign out
             </button>
           </form>
         </div>
@@ -124,7 +103,7 @@ function StreakLine({ days }: { days: number }) {
   if (days === 0) return <span className="block truncate text-[12.5px] leading-[18.75px] text-muted">No streak yet</span>;
   return (
     <span className="flex items-center gap-1 truncate text-[12.5px] leading-[18.75px] text-muted tabular-nums">
-      <Flame className="size-3.5 shrink-0 text-streak" fill="currentColor" aria-hidden />
+      <Icon name="streak" size={14} weight="fill" className="streak-glow text-streak" />
       {days} day streak
     </span>
   );
@@ -132,12 +111,11 @@ function StreakLine({ days }: { days: number }) {
 
 const userName = "block truncate text-[14.5px] leading-[21.75px] font-extrabold tracking-[-0.025em]";
 
-export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
+export function Sidebar({ user, unread, activity, initialCollapsed }: SidebarProps) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useSidebarCollapsed(initialCollapsed);
   const inset = collapsed ? "justify-center px-0" : "pr-3 pl-3.5";
   const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
-  const Toggle = collapsed ? ChevronRight : ChevronLeft;
 
   return (
     <aside
@@ -154,11 +132,11 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
           title={toggleLabel}
           className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-inset/60 hover:text-foreground"
         >
-          <Toggle className="size-[18px]" strokeWidth={2.2} aria-hidden />
+          <Icon name={collapsed ? "chevron" : "collapse"} size={18} weight="regular" />
         </button>
       </div>
       <nav aria-label="Main" className="mt-4 flex flex-col gap-0.5">
-        {SIDEBAR.map(({ href, label, icon: Icon }) => {
+        {SIDEBAR.map(({ href, label, icon, signal }) => {
           const active = isActive(path, href);
           return (
             <Link
@@ -172,7 +150,7 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
                   : "font-medium text-foreground/80 hover:bg-inset/60 hover:text-foreground"
               }`}
             >
-              <Icon className={`${navIcon} ${active ? "text-primary" : ""}`} strokeWidth={2} />
+              <Icon name={icon} size={24} active={active} badge={signal && activity[signal] ? "live" : false} className="text-muted" />
               <span className={collapsed ? "sr-only" : ""}>{label}</span>
             </Link>
           );
@@ -189,9 +167,9 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
                 : "font-medium text-foreground/80 hover:bg-inset/60 hover:text-foreground"
             }`}
           >
-            <Bell className={`${navIcon} ${path === "/dashboard/notifications" ? "text-primary" : ""}`} strokeWidth={2} />
+            <Icon name="notifications" size={24} active={path === "/dashboard/notifications"} badge={unread > 0} className="text-muted" />
             {!collapsed && "Notifications"}
-            <UnreadBadge count={unread} compact={collapsed} />
+            {!collapsed && <UnreadCount count={unread} />}
           </Link>
         )}
       </nav>
@@ -200,7 +178,7 @@ export function Sidebar({ user, unread, initialCollapsed }: SidebarProps) {
         title={collapsed ? "Start focus" : undefined}
         className={`${btnPrimary} mt-3.5 h-12 shrink-0 text-[15.5px] font-extrabold ${collapsed ? "px-0!" : ""}`}
       >
-        <Play className="size-[18px] shrink-0 fill-current" /> <span className={collapsed ? "sr-only" : ""}>Start focus</span>
+        <Icon name="startFocus" size={18} weight="fill" /> <span className={collapsed ? "sr-only" : ""}>Start focus</span>
       </Link>
 
       <div className="relative mt-auto pt-4">
@@ -241,7 +219,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
     >
       <div className="flex w-full max-w-[560px] items-center justify-between rounded-full border border-border bg-[#0d1421]/95 p-1.5 backdrop-blur">
-        {BOTTOM.map(({ href, label, icon: Icon }) => {
+        {BOTTOM.map(({ href, label, icon }) => {
           const active = isActive(path, href);
           return (
             <Link
@@ -252,7 +230,7 @@ export function BottomNav() {
                 active ? "bg-primary-light text-primary" : "text-sidebar-foreground"
               }`}
             >
-              <Icon className="size-5" strokeWidth={2.2} />
+              <Icon name={icon} size={22} active={active} />
               {label}
             </Link>
           );
@@ -262,7 +240,7 @@ export function BottomNav() {
   );
 }
 
-export function MobileTopBar({ signedIn, unread }: { signedIn: boolean; unread: number }) {
+export function MobileTopBar({ signedIn, unread, activity }: { signedIn: boolean; unread: number; activity: Activity }) {
   return (
     <div className="flex items-center justify-between py-3 lg:hidden">
       <Logo />
@@ -272,23 +250,22 @@ export function MobileTopBar({ signedIn, unread }: { signedIn: boolean; unread: 
           className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
           aria-label="Live rooms"
         >
-          <DoorOpen className="size-5" />
+          <Icon name="liveRooms" size={22} badge={activity.rooms ? "live" : false} />
         </Link>
         <Link
           href="/dashboard/buddies"
           className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
           aria-label="Focus buddies"
         >
-          <Handshake className="size-5" />
+          <Icon name="buddies" size={22} badge={activity.buddies ? "live" : false} />
         </Link>
         {signedIn && (
           <Link
             href="/dashboard/notifications"
-            className="relative grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
+            className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
             aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
           >
-            <Bell className="size-5" />
-            {unread > 0 && <span className="absolute top-2 right-2 size-2.5 rounded-full bg-primary" />}
+            <Icon name="notifications" size={22} badge={unread > 0} />
           </Link>
         )}
         <Link
@@ -296,7 +273,7 @@ export function MobileTopBar({ signedIn, unread }: { signedIn: boolean; unread: 
           className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
           aria-label="Find people"
         >
-          <Users className="size-5" />
+          <Icon name="people" size={22} />
         </Link>
       </div>
     </div>

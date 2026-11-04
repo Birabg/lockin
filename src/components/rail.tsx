@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Crown, Flame, Medal, Radio } from "lucide-react";
+import { Icon } from "./icon";
 import { Avatar } from "./ui";
 import { formatDuration } from "@/lib/time";
 import type { WeekDay } from "@/lib/queries";
@@ -12,7 +12,7 @@ export function StreakCard({ streak, todaySec, goalMin, week }: { streak: number
     <section className="panel p-3.5">
       <div className="flex items-center gap-2.5">
         <span className={`grid size-10 place-items-center rounded-xl ${streak > 0 ? "bg-streak-bg text-streak" : "bg-inset text-subtle"}`}>
-          <Flame className="size-5" fill={streak > 0 ? "currentColor" : "none"} />
+          <Icon name="streak" size={22} weight={streak > 0 ? "fill" : "duotone"} className={streak > 0 ? "streak-glow" : ""} />
         </span>
         <div>
           <p className="text-[18px] leading-[18px] font-extrabold tracking-[-0.45px]">
@@ -53,7 +53,7 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
     <Link href="/dashboard/focusing" className="panel block p-4 transition-colors hover:border-primary/40">
       <div className="flex items-center gap-3">
         <span className="grid size-9 place-items-center rounded-xl bg-inset text-live">
-          <Radio className="size-[18px]" />
+          <Icon name="focusingNow" size={20} />
         </span>
         <div className="flex-1">
           <p className={railTitle}>Focusing now</p>
@@ -61,7 +61,7 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
             {count === 0 ? "Nobody yet — be the first" : `${count} ${count === 1 ? "person" : "people"} in a session`}
           </p>
         </div>
-        <ChevronRight className="size-4 text-subtle" />
+        <Icon name="chevron" size={16} weight="regular" className="text-subtle" />
       </div>
       {sessions.length > 0 && (
         <div className="mt-3 flex -space-x-1.5 overflow-hidden">
@@ -77,10 +77,10 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
 }
 
 export function RankIcon({ rank }: { rank: number }) {
-  if (rank === 1) return <Crown className="size-4 text-gold" fill="currentColor" />;
-  if (rank === 2) return <Medal className="size-4 text-silver" />;
-  if (rank === 3) return <Medal className="size-4 text-bronze" />;
-  return <span className="w-4 text-center text-xs font-bold text-subtle tabular">{rank}</span>;
+  if (rank === 1) return <Icon name="crown" size={18} weight="fill" className="text-gold" />;
+  if (rank === 2) return <Icon name="medal" size={18} weight="fill" className="text-silver" />;
+  if (rank === 3) return <Icon name="medal" size={18} weight="fill" className="text-bronze" />;
+  return <span className="w-[18px] text-center text-xs font-bold text-subtle tabular">{rank}</span>;
 }
 
 type Row = { rank: number; sec: number; user: { id: string; username: string; name: string; avatar: string | null } };
@@ -90,10 +90,10 @@ export function LeaderboardCard({ rows }: { rows: Row[] }) {
     <section className="panel p-3.5">
       <Link href="/dashboard/leaderboard" className="flex items-center gap-2.5 border-b border-border/50 pb-2.5">
         <span className="grid size-8 place-items-center rounded-xl bg-inset text-gold">
-          <Crown className="size-4" />
+          <Icon name="crown" size={18} />
         </span>
         <p className={`${railTitle} flex-1`}>Today’s leaderboard</p>
-        <ChevronRight className="size-4 text-subtle" />
+        <Icon name="chevron" size={16} weight="regular" className="text-subtle" />
       </Link>
       <ul className="-mx-1.5 mt-1 flex flex-col">
         {rows.length === 0 && <li className="px-1.5 py-2 text-[13.5px] text-muted">No focus logged today yet.</li>}
@@ -116,7 +116,7 @@ export function GuestBanner({ next = "/dashboard" }: { next?: string }) {
   return (
     <div className="panel flex items-center gap-3 px-3.5 py-3">
       <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-light text-primary">
-        <Flame className="size-[18px]" />
+        <Icon name="streak" size={20} weight="fill" />
       </span>
       <p className="flex-1 text-sm font-bold">{brand.tagline} Start free.</p>
       <Link

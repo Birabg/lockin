@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Send } from "lucide-react";
 import { createPost } from "@/app/actions/social";
+import { Icon } from "./icon";
 import { toast } from "./toaster";
 import { Avatar } from "./ui";
 
@@ -44,7 +44,7 @@ export function Composer({ name, avatar }: { name: string; avatar: string | null
           aria-label="Post"
           className="btn-3d grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
         >
-          <Send className="size-[18px]" aria-hidden />
+          <Icon name="compose" size={20} />
         </button>
       </div>
     </form>
