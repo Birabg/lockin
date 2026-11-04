@@ -7,10 +7,13 @@ import { getFeed, getProfile, getStreak } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
 import { Avatar, EmptyState } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
+import { BuddyRequestButton } from "@/components/buddy-actions";
 import { FeedList } from "@/components/feed-list";
+import { getBuddyState } from "@/lib/social-features";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
-  return { title: `@${(await params).username}` };
+  const { username } = await params;
+  return { title: `@${username}`, openGraph: { images: [`/card/${username}`] } };
 }
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
@@ -24,6 +27,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     db.focusSession.aggregate({ where: { userId: profile.id, status: "DONE" }, _sum: { durationSec: true } }),
     getFeed(viewer?.id ?? null, "global", { authorId: profile.id }),
   ]);
+
+  const buddy = viewer && viewer.id !== profile.id ? await getBuddyState(viewer.id, profile.id) : null;
 
   const stats = [
     { k: "Streak", v: `${streak.current}d`, flame: true },
@@ -42,7 +47,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             <p className="text-sm text-muted">@{profile.username}</p>
             {profile.bio && <p className="mt-2 text-sm">{profile.bio}</p>}
           </div>
-          {viewer?.id !== profile.id && <FollowButton userId={profile.id} following={profile.isFollowing} signedIn={!!viewer} />}
+          {viewer?.id !== profile.id && (
+            <div className="flex flex-col items-end gap-2">
+              <FollowButton userId={profile.id} following={profile.isFollowing} signedIn={!!viewer} />
+              {buddy && <BuddyRequestButton userId={profile.id} state={buddy.state} id={buddy.id} />}
+            </div>
+          )}
         </div>
         <dl className="mt-5 grid grid-cols-4 gap-2 text-center">
           {stats.map((x) => (

@@ -1,14 +1,16 @@
 import { Clock, Flame, Target, Trophy } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getStats } from "@/lib/queries";
+import { getStats, getWeeklyRecap } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
 import { PageHeader } from "@/components/ui";
+import { ShareCard } from "./share-card";
 
 export const metadata = { title: "Stats" };
 
 export default async function StatsPage() {
   const user = await requireUser("/dashboard/stats");
-  const s = await getStats(user);
+  const [s, recap] = await Promise.all([getStats(user), getWeeklyRecap(user, user.dailyGoalMin)]);
+  const change = recap.thisWeek - recap.lastWeekSoFar;
   const goalSec = user.dailyGoalMin * 60;
   const max = Math.max(goalSec, ...s.last30.map((d) => d.sec), 1);
   const goalLine = (goalSec / max) * 100;
@@ -36,6 +38,41 @@ export default async function StatsPage() {
           </div>
         ))}
       </div>
+
+      <section className="panel mt-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-bold">Weekly recap</h2>
+          <ShareCard username={user.username} />
+        </div>
+        <p className="mt-3 text-2xl font-extrabold tabular">{formatDuration(recap.thisWeek)} this week</p>
+        <p className="text-sm text-muted">
+          {change === 0
+            ? "Level with this point last week"
+            : `${formatDuration(Math.abs(change))} ${change > 0 ? "ahead of" : "behind"} this point last week`}
+        </p>
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+          {[
+            ["Days focused", `${recap.daysFocused} of ${recap.daysSoFar}`],
+            ["Goal hit", `${recap.goalDays} ${recap.goalDays === 1 ? "day" : "days"}`],
+            ["Sessions", String(recap.sessionCount)],
+            ["Top focus", recap.topLabel ?? "None yet"],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-inset p-3">
+              <dt className="text-xs text-muted">{k}</dt>
+              <dd className="truncate font-bold">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        {recap.bestDay && (
+          <p className="mt-3 text-sm text-muted">
+            Best day:{" "}
+            <span className="font-bold text-foreground">
+              {new Date(`${recap.bestDay.day}T12:00:00Z`).toLocaleDateString("en", { weekday: "long", timeZone: "UTC" })}
+            </span>{" "}
+            with {formatDuration(recap.bestDay.sec)}
+          </p>
+        )}
+      </section>
 
       <section className="panel mt-4 p-4">
         <div className="flex items-baseline justify-between">

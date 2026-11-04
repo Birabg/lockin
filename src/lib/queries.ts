@@ -44,7 +44,7 @@ export async function getStreak(person: Person) {
 }
 
 /** Current streaks for many users in two queries. */
-async function getStreaks(people: Person[]) {
+export async function getStreaks(people: Person[]) {
   const totals = await dayTotalsFor(people);
   const now = new Date();
   return new Map(people.map((p) => [p.id, computeStreak(totals.get(p.id) ?? new Map(), dayKey(now, p.timeZone)).current]));
@@ -222,6 +222,46 @@ export async function getStats(person: Person) {
     byLabel: byLabel.map((l) => ({ label: l.label ?? "Untitled", sec: l._sum.durationSec ?? 0 })),
   };
 }
+
+export async function getWeeklyRecap(person: Person, goalMin: number) {
+  const today = dayKey(new Date(), person.timeZone);
+  const monday = weekStartKey(today);
+  const lastMonday = shiftDayKey(monday, -7);
+  const totals = (await dayTotalsFor([person], lastMonday)).get(person.id) ?? new Map<string, number>();
+
+  const days = Array.from({ length: 7 }, (_, i) => shiftDayKey(monday, i)).filter((d) => d <= today);
+  const sum = (keys: string[]) => keys.reduce((a, k) => a + (totals.get(k) ?? 0), 0);
+  const sameDaysLastWeek = days.map((d) => shiftDayKey(d, -7));
+  const best = days.reduce<{ day: string; sec: number } | null>((top, day) => {
+    const sec = totals.get(day) ?? 0;
+    return sec > (top?.sec ?? 0) ? { day, sec } : top;
+  }, null);
+
+  const sessions = await db.focusSession.findMany({
+    where: { userId: person.id, status: "DONE", startedAt: { gte: addDaysAgo(8) } },
+    select: { startedAt: true, durationSec: true, label: true },
+  });
+  const labels = new Map<string, number>();
+  let sessionCount = 0;
+  for (const s of sessions) {
+    if (dayKey(s.startedAt, person.timeZone) < monday) continue;
+    sessionCount++;
+    if (s.label) labels.set(s.label, (labels.get(s.label) ?? 0) + s.durationSec);
+  }
+
+  return {
+    thisWeek: sum(days),
+    lastWeekSoFar: sum(sameDaysLastWeek),
+    daysFocused: days.filter((d) => (totals.get(d) ?? 0) >= 60).length,
+    goalDays: days.filter((d) => (totals.get(d) ?? 0) >= goalMin * 60).length,
+    daysSoFar: days.length,
+    bestDay: best,
+    topLabel: [...labels.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+    sessionCount,
+  };
+}
+
+const addDaysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
 
 export async function getProfile(username: string, viewerId: string | null) {
   const user = await db.user.findUnique({

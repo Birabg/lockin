@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bell, Home, Play, Radio, Timer, Trophy, User, Users } from "lucide-react";
+import { BarChart3, Bell, DoorOpen, Handshake, Home, Play, Radio, Timer, Trophy, User, Users } from "lucide-react";
 import { Avatar, Logo, btnPrimary } from "./ui";
 
 const SIDEBAR = [
@@ -12,6 +12,8 @@ const SIDEBAR = [
   { href: "/dashboard/stats", label: "Stats", icon: BarChart3 },
   { href: "/dashboard/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/dashboard/people", label: "People", icon: Users },
+  { href: "/dashboard/buddies", label: "Buddies", icon: Handshake },
+  { href: "/dashboard/rooms", label: "Live rooms", icon: DoorOpen },
 ];
 
 const BOTTOM = [
@@ -133,6 +135,20 @@ export function MobileTopBar({ signedIn, unread }: { signedIn: boolean; unread: 
     <div className="flex items-center justify-between py-3 lg:hidden">
       <Logo />
       <div className="flex items-center">
+        <Link
+          href="/dashboard/rooms"
+          className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
+          aria-label="Live rooms"
+        >
+          <DoorOpen className="size-5" />
+        </Link>
+        <Link
+          href="/dashboard/buddies"
+          className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
+          aria-label="Focus buddies"
+        >
+          <Handshake className="size-5" />
+        </Link>
         {signedIn && (
           <Link
             href="/dashboard/notifications"
