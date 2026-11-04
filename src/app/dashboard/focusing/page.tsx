@@ -16,7 +16,11 @@ export default async function FocusingPage() {
         <EmptyState
           title="It’s quiet"
           body="Nobody is focusing at the moment. Start a session and others will see you here."
-          action={<Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>Start focus</Link>}
+          action={
+            <Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>
+              Start focus
+            </Link>
+          }
         />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">

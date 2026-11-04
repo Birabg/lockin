@@ -41,7 +41,17 @@ export function Avatar({ name, size = 36, live = false }: { name: string; size?:
   );
 }
 
-export function GoalRing({ pct, size = 64, stroke = 6, children }: { pct: number; size?: number; stroke?: number; children?: React.ReactNode }) {
+export function GoalRing({
+  pct,
+  size = 64,
+  stroke = 6,
+  children,
+}: {
+  pct: number;
+  size?: number;
+  stroke?: number;
+  children?: React.ReactNode;
+}) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.min(Math.max(pct, 0), 1);

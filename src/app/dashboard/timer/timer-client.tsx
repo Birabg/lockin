@@ -10,14 +10,14 @@ import { brand } from "@/lib/brand";
 
 const PRESETS = [25, 50, 90, 120];
 
-type Props = { active: ActiveSession | null; todaySec: number; dailyGoalMin: number; liveCount: number };
+type Props = { active: ActiveSession | null; todaySec: number; dailyGoalMin: number; liveCount: number; serverNow: number };
 
-export function TimerClient({ active, todaySec, dailyGoalMin, liveCount }: Props) {
+export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverNow }: Props) {
   const router = useRouter();
   const [session, setSession] = useState<ActiveSession | null>(active);
   const [goal, setGoal] = useState(active?.goalMin ?? 25);
   const [label, setLabel] = useState(active?.label ?? "");
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(serverNow); // same value on server and client, so hydration matches
   const [finishing, setFinishing] = useState(false);
   const [note, setNote] = useState("");
   const [share, setShare] = useState(true);
@@ -33,6 +33,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount }: Props
   // tick
   useEffect(() => {
     if (!session) return;
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [session]);
@@ -157,7 +158,13 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount }: Props
               />
             </div>
           </div>
-          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="What are you working on? (optional)" maxLength={40} className={inputCls} />
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="What are you working on? (optional)"
+            maxLength={40}
+            className={inputCls}
+          />
           <button onClick={onStart} disabled={pending} className={`${btnPrimary} h-14 w-full text-base`}>
             <Play className="size-5 fill-current" /> Start focus
           </button>
@@ -190,7 +197,12 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount }: Props
             className={`${inputCls} resize-none`}
           />
           <label className="flex items-center gap-2 text-sm font-semibold text-muted">
-            <input type="checkbox" checked={share} onChange={(e) => setShare(e.target.checked)} className="size-4 accent-[var(--primary)]" />
+            <input
+              type="checkbox"
+              checked={share}
+              onChange={(e) => setShare(e.target.checked)}
+              className="size-4 accent-[var(--primary)]"
+            />
             Share to the feed {elapsed < 60 && <span className="text-subtle">(sessions under 1 min aren’t posted)</span>}
           </label>
           <div className="flex gap-2">

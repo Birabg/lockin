@@ -10,10 +10,10 @@ import type { FeedPost } from "@/lib/queries";
 
 export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean }) {
   const [pending, start] = useTransition();
-  const [like, setLike] = useOptimistic(
-    { liked: post.liked, count: post.likeCount },
-    (s) => ({ liked: !s.liked, count: s.count + (s.liked ? -1 : 1) }),
-  );
+  const [like, setLike] = useOptimistic({ liked: post.liked, count: post.likeCount }, (s) => ({
+    liked: !s.liked,
+    count: s.count + (s.liked ? -1 : 1),
+  }));
   const [showComments, setShowComments] = useState(false);
   const [draft, setDraft] = useState("");
   const s = post.session;
@@ -55,7 +55,9 @@ export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean
             <span className="truncate text-xs font-medium text-subtle">@{post.user.username}</span>
           </p>
           <p className="flex items-center gap-2 text-xs text-muted">
-            {timeAgo(createdAt)}
+            <time dateTime={createdAt.toISOString()} suppressHydrationWarning>
+              {timeAgo(createdAt)}
+            </time>
             {post.streak > 0 && (
               <span className="flex items-center gap-0.5 font-bold text-streak">
                 <Flame className="size-3" fill="currentColor" />
@@ -144,7 +146,11 @@ export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean
                 maxLength={280}
                 className="flex-1 rounded-full border border-border bg-inset px-4 py-2 text-sm outline-none focus:border-primary"
               />
-              <button disabled={!draft.trim() || pending} className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40" aria-label="Send">
+              <button
+                disabled={!draft.trim() || pending}
+                className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+                aria-label="Send"
+              >
                 <Send className="size-4" />
               </button>
             </form>

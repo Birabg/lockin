@@ -141,7 +141,10 @@ export type Range = "today" | "week" | "all";
 export async function getLeaderboard(range: Range, limit = 50) {
   const from = range === "today" ? startOfDay() : range === "week" ? startOfWeek() : new Date(0);
   const totals = await totalsSince(from);
-  const top = [...totals.entries()].filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, limit);
+  const top = [...totals.entries()]
+    .filter(([, s]) => s > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit);
   const users = await db.user.findMany({
     where: { id: { in: top.map(([id]) => id) } },
     select: { id: true, username: true, name: true },

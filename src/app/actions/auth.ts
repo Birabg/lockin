@@ -37,7 +37,9 @@ export async function signup(_prev: FormState, form: FormData): Promise<FormStat
 }
 
 export async function login(_prev: FormState, form: FormData): Promise<FormState> {
-  const id = String(form.get("identifier") ?? "").trim().toLowerCase();
+  const id = String(form.get("identifier") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(form.get("password") ?? "");
   if (!id || !password) return { error: "Enter your email or username and password" };
 

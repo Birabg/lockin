@@ -106,7 +106,11 @@ export function MobileTopBar() {
   return (
     <div className="flex items-center justify-between py-3 lg:hidden">
       <Logo />
-      <Link href="/dashboard/people" className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset" aria-label="Find people">
+      <Link
+        href="/dashboard/people"
+        className="grid size-10 place-items-center rounded-full text-muted hover:bg-inset"
+        aria-label="Find people"
+      >
         <Users className="size-5" />
       </Link>
     </div>

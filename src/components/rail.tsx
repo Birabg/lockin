@@ -117,7 +117,10 @@ export function GuestBanner({ next = "/dashboard" }: { next?: string }) {
         <Flame className="size-[18px]" />
       </span>
       <p className="flex-1 text-[15px] font-bold">{brand.tagline} Start free.</p>
-      <Link href={`/login?next=${encodeURIComponent(next)}`} className="hidden px-3 text-sm font-semibold text-muted hover:text-foreground sm:block">
+      <Link
+        href={`/login?next=${encodeURIComponent(next)}`}
+        className="hidden px-3 text-sm font-semibold text-muted hover:text-foreground sm:block"
+      >
         Sign in
       </Link>
       <Link href="/signup" className="btn-3d rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">

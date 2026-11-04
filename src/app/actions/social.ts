@@ -49,7 +49,11 @@ export async function toggleFollow(targetId: string) {
 const profileSchema = z.object({
   name: z.string().trim().min(1).max(40),
   bio: z.string().trim().max(160).optional(),
-  dailyGoalMin: z.coerce.number().int().min(10).max(16 * 60),
+  dailyGoalMin: z.coerce
+    .number()
+    .int()
+    .min(10)
+    .max(16 * 60),
 });
 
 type ProfileState = { error?: string; ok?: boolean } | undefined;

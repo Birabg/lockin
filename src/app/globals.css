@@ -69,15 +69,28 @@ body {
 /* Tactile "pressable" buttons: a solid shadow that collapses on press */
 @utility btn-3d {
   box-shadow: 0 3px 0 var(--primary-shadow);
-  transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
-  &:hover { filter: brightness(1.06); }
-  &:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--primary-shadow); }
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease,
+    filter 120ms ease;
+  &:hover {
+    filter: brightness(1.06);
+  }
+  &:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--primary-shadow);
+  }
 }
 
 @utility btn-3d-muted {
   box-shadow: 0 3px 0 var(--border-shadow);
-  transition: transform 80ms ease, box-shadow 80ms ease;
-  &:active { transform: translateY(2px); box-shadow: none; }
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease;
+  &:active {
+    transform: translateY(2px);
+    box-shadow: none;
+  }
 }
 
 @utility panel {
@@ -91,7 +104,14 @@ body {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
-.animate-live { animation: pulse-dot 1.6s ease-in-out infinite; }
+.animate-live {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}

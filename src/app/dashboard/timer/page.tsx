@@ -10,7 +10,7 @@ export default async function TimerPage() {
   const [active, todaySec, live] = await Promise.all([getActiveSession(), getTodaySeconds(user.id), getFocusingNow(0)]);
   return (
     <div className="mx-auto max-w-[560px] pt-4 lg:pt-10">
-      <TimerClient active={active} todaySec={todaySec} dailyGoalMin={user.dailyGoalMin} liveCount={live.count} />
+      <TimerClient active={active} todaySec={todaySec} dailyGoalMin={user.dailyGoalMin} liveCount={live.count} serverNow={Date.now()} />
     </div>
   );
 }

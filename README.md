@@ -16,17 +16,17 @@ npm run dev                   # http://localhost:3000
 
 ## What's in it
 
-| Route | What it does |
-|---|---|
-| `/dashboard` | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
-| `/dashboard/timer` | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard |
-| `/dashboard/focusing` | Everyone with a live session |
-| `/dashboard/stats` | Today / week / streak / all-time tiles, 30-day bars against your goal, time by label |
-| `/dashboard/leaderboard` | Today / week / all-time rankings with follow buttons |
-| `/dashboard/people` | Search users and follow |
-| `/dashboard/u/[username]` | Public profile: streak, total time, followers, posts |
-| `/dashboard/settings` | Name, bio, daily goal, log out |
-| `/login`, `/signup` | Email or username + password |
+| Route                     | What it does                                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard`              | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
+| `/dashboard/timer`        | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard                                 |
+| `/dashboard/focusing`     | Everyone with a live session                                                                                                                 |
+| `/dashboard/stats`        | Today / week / streak / all-time tiles, 30-day bars against your goal, time by label                                                         |
+| `/dashboard/leaderboard`  | Today / week / all-time rankings with follow buttons                                                                                         |
+| `/dashboard/people`       | Search users and follow                                                                                                                      |
+| `/dashboard/u/[username]` | Public profile: streak, total time, followers, posts                                                                                         |
+| `/dashboard/settings`     | Name, bio, daily goal, log out                                                                                                               |
+| `/login`, `/signup`       | Email or username + password                                                                                                                 |
 
 Guests can browse the dashboard (public preview); focusing, posting, liking, commenting and following require an account.
 

@@ -13,7 +13,8 @@ function secret() {
   const s = process.env.AUTH_SECRET;
   if (!s || s.length < 16) throw new Error("AUTH_SECRET is missing or too short (see .env.example)");
   // The placeholder is public, so anyone could forge a login with it.
-  if (process.env.NODE_ENV === "production" && s === PLACEHOLDER_SECRET) throw new Error("Set a real AUTH_SECRET before running in production");
+  if (process.env.NODE_ENV === "production" && s === PLACEHOLDER_SECRET)
+    throw new Error("Set a real AUTH_SECRET before running in production");
   return new TextEncoder().encode(s);
 }
 

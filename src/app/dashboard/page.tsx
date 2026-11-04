@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { Clapperboard, Globe, RotateCw, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { getFeed, getFocusingNow, getLeaderboard, getStreak, getTodaySeconds, getWeekStrip, type FeedPost, type FeedTab } from "@/lib/queries";
+import {
+  getFeed,
+  getFocusingNow,
+  getLeaderboard,
+  getStreak,
+  getTodaySeconds,
+  getWeekStrip,
+  type FeedPost,
+  type FeedTab,
+} from "@/lib/queries";
 import { brand } from "@/lib/brand";
 import { dayKey, formatDayHeading } from "@/lib/time";
 import { PostCard } from "@/components/post-card";
@@ -79,12 +88,28 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             body="Screen-recorded session timelapses need media storage. The data model is ready — this tab lights up once uploads are wired in."
           />
         ) : tab === "following" && !user ? (
-          <EmptyState title="Follow people to fill this feed" body="Sign in, then follow friends from the leaderboard." action={<Link href="/signup" className={`${btnPrimary} h-10 text-sm`}>Join free</Link>} />
+          <EmptyState
+            title="Follow people to fill this feed"
+            body="Sign in, then follow friends from the leaderboard."
+            action={
+              <Link href="/signup" className={`${btnPrimary} h-10 text-sm`}>
+                Join free
+              </Link>
+            }
+          />
         ) : feed.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
-            body={tab === "following" ? "Follow people from the leaderboard or People page." : "Finish a focus session and share it to start the feed."}
-            action={<Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>Start focus</Link>}
+            body={
+              tab === "following"
+                ? "Follow people from the leaderboard or People page."
+                : "Finish a focus session and share it to start the feed."
+            }
+            action={
+              <Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>
+                Start focus
+              </Link>
+            }
           />
         ) : (
           groups.map((g) => (
