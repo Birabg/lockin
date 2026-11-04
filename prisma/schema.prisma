@@ -17,6 +17,7 @@ model User {
   bio          String?
   avatar       String?
   sceneId      String?
+  passwordChangedAt DateTime?
   dailyGoalMin Int      @default(60)
   /// IANA zone from the browser at signup. "Today", streaks and day totals use it.
   timeZone     String   @default("UTC")
@@ -35,6 +36,7 @@ model User {
   buddyInvites  Buddy[] @relation("addressee")
   roomsOwned    Room[]
   roomMembers   RoomMember[]
+  passwordResets PasswordReset[]
 }
 
 /// One timer run. status: ACTIVE | DONE | ABANDONED
@@ -128,6 +130,19 @@ model RoomMember {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([roomId, userId])
+  @@index([userId])
+}
+
+/// One-time password reset links. Only a hash of the token is kept.
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

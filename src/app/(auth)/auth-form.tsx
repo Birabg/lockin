@@ -5,7 +5,17 @@ import { useActionState, useEffect, useState } from "react";
 import { login, signup } from "@/app/actions/auth";
 import { btnPrimary, inputCls } from "@/components/ui";
 
-export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: string }) {
+export function AuthForm({
+  mode,
+  next,
+  canReset,
+  notice,
+}: {
+  mode: "login" | "signup";
+  next: string;
+  canReset?: boolean;
+  notice?: string;
+}) {
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, undefined);
   const isSignup = mode === "signup";
   const [timeZone, setTimeZone] = useState("");
@@ -55,10 +65,27 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
           />
         </>
       )}
+      {notice && !state?.error && <p className="text-sm text-primary-text">{notice}</p>}
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
       <button disabled={pending} className={`${btnPrimary} h-12 w-full`}>
         {pending ? "One sec…" : isSignup ? "Join free" : "Sign in"}
       </button>
+      {canReset && (
+        <p className="text-center text-sm">
+          <Link href="/forgot-password" className="font-semibold text-primary">
+            Forgot your password?
+          </Link>
+        </p>
+      )}
+      {isSignup && (
+        <p className="text-center text-xs text-subtle">
+          By joining you agree to our{" "}
+          <Link href="/privacy" className="underline">
+            privacy policy
+          </Link>
+          . Your profile and focus stats are public.
+        </p>
+      )}
       <p className="pt-1 text-center text-sm text-muted">
         {isSignup ? "Already have an account? " : "New here? "}
         <Link href={`/${isSignup ? "login" : "signup"}?next=${encodeURIComponent(next)}`} className="font-semibold text-primary">

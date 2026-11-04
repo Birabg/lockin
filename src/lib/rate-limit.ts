@@ -16,6 +16,8 @@ export const limits = {
   nudge: { max: 1, windowSec: 60 * 60 },
   room: { max: 20, windowSec: 60 * 60 },
   scene: { max: 60, windowSec: 60 },
+  resetIp: { max: 20, windowSec: 60 * 60 },
+  resetEmail: { max: 3, windowSec: 60 * 60 },
 } as const;
 
 type Limit = { max: number; windowSec: number };

@@ -42,6 +42,7 @@ const ownsKey = (key: string, kind: string, userId: string) => key.startsWith(`$
 
 export async function saveAvatar(key: string | null) {
   const user = await me();
+  const previous = user.avatar;
   if (key === null) {
     await db.user.update({ where: { id: user.id }, data: { avatar: null } });
   } else {
@@ -49,6 +50,10 @@ export async function saveAvatar(key: string | null) {
     if (!ownsKey(parsed, "avatar", user.id)) throw new Error("Not your file");
     await db.user.update({ where: { id: user.id }, data: { avatar: storage().publicUrl(parsed) } });
   }
+  if (previous)
+    await storage()
+      .remove(previous)
+      .catch((e) => console.error("Old avatar not deleted", e));
   revalidatePath("/dashboard", "layout");
 }
 

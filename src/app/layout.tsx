@@ -2,11 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/toaster";
 import { brand } from "@/lib/brand";
-
-const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL ?? (host ? `https://${host}` : "http://localhost:3000")),
+  metadataBase: new URL(siteUrl()),
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
   applicationName: brand.name,

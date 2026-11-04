@@ -1,6 +1,6 @@
 # Lockin
 
-A social focus-timer app: run focus sessions, keep a daily streak, see who's focusing right now, share sessions to a feed and climb the leaderboard. Layout and interaction model modelled on nuzz.space, under its own name and colors.
+A social focus-timer app: run focus sessions, keep a daily streak, see who's focusing right now, share sessions to a feed and climb the leaderboard.
 
 **Stack:** Next.js 16 (App Router, Server Actions) · React 19 · Tailwind CSS v4 · Prisma + Postgres · JWT cookie auth (jose + bcryptjs)
 
@@ -30,6 +30,7 @@ npm run dev                   # http://localhost:3000
 | `APP_URL`                                                                               | No        | Public address for social preview images. Vercel supplies its own.                                |
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | On Vercel | Bucket for avatars and timelapses.                                                                |
 | `S3_REGION`                                                                             | No        | Defaults to `auto`, which suits R2.                                                               |
+| `RESEND_API_KEY`, `EMAIL_FROM`                                                          | No        | Password reset emails. Without them the reset link is hidden in production.                       |
 | `UPLOAD_DIR`                                                                            | No        | Folder for local uploads. Defaults to `.uploads`.                                                 |
 
 ## Tests
@@ -44,22 +45,24 @@ The e2e test needs a migrated database in `DATABASE_URL` and writes to it, so us
 
 ## What's in it
 
-| Route                      | What it does                                                                                                                                 |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dashboard`               | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
-| `/dashboard/timer`         | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard                                 |
-| `/dashboard/focusing`      | Everyone with a live session                                                                                                                 |
-| `/dashboard/stats`         | Today / week / streak / all-time tiles, weekly recap, 30-day bars against your goal, time by label                                           |
-| `/dashboard/leaderboard`   | Today / week / all-time rankings with follow buttons                                                                                         |
-| `/dashboard/people`        | Search users and follow                                                                                                                      |
-| `/dashboard/u/[username]`  | Public profile: streak, total time, followers, posts                                                                                         |
-| `/dashboard/settings`      | Avatar, name, bio, daily goal, time zone, log out                                                                                            |
-| `/dashboard/notifications` | Likes, comments, follows, session starts, nudges and buddy requests                                                                          |
-| `/dashboard/buddies`       | Focus buddies: requests, streaks, live status, nudges                                                                                        |
-| `/dashboard/rooms`         | Create a live room or join one with its 6-character code                                                                                     |
-| `/dashboard/rooms/[code]`  | Everyone's timers in the room, ticking together                                                                                              |
-| `/card/[username]`         | Shareable streak card image (1200×630), also the profile's social preview                                                                    |
-| `/login`, `/signup`        | Email or username + password                                                                                                                 |
+| Route                                 | What it does                                                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard`                          | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
+| `/dashboard/timer`                    | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard                                 |
+| `/dashboard/focusing`                 | Everyone with a live session                                                                                                                 |
+| `/dashboard/stats`                    | Today / week / streak / all-time tiles, weekly recap, 30-day bars against your goal, time by label                                           |
+| `/dashboard/leaderboard`              | Today / week / all-time rankings with follow buttons                                                                                         |
+| `/dashboard/people`                   | Search users and follow                                                                                                                      |
+| `/dashboard/u/[username]`             | Public profile: streak, total time, followers, posts                                                                                         |
+| `/dashboard/settings`                 | Avatar, name, bio, daily goal, time zone, log out                                                                                            |
+| `/dashboard/notifications`            | Likes, comments, follows, session starts, nudges and buddy requests                                                                          |
+| `/dashboard/buddies`                  | Focus buddies: requests, streaks, live status, nudges                                                                                        |
+| `/dashboard/rooms`                    | Create a live room or join one with its 6-character code                                                                                     |
+| `/dashboard/rooms/[code]`             | Everyone's timers in the room, ticking together                                                                                              |
+| `/card/[username]`                    | Shareable streak card image (1200×630), also the profile's social preview                                                                    |
+| `/login`, `/signup`                   | Email or username + password                                                                                                                 |
+| `/forgot-password`, `/reset-password` | One-time emailed reset link, which signs out every device                                                                                    |
+| `/privacy`                            | Privacy page                                                                                                                                 |
 
 Guests can browse the dashboard (public preview); focusing, posting, liking, commenting and following require an account.
 
@@ -112,10 +115,17 @@ To add a photo, put a `.webp` (up to 2560px wide) in `public/scenes` and a 240px
 ## Deploying to Vercel with Neon
 
 1. **Database:** create a [Neon](https://neon.tech) project and copy two connection strings: pooled (`DATABASE_URL`) and direct (`DIRECT_URL`).
-2. **Media:** create a Cloudflare R2 or S3 bucket with public read access, and add a CORS rule allowing `PUT` with a `Content-Type` header from your site's address. Create an access key.
+2. **Media:** create a Cloudflare R2 or S3 bucket, turn on public access, and create an access key with read and write permission. Add this CORS rule, with your site's address:
+
+   ```json
+   [{ "AllowedOrigins": ["https://your-site.vercel.app"], "AllowedMethods": ["PUT"], "AllowedHeaders": ["content-type"] }]
+   ```
+
 3. **Project:** import the repo on [Vercel](https://vercel.com/new). It finds Next.js by itself.
-4. **Variables:** add `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` and the `S3_*` variables for Production.
+4. **Variables:** add `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` and the `S3_*` variables for Production. Add `RESEND_API_KEY` and `EMAIL_FROM` if you want password resets.
 5. **Deploy.** Vercel runs `vercel-build`, which applies pending migrations and then builds.
+
+After the first deploy, check that you can sign up, finish a session, upload an avatar, and open `/card/<username>`. Add a custom domain? Set `APP_URL` to it so reset links and preview images use it.
 
 Every deployment runs migrations against the database it's configured with. To keep preview deployments away from production data, give the Preview environment its own `DATABASE_URL` and `DIRECT_URL`, such as a Neon branch.
 

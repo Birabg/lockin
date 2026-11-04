@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { Avatar, PageHeader, btnGhost } from "@/components/ui";
 import { AvatarForm } from "./avatar-form";
+import { DeleteAccount } from "./delete-account";
 import { ProfileForm } from "./profile-form";
 
 export const metadata = { title: "Profile" };
@@ -27,6 +28,12 @@ export default async function SettingsPage() {
       <form action={logout} className="mt-4">
         <button className={`${btnGhost} h-11 w-full text-sm text-danger`}>Log out</button>
       </form>
+      <DeleteAccount />
+      <p className="mt-4 text-center text-xs">
+        <Link href="/privacy" className="text-subtle underline">
+          Privacy
+        </Link>
+      </p>
     </div>
   );
 }

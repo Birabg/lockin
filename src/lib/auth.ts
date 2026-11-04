@@ -38,12 +38,12 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-async function readUserId(): Promise<string | null> {
+async function readSession(): Promise<{ id: string; issuedAt: number } | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return typeof payload.sub === "string" ? payload.sub : null;
+    return typeof payload.sub === "string" ? { id: payload.sub, issuedAt: payload.iat ?? 0 } : null;
   } catch {
     return null;
   }
@@ -63,10 +63,10 @@ export type CurrentUser = {
 
 /** The signed-in user, or null for guests. Cached per request. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
-  const id = await readUserId();
-  if (!id) return null;
-  return db.user.findUnique({
-    where: { id },
+  const session = await readSession();
+  if (!session) return null;
+  const row = await db.user.findUnique({
+    where: { id: session.id },
     select: {
       id: true,
       username: true,
@@ -77,8 +77,14 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       dailyGoalMin: true,
       timeZone: true,
       sceneId: true,
+      passwordChangedAt: true,
     },
   });
+  if (!row) return null;
+  const { passwordChangedAt, ...user } = row;
+  // sessions are stateless, so this is what signs out every device after a password reset
+  if (passwordChangedAt && session.issuedAt < Math.floor(passwordChangedAt.getTime() / 1000)) return null;
+  return user;
 });
 
 export async function requireUser(next = "/dashboard"): Promise<CurrentUser> {
