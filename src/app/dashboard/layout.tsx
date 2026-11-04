@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const [user, active] = await Promise.all([getCurrentUser(), getActiveSession(), reapStaleSessions()]);
   const unread = user ? await getUnreadCount(user.id) : 0;
   return (
-    <div className="flex min-h-dvh">
+    <div data-app-chrome className="flex min-h-dvh">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 panel focus:px-4 focus:py-2">
         Skip to content
       </a>

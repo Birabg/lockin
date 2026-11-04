@@ -83,8 +83,8 @@ export async function deleteAccount(_prev: FormState, form: FormData): Promise<F
   const row = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
   if (!password.success || !row || !(await bcrypt.compare(password.data, row.passwordHash))) return { error: "That password isn't right" };
 
-  const posts = await db.post.findMany({ where: { userId: user.id, timelapseUrl: { not: null } }, select: { timelapseUrl: true } });
-  const files = [user.avatar, ...posts.map((p) => p.timelapseUrl)].filter((url): url is string => !!url);
+  const posts = await db.post.findMany({ where: { userId: user.id, mediaUrl: { not: null } }, select: { mediaUrl: true } });
+  const files = [user.avatar, ...posts.map((p) => p.mediaUrl)].filter((url): url is string => !!url);
 
   await db.$transaction(async (tx) => {
     // rooms outlive their creator, so the people still in them aren't thrown out

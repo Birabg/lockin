@@ -1,7 +1,7 @@
 import { requestUpload } from "@/app/actions/media";
 
 /** Sends a blob straight to storage and returns its key. */
-export async function uploadBlob(kind: "avatar" | "timelapse", blob: Blob): Promise<string> {
+export async function uploadBlob(kind: "avatar" | "timelapse" | "photo", blob: Blob): Promise<string> {
   const ticket = await requestUpload(kind, blob.type, blob.size);
   if ("error" in ticket) throw new Error(ticket.error);
   const res = await fetch(ticket.url, { method: "PUT", headers: ticket.headers, body: blob });

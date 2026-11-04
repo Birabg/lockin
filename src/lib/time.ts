@@ -1,6 +1,7 @@
 import { brand } from "./brand";
 
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
 
 const dayFormats = new Map<string, Intl.DateTimeFormat>();
 
@@ -75,6 +76,51 @@ export function formatTimer(totalSec: number): string {
   const sec = s % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+const tickFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** "9p", or "9:30p" when it isn't on the hour */
+function formatTick(date: Date, timeZone: string): string {
+  let format = tickFormats.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit", hour12: true });
+    tickFormats.set(timeZone, format);
+  }
+  const parts = format.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  const minute = part("minute");
+  return `${part("hour")}${minute === "00" ? "" : `:${minute}`}${part("dayPeriod").charAt(0).toLowerCase()}`;
+}
+
+/** How far past the hour a moment is on that zone's clock. Half-hour zones make this differ from UTC. */
+function msPastHour(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, minute: "numeric", second: "numeric" }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return (part("minute") * 60 + part("second")) * 1000 + date.getMilliseconds();
+}
+
+/**
+ * Places a session on a timeline of whole hours. The span is an even number of hours,
+ * so the middle tick lands on the hour too.
+ */
+export function sessionWindow(start: Date, end: Date, timeZone: string) {
+  const startMs = start.getTime();
+  const endMs = Math.max(end.getTime(), startMs);
+  const from = startMs - msPastHour(start, timeZone);
+  const hours = Math.max(1, Math.ceil((endMs - from) / HOUR));
+  const span = (hours + (hours % 2)) * HOUR;
+  const widthPct = Math.max(((endMs - startMs) / span) * 100, 2); // a very short session still shows
+  return {
+    leftPct: Math.min(((startMs - from) / span) * 100, 100 - widthPct),
+    widthPct,
+    ticks: [from, from + span / 2, from + span].map((t) => formatTick(new Date(t), timeZone)),
+  };
+}
+
+/** 950 -> "950", 1240 -> "1.2K" */
+export function formatCount(n: number): string {
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 }
 
 export function timeAgo(date: Date): string {

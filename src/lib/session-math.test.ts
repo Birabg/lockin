@@ -1,9 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { GRACE_MS, STALE_MS, activeSeconds, isExpired, runningSeconds } from "./session-math";
+import { GRACE_MS, STALE_MS, activeSeconds, isExpired, pausedSeconds, runningSeconds } from "./session-math";
 
 const start = new Date("2026-11-04T10:00:00Z");
 const after = (min: number) => new Date(start.getTime() + min * 60_000);
 const base = { startedAt: start, pausedSec: 0, pausedAt: null };
+
+describe("pausedSeconds", () => {
+  const at = new Date("2026-01-01T10:00:00Z");
+
+  it("adds a pause that's still running", () => {
+    expect(pausedSeconds({ pausedSec: 60, pausedAt: new Date("2026-01-01T09:58:00Z") }, at)).toBe(180);
+  });
+
+  it("is just the saved total when not paused", () => {
+    expect(pausedSeconds({ pausedSec: 60, pausedAt: null }, at)).toBe(60);
+  });
+});
 
 describe("activeSeconds", () => {
   it("counts time since the start", () => {

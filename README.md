@@ -1,5 +1,7 @@
 # Lockin
 
+**Live:** https://lockin-beige-three.vercel.app
+
 A social focus-timer app: run focus sessions, keep a daily streak, see who's focusing right now, share sessions to a feed and climb the leaderboard.
 
 **Stack:** Next.js 16 (App Router, Server Actions) · React 19 · Tailwind CSS v4 · Prisma + Postgres · JWT cookie auth (jose + bcryptjs)
@@ -28,7 +30,7 @@ npm run dev                   # http://localhost:3000
 | `DIRECT_URL`                                                                            | Yes       | Direct Postgres connection for migrations. Locally, the same as `DATABASE_URL`.                   |
 | `AUTH_SECRET`                                                                           | Yes       | Signs login cookies. Generate with `openssl rand -base64 32`. Production refuses the placeholder. |
 | `APP_URL`                                                                               | No        | Public address for social preview images. Vercel supplies its own.                                |
-| `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | On Vercel | Bucket for avatars and timelapses.                                                                |
+| `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | On Vercel | Bucket for avatars, photos and timelapses.                                                        |
 | `S3_REGION`                                                                             | No        | Defaults to `auto`, which suits R2.                                                               |
 | `RESEND_API_KEY`, `EMAIL_FROM`                                                          | No        | Password reset emails. Without them the reset link is hidden in production.                       |
 | `UPLOAD_DIR`                                                                            | No        | Folder for local uploads. Defaults to `.uploads`.                                                 |
@@ -85,6 +87,8 @@ The browser uploads files straight to storage, so large videos never pass throug
 
 - **Local disk** (default in dev): files go to `UPLOAD_DIR` (`.uploads`) and are served from `/media`.
 - **S3 or Cloudflare R2**: set the `S3_*` variables in `.env.example`. The bucket needs a CORS rule allowing `PUT` from your site. URLs are signed in `src/lib/s3-presign.ts`, with no AWS SDK.
+
+**Photos** can be added when finishing a session (5MB at most). The original goes straight to storage, then the server resizes it to 1600px WebP with sharp, which also drops location data, and deletes the original.
 
 **Timelapses** are opt-in on the timer. The browser asks to share a screen, keeps a small frame every 5 s, and turns them into a sped-up WebM when the session ends. Recording survives moving between pages, but not a full page reload.
 

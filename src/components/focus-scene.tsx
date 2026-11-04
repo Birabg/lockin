@@ -37,17 +37,33 @@ export function DrawnBackdrop({ scene }: { scene: DrawnScene }) {
 }
 
 /** The timer card. Darkened most at the top and bottom, and enough through the middle to keep white text readable on any photo. */
-export function FocusScene({ scene, children }: { scene: Scene; children: React.ReactNode }) {
+export function FocusScene({
+  scene,
+  children,
+  compact = false,
+  fullscreen = false,
+  className = "",
+}: {
+  scene: Scene;
+  children: React.ReactNode;
+  /** For feed cards: loads lazily, at card size. */
+  compact?: boolean;
+  /** Fills its parent, with no frame, and darkens only the top and bottom edges. */
+  fullscreen?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="relative isolate w-full overflow-hidden rounded-2xl border border-border bg-black text-white">
+    <div
+      className={`relative isolate w-full overflow-hidden bg-black text-white ${fullscreen ? "h-full" : "rounded-2xl border border-border"} ${className}`}
+    >
       {scene.kind === "image" ? (
         <Image
           key={scene.id}
           src={scene.image}
           alt=""
           fill
-          priority
-          sizes="(min-width: 640px) 560px, 100vw"
+          priority={!compact}
+          sizes={fullscreen ? "100vw" : compact ? "(min-width: 640px) 440px, 100vw" : "(min-width: 640px) 560px, 100vw"}
           className="-z-20 object-cover"
         />
       ) : (
@@ -55,8 +71,12 @@ export function FocusScene({ scene, children }: { scene: Scene; children: React.
           <DrawnBackdrop scene={scene} />
         </div>
       )}
-      <div className="absolute inset-0 -z-10 bg-linear-to-b from-black/65 via-black/35 to-black/70" aria-hidden />
-      <div className="[text-shadow:0_1px_3px_rgb(0_0_0/0.7)]">{children}</div>
+      {fullscreen ? (
+        <div className="absolute inset-0 -z-10 bg-linear-to-b from-black/65 via-transparent via-30% to-black/65" aria-hidden />
+      ) : (
+        <div className="absolute inset-0 -z-10 bg-linear-to-b from-black/65 via-black/35 to-black/70" aria-hidden />
+      )}
+      <div className={`[text-shadow:0_1px_3px_rgb(0_0_0/0.7)] ${fullscreen ? "size-full" : ""}`}>{children}</div>
     </div>
   );
 }

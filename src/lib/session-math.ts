@@ -13,6 +13,12 @@ export function activeSeconds(s: Timing, at: Date): number {
   return Math.max(0, Math.round((end.getTime() - s.startedAt.getTime()) / 1000) - s.pausedSec);
 }
 
+/** All paused time up to `at`, including a pause that's still running. */
+export function pausedSeconds(s: Pick<Timing, "pausedSec" | "pausedAt">, at: Date): number {
+  const open = s.pausedAt && s.pausedAt < at ? Math.round((at.getTime() - s.pausedAt.getTime()) / 1000) : 0;
+  return s.pausedSec + open;
+}
+
 /** Time to show for a running session: a silent one only counts up to its last heartbeat. */
 export function runningSeconds(s: Timing & { lastBeatAt: Date }, now: Date): number {
   const silent = now.getTime() - s.lastBeatAt.getTime() > STALE_MS;

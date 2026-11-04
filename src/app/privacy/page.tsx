@@ -6,15 +6,15 @@ export const metadata = { title: "Privacy" };
 const SECTIONS = [
   [
     "What we store",
-    "Your name, username, email, a hashed password, time zone, focus sessions, posts, comments, likes, follows, and any avatar you upload.",
+    "Your name, username, email, a hashed password, time zone, focus sessions, posts, comments, likes, follows, and any avatar or photo you upload. We count how many people viewed each post, once per person per day, and clear the record of who viewed it after a few days.",
   ],
   [
     "What others can see",
     "Your profile, streak, total focus time, posts and comments are public, including to people without an account. So is whether you're focusing right now.",
   ],
   [
-    "Timelapses",
-    "Recording is off unless you turn it on for a session, and your browser asks before sharing your screen. A finished timelapse is attached to your post, where anyone can watch it, so avoid recording anything private. Deleting the post deletes the video.",
+    "Photos and timelapses",
+    "A photo you add to a session is attached to your post, where anyone can see it. We resize it and remove its location data. Recording is off unless you turn it on for a session, and your browser asks before sharing your screen. A finished timelapse is attached to your post, where anyone can watch it, so avoid recording anything private. Deleting the post deletes the photo or video.",
   ],
   [
     "Cookies and storage",
@@ -26,7 +26,7 @@ const SECTIONS = [
   ],
   [
     "Deleting your data",
-    "You can delete your account in Settings. That removes your profile, sessions, posts, comments, likes, avatar and timelapses.",
+    "You can delete your account in Settings. That removes your profile, sessions, posts, comments, likes, avatar, photos and timelapses.",
   ],
 ];
 

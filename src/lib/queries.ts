@@ -140,7 +140,7 @@ const FEED_PAGE = 20;
 
 export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { take?: number; authorId?: string; cursor?: string } = {}) {
   const take = opts.take ?? FEED_PAGE;
-  let where: { userId?: string | { in: string[] }; timelapseUrl?: { not: null } } = {};
+  let where: { userId?: string | { in: string[] }; mediaType?: string } = {};
   if (opts.authorId) {
     where = { userId: opts.authorId };
   } else if (tab === "following") {
@@ -148,7 +148,7 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
     const follows = await db.follow.findMany({ where: { followerId: viewerId }, select: { followingId: true } });
     where = { userId: { in: [viewerId, ...follows.map((f) => f.followingId)] } };
   } else if (tab === "timelapses") {
-    where = { timelapseUrl: { not: null } };
+    where = { mediaType: "timelapse" };
   }
   const rows = await db.post.findMany({
     where,
@@ -156,8 +156,8 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
     take: take + 1,
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     include: {
-      user: { select: { id: true, username: true, name: true, avatar: true, timeZone: true } },
-      session: { select: { goalMin: true, startedAt: true, endedAt: true, durationSec: true, label: true } },
+      user: { select: { id: true, username: true, name: true, avatar: true, timeZone: true, sceneId: true } },
+      session: { select: { goalMin: true, startedAt: true, endedAt: true, durationSec: true, pausedSec: true, label: true } },
       _count: { select: { likes: true, comments: true } },
       likes: { where: { userId: viewerId ?? "__guest__" }, select: { userId: true } },
       comments: {
@@ -172,9 +172,11 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
   const posts = page.map((p) => ({
     id: p.id,
     body: p.body,
-    timelapseUrl: p.timelapseUrl,
+    mediaUrl: p.mediaUrl,
+    mediaType: p.mediaType,
+    views: p.views,
     createdAt: p.createdAt,
-    user: { id: p.user.id, username: p.user.username, name: p.user.name, avatar: p.user.avatar },
+    user: { id: p.user.id, username: p.user.username, name: p.user.name, avatar: p.user.avatar, sceneId: p.user.sceneId },
     streak: streaks.get(p.user.id) ?? 0,
     session: p.session,
     likeCount: p._count.likes,

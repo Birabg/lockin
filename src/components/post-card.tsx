@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
-import { Flame, Heart, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ChartNoAxesColumn, Flame, Heart, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
+import { SessionBody } from "./session-body";
 import { toast } from "./toaster";
-import { Avatar, GoalRing } from "./ui";
+import { Avatar } from "./ui";
 import { addComment, deleteComment, deletePost, toggleLike, type NewComment } from "@/app/actions/social";
-import { formatClock, formatDuration, timeAgo } from "@/lib/time";
+import { formatCount, timeAgo } from "@/lib/time";
+import { trackView } from "@/lib/view-tracker";
 import type { FeedPost } from "@/lib/queries";
 
 export type Viewer = { username: string; name: string; avatar: string | null };
@@ -26,13 +28,29 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   useEffect(() => setLike({ liked: post.liked, count: post.likeCount }), [post.liked, post.likeCount]);
   const [showComments, setShowComments] = useState(false);
   const [draft, setDraft] = useState("");
+  const card = useRef<HTMLElement>(null);
   const s = post.session;
-  const pct = s ? s.durationSec / (s.goalMin * 60) : 0;
   const createdAt = new Date(post.createdAt);
   const newComments = added.filter((c) => !post.comments.some((x) => x.id === c.id));
   const allComments = [...post.comments, ...newComments];
   const comments = allComments.filter((c) => !goneComments.includes(c.id));
   const commentCount = post.commentCount + newComments.length - (allComments.length - comments.length);
+
+  // a view is a card that's really been on screen, not just one the feed loaded
+  useEffect(() => {
+    const el = card.current;
+    if (!el || !signedIn || mine) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        trackView(post.id);
+        observer.disconnect();
+      },
+      { threshold: 0.25 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [post.id, signedIn, mine]);
 
   function onLike() {
     if (!signedIn) return router.push("/signup");
@@ -96,27 +114,31 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   if (removed) return null;
 
   return (
-    <article className="panel overflow-hidden">
-      <header className="flex items-center gap-3 p-4 pb-3">
+    <article ref={card} className="post-panel @container overflow-hidden">
+      <header className="flex items-center gap-3 p-4 pb-0">
         <Link href={`/dashboard/u/${post.user.username}`} aria-label={`${post.user.name}’s profile`}>
-          <Avatar name={post.user.name} src={post.user.avatar} size={40} />
+          <Avatar name={post.user.name} src={post.user.avatar} size={48} />
         </Link>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-[15px] font-bold">
             <Link href={`/dashboard/u/${post.user.username}`} className="truncate hover:underline">
               {post.user.name}
             </Link>
-            <span className="truncate text-xs font-medium text-subtle">@{post.user.username}</span>
+            {/* a verified badge goes here once accounts can earn one */}
+            <span className="truncate text-sm font-medium text-subtle">@{post.user.username}</span>
           </p>
-          <p className="flex items-center gap-2 text-xs text-muted">
+          <p className="flex items-center gap-1.5 text-[13px] text-muted">
             <time dateTime={createdAt.toISOString()} suppressHydrationWarning>
-              {timeAgo(createdAt)}
+              {timeAgo(createdAt).replace(" ago", "")}
             </time>
             {post.streak > 0 && (
-              <span className="flex items-center gap-0.5 font-bold text-streak">
-                <Flame className="size-3" fill="currentColor" />
-                {post.streak}d
-              </span>
+              <>
+                <span aria-hidden>·</span>
+                <span className="flex items-center gap-0.5 font-bold text-streak tabular">
+                  <Flame className="size-3.5" fill="currentColor" />
+                  {post.streak}d
+                </span>
+              </>
             )}
           </p>
         </div>
@@ -131,52 +153,10 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
         )}
       </header>
 
-      {s && (
-        <div className="mx-4 grid gap-3 rounded-xl border border-border bg-inset p-3 sm:grid-cols-[1fr_auto]">
-          <div className="flex flex-col justify-between gap-3">
-            <div>
-              <div className="flex items-baseline justify-between text-xs font-semibold text-muted">
-                <span>Session{s.label ? ` · ${s.label}` : ""}</span>
-                <span className="text-sm font-extrabold text-foreground tabular">{formatDuration(s.durationSec)}</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-background">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(pct, 1) * 100}%` }} />
-              </div>
-            </div>
-            <div className="flex justify-between text-[11px] text-subtle tabular">
-              <span>{formatClock(new Date(s.startedAt), timeZone)}</span>
-              <span>{s.endedAt ? formatClock(new Date(s.endedAt), timeZone) : "now"}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 sm:border-l sm:border-border sm:pl-4">
-            <GoalRing pct={pct} size={56} stroke={5}>
-              <span className="text-[11px] font-extrabold tabular">{Math.round(Math.min(pct, 9.99) * 100)}%</span>
-            </GoalRing>
-            <div>
-              <p className="text-lg leading-tight font-extrabold tabular">{formatDuration(s.durationSec)}</p>
-              <p className="text-xs text-muted">
-                {pct >= 1 ? "Hit" : "of"} {formatDuration(s.goalMin * 60)} goal
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <p className="px-4 pt-3 text-[15px] whitespace-pre-wrap">{post.body}</p>
-      {post.timelapseUrl && (
-        <video
-          src={post.timelapseUrl}
-          controls
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          aria-label="Session timelapse"
-          className="mt-3 w-full bg-black"
-        />
-      )}
+      {s && <SessionBody post={post} session={s} timeZone={timeZone} />}
 
-      <footer className="mt-2 flex items-center gap-1 border-t border-border/60 px-2 py-1.5">
+      <footer className="mt-3 flex items-center gap-1 border-t border-border px-2 py-1.5">
         <button
           onClick={onLike}
           disabled={pending}
@@ -184,21 +164,26 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
           aria-pressed={like.liked}
           aria-label={`Like, ${like.count} so far`}
         >
-          <Heart className="size-4" fill={like.liked ? "currentColor" : "none"} /> {like.count}
+          <Heart className="size-4" fill={like.liked ? "currentColor" : "none"} /> <span className="tabular">{like.count}</span>
         </button>
         <button
           onClick={() => setShowComments((v) => !v)}
+          aria-expanded={showComments}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-muted hover:bg-inset"
         >
-          <MessageCircle className="size-4" /> {commentCount || "Comment"}
+          <MessageCircle className="size-4" /> Comment {commentCount > 0 && <span className="tabular">{commentCount}</span>}
         </button>
-        <button onClick={onShare} className="ml-auto rounded-full p-2 text-muted hover:bg-inset" aria-label="Copy a link to this profile">
+        <span className="ml-auto flex items-center gap-1.5 px-2 text-sm font-semibold text-muted tabular">
+          <ChartNoAxesColumn className="size-4" aria-hidden />
+          <span className="sr-only">Views:</span> {formatCount(post.views)}
+        </span>
+        <button onClick={onShare} className="rounded-full p-2 text-muted hover:bg-inset" aria-label="Copy a link to this profile">
           <Share2 className="size-4" />
         </button>
       </footer>
 
       {showComments && (
-        <div className="border-t border-border/60 px-4 py-3">
+        <div className="border-t border-border px-4 py-3">
           <ul className="flex flex-col gap-2.5">
             {comments.map((c) => (
               <li key={c.id} className="flex gap-2.5 text-sm">

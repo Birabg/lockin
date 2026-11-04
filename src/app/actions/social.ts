@@ -9,7 +9,7 @@ import { notify, unnotify } from "@/lib/notifications";
 import { getFeed, type FeedTab } from "@/lib/queries";
 import { allow, limits } from "@/lib/rate-limit";
 import { storage } from "@/lib/storage";
-import { isValidTimeZone } from "@/lib/time";
+import { dayKey, isValidTimeZone, shiftDayKey } from "@/lib/time";
 
 async function me() {
   const user = await getCurrentUser();
@@ -75,18 +75,37 @@ export async function createPost(body: string): Promise<Result> {
   return {};
 }
 
+/** Counts each signed-in viewer once per post per day. Your own posts don't count. */
+export async function recordViews(postIds: string[]): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const ids = z.array(idSchema).max(50).parse(postIds);
+  if (ids.length === 0 || !(await allow(`views:${user.id}`, limits.views))) return;
+  const day = dayKey(new Date(), user.timeZone);
+  // only rows that were really inserted add to the count, which is what keeps it once a day
+  await db.$executeRaw`
+    WITH fresh AS (
+      INSERT INTO "PostView" ("postId", "userId", "day")
+      SELECT "id", ${user.id}::text, ${day}::text FROM "Post" WHERE "id" = ANY(${ids}::text[]) AND "userId" <> ${user.id}::text
+      ON CONFLICT DO NOTHING
+      RETURNING "postId"
+    )
+    UPDATE "Post" SET "views" = "views" + 1 WHERE "id" IN (SELECT "postId" FROM fresh)`;
+  if (Math.random() < 0.01) await db.postView.deleteMany({ where: { day: { lt: shiftDayKey(day, -2) } } });
+}
+
 /** Deleting a post keeps its session, so stats and streaks don't change. */
 export async function deletePost(postId: string): Promise<Result> {
   const user = await me();
   const id = idSchema.parse(postId);
-  const post = await db.post.findFirst({ where: { id, userId: user.id }, select: { timelapseUrl: true } });
+  const post = await db.post.findFirst({ where: { id, userId: user.id }, select: { mediaUrl: true } });
   if (!post) return { error: "That post is gone" };
   await db.$transaction([db.notification.deleteMany({ where: { postId: id } }), db.post.delete({ where: { id } })]);
-  // screen recordings can hold private things, so the file goes too, not just the link
-  if (post.timelapseUrl)
+  // photos and screen recordings can hold private things, so the file goes too, not just the link
+  if (post.mediaUrl)
     await storage()
-      .remove(post.timelapseUrl)
-      .catch((e) => console.error("Timelapse not deleted", post.timelapseUrl, e));
+      .remove(post.mediaUrl)
+      .catch((e) => console.error("Post media not deleted", post.mediaUrl, e));
   revalidatePath("/dashboard", "layout");
   return {};
 }

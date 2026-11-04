@@ -53,7 +53,8 @@
   --color-live: var(--live);
   --color-danger: var(--danger);
   --radius-card: var(--radius);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    var(--font-app), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, "Segoe UI", Roboto, sans-serif;
 }
 
 html {
@@ -78,6 +79,26 @@ body {
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
+}
+
+/* A running session owns the screen. Hidden, not removed, so the page keeps its state. */
+html[data-immersive],
+html[data-immersive] body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html[data-immersive] [data-app-chrome] {
+  visibility: hidden;
+}
+
+@keyframes immersive-in {
+  from {
+    opacity: 0;
+  }
+}
+.animate-immersive-in {
+  animation: immersive-in 400ms ease;
 }
 
 /* Tactile "pressable" buttons: a solid shadow that collapses on press */
@@ -113,8 +134,17 @@ body {
   border-radius: var(--radius);
 }
 
+/* Feed cards: slightly raised, like the 3D buttons */
+@utility post-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 3px 0 var(--border-shadow);
+}
+
 @utility tabular {
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 @keyframes pulse-dot {

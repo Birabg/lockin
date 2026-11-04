@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "./db";
-import { activeSeconds, isExpired, STALE_MS } from "./session-math";
+import { activeSeconds, isExpired, pausedSeconds, STALE_MS } from "./session-math";
 import { dayKey } from "./time";
 
 type Closable = { id: string; userId: string; startedAt: Date; pausedSec: number; pausedAt: Date | null };
@@ -11,7 +11,15 @@ export async function finishSession(s: Closable, end: Date, timeZone: string) {
   return db.$transaction(async (tx) => {
     const { count } = await tx.focusSession.updateMany({
       where: { id: s.id, status: "ACTIVE" },
-      data: { status: "DONE", endedAt: end, lastBeatAt: end, durationSec, pausedAt: null, activeKey: null },
+      data: {
+        status: "DONE",
+        endedAt: end,
+        lastBeatAt: end,
+        durationSec,
+        pausedSec: pausedSeconds(s, end),
+        pausedAt: null,
+        activeKey: null,
+      },
     });
     if (count === 0) {
       const row = await tx.focusSession.findUnique({ where: { id: s.id }, select: { durationSec: true } });

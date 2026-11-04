@@ -37,6 +37,7 @@ model User {
   roomsOwned    Room[]
   roomMembers   RoomMember[]
   passwordResets PasswordReset[]
+  postViews     PostView[]
 }
 
 /// One timer run. status: ACTIVE | DONE | ABANDONED
@@ -159,7 +160,10 @@ model Post {
   id           String   @id @default(cuid())
   userId       String
   sessionId    String?  @unique
-  timelapseUrl String?
+  mediaUrl     String?
+  /// "image" | "timelapse"
+  mediaType    String?
+  views        Int      @default(0)
   body         String
   createdAt    DateTime @default(now())
 
@@ -167,9 +171,24 @@ model Post {
   session  FocusSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   likes    Like[]
   comments Comment[]
+  viewers  PostView[]
 
   @@index([createdAt, id])
   @@index([userId, createdAt, id])
+}
+
+/// One row per viewer per post per day, so a view only counts once a day. Old days are cleared out.
+model PostView {
+  postId String
+  userId String
+  /// "YYYY-MM-DD" in the viewer's zone
+  day    String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId, day])
+  @@index([day])
 }
 
 model Like {

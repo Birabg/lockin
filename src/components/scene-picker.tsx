@@ -31,23 +31,61 @@ function Thumb({ scene, selected, onPick }: { scene: Scene; selected: boolean; o
   );
 }
 
+type PanelProps = {
+  current: Scene;
+  onPick: (id: string) => void;
+  onClose: () => void;
+  /** Centred above the bottom of the screen, instead of hanging from a button. */
+  centered?: boolean;
+};
+
 /** A popover on desktop and a bottom sheet on mobile, from one element. */
-export function ScenePicker({ current, onPick }: { current: Scene; onPick: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
+export function ScenePanel({ current, onPick, onClose, centered = false }: PanelProps) {
   const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
 
   useEffect(() => {
-    if (!open) return;
     panel.current?.querySelector<HTMLElement>("[data-selected]")?.focus();
     function onKey(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      trigger.current?.focus();
+      if (e.key === "Escape") close.current();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, []);
+
+  const desktop = centered
+    ? "sm:inset-x-auto sm:bottom-24 sm:left-1/2 sm:-translate-x-1/2"
+    : "sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:bottom-auto sm:mt-2";
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/50 sm:bg-transparent" onClick={onClose} aria-hidden />
+      <div
+        ref={panel}
+        role="dialog"
+        aria-label="Choose a background"
+        className={`fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-[16px] text-foreground [text-shadow:none] sm:w-[360px] sm:rounded-2xl ${desktop}`}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-bold">Background</h2>
+          <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-full text-muted hover:bg-inset">
+            <X className="size-4" aria-hidden />
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {scenes.map((s) => (
+            <Thumb key={s.id} scene={s} selected={s.id === current.id} onPick={() => onPick(s.id)} />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function ScenePicker({ current, onPick }: { current: Scene; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="relative">
@@ -61,34 +99,14 @@ export function ScenePicker({ current, onPick }: { current: Scene; onPick: (id: 
         <ImageIcon className="size-4" aria-hidden /> Background
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-50 bg-black/50 sm:bg-transparent" onClick={() => setOpen(false)} aria-hidden />
-          <div
-            ref={panel}
-            role="dialog"
-            aria-label="Choose a background"
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:bottom-auto sm:mt-2 sm:w-[360px] sm:rounded-2xl"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-bold">Background</h2>
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  trigger.current?.focus();
-                }}
-                aria-label="Close"
-                className="grid size-8 place-items-center rounded-full text-muted hover:bg-inset"
-              >
-                <X className="size-4" aria-hidden />
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {scenes.map((s) => (
-                <Thumb key={s.id} scene={s} selected={s.id === current.id} onPick={() => onPick(s.id)} />
-              ))}
-            </div>
-          </div>
-        </>
+        <ScenePanel
+          current={current}
+          onPick={onPick}
+          onClose={() => {
+            setOpen(false);
+            trigger.current?.focus();
+          }}
+        />
       )}
     </div>
   );

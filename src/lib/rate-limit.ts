@@ -10,6 +10,7 @@ export const limits = {
   post: { max: 30, windowSec: 60 * 60 },
   comment: { max: 60, windowSec: 60 * 60 },
   like: { max: 60, windowSec: 60 },
+  views: { max: 60, windowSec: 60 },
   follow: { max: 60, windowSec: 60 },
   upload: { max: 20, windowSec: 60 * 60 },
   buddy: { max: 30, windowSec: 60 * 60 },

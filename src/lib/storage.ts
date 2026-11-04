@@ -7,6 +7,7 @@ import { presignUrl } from "./s3-presign";
 export const UPLOADS = {
   avatar: { maxBytes: 2 * 1024 * 1024, types: { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" } },
   timelapse: { maxBytes: 80 * 1024 * 1024, types: { "video/webm": "webm", "video/mp4": "mp4" } },
+  photo: { maxBytes: 5 * 1024 * 1024, types: { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" } },
 } as const;
 
 export type UploadKind = keyof typeof UPLOADS;
@@ -19,6 +20,9 @@ type StorageAdapter = {
   publicUrl(key: string): string;
   /** Deletes the file behind a URL from publicUrl. */
   remove(url: string): Promise<void>;
+  /** For server-side processing. Null when the file isn't there. */
+  read(key: string): Promise<Uint8Array | null>;
+  write(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
 };
 
 const SAFE_KEY = /^[a-z]+s\/[A-Za-z0-9_-]+\/[A-Za-z0-9-]+\.[a-z0-9]+$/;
@@ -41,6 +45,8 @@ const local: StorageAdapter = {
     const key = url.replace(/^\/media\//, "");
     if (isSafeKey(key)) await rm(localPath(key), { force: true });
   },
+  read: (key) => readLocalFile(key),
+  write: (key, bytes) => writeLocalFile(key, bytes),
 };
 
 /** Checks a ticket from local.createUpload and returns what it allows. */
@@ -68,7 +74,7 @@ function s3(): StorageAdapter {
     return value;
   };
   const bucket = env("S3_BUCKET");
-  const signed = (method: "PUT" | "DELETE", key: string, headers?: Record<string, string>) =>
+  const signed = (method: "GET" | "PUT" | "DELETE", key: string, headers?: Record<string, string>) =>
     presignUrl({
       method,
       endpoint: env("S3_ENDPOINT"),
@@ -94,6 +100,17 @@ function s3(): StorageAdapter {
       if (!url.startsWith(base()) || !isSafeKey(key)) return;
       const res = await fetch(signed("DELETE", key), { method: "DELETE" });
       if (!res.ok) throw new Error(`Storage delete failed: ${res.status}`);
+    },
+    async read(key) {
+      const res = await fetch(signed("GET", key));
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`Storage read failed: ${res.status}`);
+      return new Uint8Array(await res.arrayBuffer());
+    },
+    async write(key, bytes, contentType) {
+      const headers = { "Content-Type": contentType };
+      const res = await fetch(signed("PUT", key, headers), { method: "PUT", headers, body: new Uint8Array(bytes) });
+      if (!res.ok) throw new Error(`Storage write failed: ${res.status}`);
     },
   };
 }

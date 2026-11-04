@@ -1,5 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { dayKey, formatDuration, formatTimer, isValidTimeZone, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
+import {
+  dayKey,
+  formatCount,
+  formatDuration,
+  formatTimer,
+  isValidTimeZone,
+  sessionWindow,
+  shiftDayKey,
+  weekStartKey,
+  weekdayLetter,
+} from "./time";
+
+describe("sessionWindow", () => {
+  it("places a session by its real times on whole hours", () => {
+    const w = sessionWindow(new Date("2026-01-01T21:30:00Z"), new Date("2026-01-01T23:00:00Z"), "UTC");
+    expect(w.ticks).toEqual(["9p", "10p", "11p"]);
+    expect(w.leftPct).toBe(25);
+    expect(w.widthPct).toBe(75);
+  });
+
+  it("runs past midnight", () => {
+    const w = sessionWindow(new Date("2026-01-01T21:10:00Z"), new Date("2026-01-02T00:50:00Z"), "UTC");
+    expect(w.ticks).toEqual(["9p", "11p", "1a"]);
+  });
+
+  it("uses the clock of half-hour zones", () => {
+    const w = sessionWindow(new Date("2026-01-01T15:45:00Z"), new Date("2026-01-01T16:15:00Z"), "Asia/Kolkata");
+    expect(w.ticks).toEqual(["9p", "10p", "11p"]);
+    expect(w.leftPct).toBe(12.5);
+  });
+
+  it("keeps a tiny session visible and inside the track", () => {
+    const w = sessionWindow(new Date("2026-01-01T21:59:50Z"), new Date("2026-01-01T22:00:00Z"), "UTC");
+    expect(w.widthPct).toBe(2);
+    expect(w.leftPct + w.widthPct).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("formatCount", () => {
+  it("shortens big numbers", () => {
+    expect(formatCount(950)).toBe("950");
+    expect(formatCount(1240)).toBe("1.2K");
+  });
+});
 
 describe("dayKey", () => {
   const instant = new Date("2026-03-10T23:30:00Z");

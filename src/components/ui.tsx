@@ -16,12 +16,23 @@ export function Logo({ className = "" }: { className?: string }) {
 
 const PALETTE = ["#8b80f9", "#4ade80", "#f5b366", "#6ec9d4", "#e85a6e", "#d4b06f", "#a78bfa", "#60a5fa"];
 
-type AvatarProps = { name: string; src?: string | null; size?: number; live?: boolean };
-
-export function Avatar({ name, src, size = 36, live = false }: AvatarProps) {
+/** The same name always gets the same colour. */
+export function colorFor(name: string) {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const bg = PALETTE[h % PALETTE.length];
+  return PALETTE[h % PALETTE.length];
+}
+
+type AvatarProps = {
+  name: string;
+  src?: string | null;
+  size?: number;
+  /** Any CSS length, for avatars that scale with the screen. Replaces size. */
+  cssSize?: string;
+  live?: boolean;
+};
+
+export function Avatar({ name, src, size = 36, cssSize, live = false }: AvatarProps) {
   const initials = name
     .split(/\s+/)
     .map((p) => p[0])
@@ -29,14 +40,14 @@ export function Avatar({ name, src, size = 36, live = false }: AvatarProps) {
     .slice(0, 2)
     .toUpperCase();
   return (
-    <span className="relative inline-block shrink-0" style={{ width: size, height: size }}>
+    <span className="relative inline-block shrink-0" style={{ width: cssSize ?? size, height: cssSize ?? size }}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- remote hosts vary by deployment, and these are already 256px
         <img src={src} alt="" width={size} height={size} className="size-full rounded-full object-cover" />
       ) : (
         <span
           className="grid size-full place-items-center rounded-full font-bold text-[#0a0a0b]"
-          style={{ background: bg, fontSize: size * 0.38 }}
+          style={{ background: colorFor(name), fontSize: cssSize ? `calc(${cssSize} * 0.38)` : size * 0.38 }}
           aria-hidden
         >
           {initials}
@@ -55,6 +66,8 @@ export function GoalRing({
   stroke = 6,
   color = "var(--primary)",
   track = "var(--inset)",
+  minArc = 0,
+  cssSize,
   children,
 }: {
   pct: number;
@@ -62,27 +75,34 @@ export function GoalRing({
   stroke?: number;
   color?: string;
   track?: string;
+  /** Smallest share of the ring to draw for any progress above zero, so a thick stroke doesn't shrink to a stray dash. */
+  minArc?: number;
+  /** Any CSS length, for rings that scale with the screen. size and stroke then only set the proportions. */
+  cssSize?: string;
   children?: React.ReactNode;
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.min(Math.max(pct, 0), 1);
+  const shown = clamped > 0 ? Math.max(clamped, minArc) : 0;
   return (
-    <div className="relative grid place-items-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div className="relative grid shrink-0 place-items-center" style={{ width: cssSize ?? size, height: cssSize ?? size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} className="size-full -rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - clamped)}
-          style={{ transition: "stroke-dashoffset 400ms ease" }}
-        />
+        {shown > 0 && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={c * (1 - shown)}
+            style={{ transition: "stroke-dashoffset 400ms ease" }}
+          />
+        )}
       </svg>
       <div className="absolute inset-0 grid place-items-center">{children}</div>
     </div>

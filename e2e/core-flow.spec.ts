@@ -29,7 +29,7 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
 
   await page.goto("/dashboard/timer");
   await page.getByRole("button", { name: "Start focus" }).click();
-  await expect(page.getByRole("button", { name: "Finish session" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden(); // the session owns the screen
 
   // sessions under a minute aren't posted, so move this one 20 minutes into the past instead of waiting
   const user = await db.user.findUniqueOrThrow({ where: { username: focuser } });
@@ -37,10 +37,14 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   await db.focusSession.updateMany({ where: { userId: user.id, status: "ACTIVE" }, data: { startedAt } });
   await page.reload();
 
+  await page.locator("[data-immersive-view]").waitFor();
+  await page.mouse.move(300, 300); // the controls stay hidden until there's activity
+  await page.mouse.move(320, 320);
   await page.getByRole("button", { name: "Finish session" }).click();
   await page.getByPlaceholder(/how did it go/i).fill(note);
   await page.getByRole("button", { name: "Save session" }).click();
   await expect(page.getByRole("button", { name: "Start focus" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
 
   await page.goto("/dashboard");
 

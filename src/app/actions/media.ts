@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { resizePhoto } from "@/lib/photo";
 import { allow, limits } from "@/lib/rate-limit";
 import { UPLOADS, isSafeKey, storage, type UploadTicket } from "@/lib/storage";
 
@@ -15,13 +16,13 @@ async function me() {
 }
 
 const requestSchema = z.object({
-  kind: z.enum(["avatar", "timelapse"]),
+  kind: z.enum(["avatar", "timelapse", "photo"]),
   contentType: z.string().max(40),
   size: z.number().int().positive(),
 });
 
 export async function requestUpload(
-  kind: "avatar" | "timelapse",
+  kind: "avatar" | "timelapse" | "photo",
   contentType: string,
   size: number,
 ): Promise<UploadTicket | { error: string }> {
@@ -62,7 +63,43 @@ export async function attachTimelapse(postId: string, key: string) {
   const id = z.string().min(1).max(64).parse(postId);
   const parsed = keySchema.parse(key);
   if (!ownsKey(parsed, "timelapse", user.id)) throw new Error("Not your file");
-  const { count } = await db.post.updateMany({ where: { id, userId: user.id }, data: { timelapseUrl: storage().publicUrl(parsed) } });
+  const { count } = await db.post.updateMany({
+    where: { id, userId: user.id },
+    data: { mediaUrl: storage().publicUrl(parsed), mediaType: "timelapse" },
+  });
   if (count === 0) throw new Error("That post is gone");
   revalidatePath("/dashboard", "layout");
+}
+
+/**
+ * The browser uploads the original, because a 5MB file is too big to pass through a Vercel function.
+ * Only the resized copy is kept, so what's stored has been decoded as a real image and has no location data.
+ */
+export async function attachPhoto(postId: string, key: string): Promise<{ error?: string }> {
+  const user = await me();
+  const id = z.string().min(1).max(64).parse(postId);
+  const parsed = keySchema.parse(key);
+  if (!ownsKey(parsed, "photo", user.id)) throw new Error("Not your file");
+  const store = storage();
+  try {
+    const original = await store.read(parsed);
+    if (!original) return { error: "That upload didn't finish. Try again." };
+    const webp = await resizePhoto(original).catch(() => null);
+    if (!webp) return { error: "That file isn't an image we can read" };
+
+    const resized = `photos/${user.id}/${randomUUID()}.webp`;
+    await store.write(resized, webp, "image/webp");
+    const { count } = await db.post.updateMany({
+      where: { id, userId: user.id, mediaUrl: null },
+      data: { mediaUrl: store.publicUrl(resized), mediaType: "image" },
+    });
+    if (count === 0) {
+      await store.remove(store.publicUrl(resized));
+      return { error: "That post can't take a photo" };
+    }
+    revalidatePath("/dashboard", "layout");
+    return {};
+  } finally {
+    await store.remove(store.publicUrl(parsed)).catch((e) => console.error("Original photo not deleted", e));
+  }
 }
