@@ -2,7 +2,7 @@
 
 A social focus-timer app: run focus sessions, keep a daily streak, see who's focusing right now, share sessions to a feed and climb the leaderboard. Layout and interaction model modelled on nuzz.space, under its own name and colors.
 
-**Stack:** Next.js 15 (App Router, Server Actions) · React 19 · Tailwind CSS v4 · Prisma + Postgres · JWT cookie auth (jose + bcryptjs)
+**Stack:** Next.js 16 (App Router, Server Actions) · React 19 · Tailwind CSS v4 · Prisma + Postgres · JWT cookie auth (jose + bcryptjs)
 
 ## Run it
 

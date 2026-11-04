@@ -24,7 +24,8 @@ type StorageAdapter = {
 const SAFE_KEY = /^[a-z]+s\/[A-Za-z0-9_-]+\/[A-Za-z0-9-]+\.[a-z0-9]+$/;
 export const isSafeKey = (key: string) => SAFE_KEY.test(key);
 
-const localDir = () => process.env.UPLOAD_DIR ?? ".uploads";
+// the hint stops Turbopack tracing the whole project into the server bundle
+const localPath = (key: string) => join(/* turbopackIgnore: true */ process.env.UPLOAD_DIR ?? ".uploads", key);
 const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET ?? "");
 
 const local: StorageAdapter = {
@@ -38,7 +39,7 @@ const local: StorageAdapter = {
   publicUrl: (key) => `/media/${key}`,
   async remove(url) {
     const key = url.replace(/^\/media\//, "");
-    if (isSafeKey(key)) await rm(join(localDir(), key), { force: true });
+    if (isSafeKey(key)) await rm(localPath(key), { force: true });
   },
 };
 
@@ -50,14 +51,14 @@ export async function readLocalTicket(token: string) {
 
 export async function writeLocalFile(key: string, bytes: Uint8Array) {
   if (!isSafeKey(key)) throw new Error("Bad key");
-  const path = join(localDir(), key);
+  const path = localPath(key);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, bytes);
 }
 
 export async function readLocalFile(key: string) {
   if (!isSafeKey(key)) return null;
-  return readFile(join(localDir(), key)).catch(() => null);
+  return readFile(localPath(key)).catch(() => null);
 }
 
 function s3(): StorageAdapter {

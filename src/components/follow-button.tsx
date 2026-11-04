@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useOptimistic, useTransition } from "react";
 import { toggleFollow } from "@/app/actions/social";
 import { toast } from "./toaster";
 
 export function FollowButton({ userId, following, signedIn }: { userId: string; following: boolean; signedIn: boolean }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [on, setOn] = useOptimistic(following, (v) => !v);
   return (
@@ -12,7 +14,7 @@ export function FollowButton({ userId, following, signedIn }: { userId: string; 
       disabled={pending}
       aria-pressed={on}
       onClick={() => {
-        if (!signedIn) return void (window.location.href = "/signup");
+        if (!signedIn) return router.push("/signup");
         start(async () => {
           setOn(null);
           const res = await toggleFollow(userId);

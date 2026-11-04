@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Flame, Heart, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
 import { toast } from "./toaster";
@@ -12,6 +13,7 @@ import type { FeedPost } from "@/lib/queries";
 export type Viewer = { username: string; name: string; avatar: string | null };
 
 export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: Viewer | null; timeZone: string }) {
+  const router = useRouter();
   const signedIn = !!viewer;
   const mine = viewer?.username === post.user.username;
   const [removed, setRemoved] = useState(false);
@@ -33,7 +35,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   const commentCount = post.commentCount + newComments.length - (allComments.length - comments.length);
 
   function onLike() {
-    if (!signedIn) return (window.location.href = "/signup");
+    if (!signedIn) return router.push("/signup");
     const before = like;
     setLike({ liked: !before.liked, count: before.count + (before.liked ? -1 : 1) });
     start(async () => {
