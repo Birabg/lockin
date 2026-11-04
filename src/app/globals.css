@@ -128,6 +128,332 @@ html[data-immersive] [data-app-chrome] {
   animation: lock-pulse 600ms ease-out forwards;
 }
 
+/* ---- Splash screen. Its timings come from src/lib/splash.ts, through the variables on .splash ---- */
+.splash {
+  --s: 3; /* how much bigger than the real logo it plays */
+  --clock: calc(var(--draw) + var(--sweep));
+  --lift: -14px; /* how far above its final place the shackle waits */
+  display: none;
+  place-items: center;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--background);
+  color: var(--foreground);
+  user-select: none;
+}
+@media (max-width: 400px) {
+  .splash {
+    --s: 2.5;
+  }
+}
+html[data-splash] .splash {
+  display: grid;
+}
+html[data-splash="reveal"] .splash {
+  animation: splash-out var(--fade) ease-out forwards;
+  animation-duration: var(--fade) !important; /* reduced motion still fades */
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-splash="reveal"] .splash {
+    animation-name: splash-fade;
+  }
+}
+.splash-lockup {
+  gap: 0;
+  transform: scale(var(--s));
+}
+.splash-stage line,
+.splash-stage circle,
+.splash-arc,
+.splash-shackle {
+  fill: none;
+  stroke: var(--primary);
+}
+.splash-ticks line {
+  stroke-width: 0.5;
+  stroke-linecap: round;
+  animation: splash-show var(--draw) ease-out both;
+}
+.splash-ring {
+  stroke-width: 1;
+  stroke-dasharray: 1;
+  animation: splash-trace var(--draw) cubic-bezier(0.4, 0, 0.3, 1) both;
+}
+.splash-fill {
+  stroke-width: 2.4;
+  stroke-opacity: 0.35;
+  stroke-dasharray: 1;
+  animation: splash-trace var(--sweep) cubic-bezier(0.2, 0.7, 0.2, 1) var(--draw) both;
+}
+.splash-hand-turn,
+.splash-hand,
+.splash-face,
+.splash-arc,
+.splash-pulse {
+  transform-origin: 14px 14px;
+}
+.splash-hand-turn {
+  animation:
+    splash-turn var(--sweep) cubic-bezier(0.2, 0.7, 0.2, 1) var(--draw) both,
+    splash-turn var(--loop) linear var(--clock) infinite;
+}
+.splash-hand {
+  animation: splash-show 60ms linear calc(var(--draw) - 60ms) both;
+}
+.splash-hand line {
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+.splash-hand > circle:not(.splash-trail) {
+  fill: var(--primary);
+  stroke: none;
+}
+.splash-stage .splash-trail {
+  stroke-width: 19;
+  stroke-opacity: 0.16;
+  stroke-dasharray: 0.1 1;
+}
+.splash-stage .splash-trail-long {
+  stroke-opacity: 0.07;
+  stroke-dasharray: 0.2 1;
+}
+.splash-arc,
+.splash-shackle,
+.splash-pulse,
+.splash-tile,
+.splash-glyph {
+  opacity: 0;
+}
+.splash-arc {
+  stroke-width: 1;
+}
+.splash-shackle {
+  stroke-width: 1.34;
+  translate: 0 var(--lift);
+}
+.splash-parts .splash-shackle {
+  stroke: var(--primary-foreground);
+}
+.splash-keyhole {
+  fill: var(--primary-foreground);
+  opacity: 0;
+  transform-origin: 14px 16.33px;
+  transform: scale(0.16, 0.42);
+}
+.splash-flash {
+  opacity: 0;
+  background: var(--foreground);
+}
+.splash-word {
+  display: grid;
+  grid-template-columns: 0fr;
+}
+.splash-word-text {
+  opacity: 0;
+}
+
+/* the lock forms and snaps shut */
+html[data-splash-phase="lock"] .splash-hand-turn {
+  animation-play-state: paused;
+}
+html[data-splash-phase="lock"] .splash-hand {
+  animation: splash-hand-out calc(var(--form) * 0.6) ease-in both;
+}
+html[data-splash-phase="lock"] .splash-face {
+  animation: splash-face-out var(--form) ease-in-out both;
+}
+html[data-splash-phase="lock"] .splash-arc {
+  animation: splash-arc var(--form) cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-splash-phase="lock"] .splash-tile {
+  opacity: 1;
+  animation: splash-tile var(--form) cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+html[data-splash-phase="lock"] .splash-shackle {
+  animation:
+    splash-shackle-in calc(var(--form) * 0.3) linear calc(var(--form) * 0.7) both,
+    splash-drop var(--snap) ease-in var(--form) both;
+}
+html[data-splash-phase="lock"] .splash-keyhole {
+  animation:
+    splash-shackle-in calc(var(--form) * 0.4) linear calc(var(--form) * 0.6) both,
+    splash-open calc(var(--snap) * 0.4) ease-out var(--impact) both;
+}
+html[data-splash-phase="lock"] .splash-flash {
+  animation: splash-flash 200ms ease-out var(--impact) forwards;
+}
+html[data-splash-phase="lock"] .splash-pulse {
+  stroke-width: 1;
+  animation: splash-pulse 420ms ease-out var(--impact) forwards;
+}
+html[data-splash-phase="lock"] .splash-glyph {
+  animation: splash-show 1ms linear calc(var(--form) + var(--snap)) both;
+}
+html[data-splash-phase="lock"] .splash-parts {
+  animation: splash-hide 1ms linear calc(var(--form) + var(--snap)) both;
+}
+html[data-splash-phase="lock"] .splash-word {
+  animation: splash-word var(--word) ease-out calc(var(--form) + var(--snap)) both;
+}
+html[data-splash-phase="lock"] .splash-word-text {
+  animation: splash-word-text var(--word) ease-out calc(var(--form) + var(--snap)) both;
+}
+
+/* straight to the finished logo: a skip, or reduced motion */
+html[data-splash-phase="end"] .splash * {
+  animation: none !important;
+}
+html[data-splash-phase="end"] .splash-stage,
+html[data-splash-phase="end"] .splash-parts,
+html[data-splash-phase="end"] .splash-flash {
+  display: none;
+}
+html[data-splash-phase="end"] .splash-tile,
+html[data-splash-phase="end"] .splash-glyph,
+html[data-splash-phase="end"] .splash-word-text {
+  opacity: 1;
+}
+html[data-splash-phase="end"] .splash-word {
+  grid-template-columns: 1fr;
+}
+
+@keyframes splash-trace {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes splash-show {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes splash-hide {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes splash-turn {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes splash-hand-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+}
+@keyframes splash-face-out {
+  to {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+@keyframes splash-arc {
+  from {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    stroke-width: 10;
+    transform: translateY(-16.67px) scale(0.133);
+  }
+}
+@keyframes splash-tile {
+  from {
+    opacity: 0;
+    transform: scale(1.43);
+    border-radius: 50%;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@keyframes splash-shackle-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes splash-drop {
+  from {
+    translate: 0 var(--lift);
+  }
+  60% {
+    translate: 0 calc(4px / var(--s));
+    animation-timing-function: ease-out;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@keyframes splash-open {
+  to {
+    transform: none;
+  }
+}
+@keyframes splash-flash {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes splash-pulse {
+  from {
+    opacity: 0.8;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 2.6;
+  }
+}
+@keyframes splash-word {
+  to {
+    grid-template-columns: 1fr;
+  }
+}
+@keyframes splash-word-text {
+  from {
+    opacity: 0;
+    transform: translateY(60%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+@keyframes splash-fade {
+  to {
+    opacity: 0;
+  }
+}
+
 /* Tactile "pressable" buttons: a solid shadow that collapses on press */
 @utility btn-3d {
   box-shadow: 0 3px 0 var(--primary-shadow);

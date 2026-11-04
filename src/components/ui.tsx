@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { brand } from "@/lib/brand";
+import { LOCK_PATH, brand } from "@/lib/brand";
+
+/** Shared with the splash screen, which has to end on exactly this. */
+export const logoStyle = {
+  lockup: "flex items-center gap-2 text-[22px] font-black tracking-tight",
+  tile: "grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground",
+  glyph: "size-4",
+};
 
 export function Logo({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   return (
-    <Link href="/dashboard" className={`flex items-center gap-2 text-[22px] font-black tracking-tight ${className}`}>
-      <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
-        <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
-          <path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1Zm2 0h6V8a3 3 0 0 0-6 0v2Z" />
+    <Link href="/dashboard" className={`${logoStyle.lockup} ${className}`}>
+      <span className={logoStyle.tile}>
+        <svg viewBox="0 0 24 24" className={logoStyle.glyph} fill="currentColor" aria-hidden>
+          <path d={LOCK_PATH} />
         </svg>
       </span>
       <span className={compact ? "sr-only" : "lowercase"}>{brand.name}</span>

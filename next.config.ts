@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // a stylesheet holds back the first paint, which is a blank white page on a slow connection
+  experimental: { inlineCss: true },
   serverExternalPackages: ["bcryptjs"],
   async headers() {
     return [

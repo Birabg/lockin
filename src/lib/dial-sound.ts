@@ -48,9 +48,9 @@ export function playTick() {
   if (!muted) click(1500, 500, 0.05, 28);
 }
 
-export function playLock() {
-  buzz(20);
-  if (muted) return;
+export function playLock(vibrateMs = 20, sound = true) {
+  buzz(vibrateMs);
+  if (muted || !sound) return;
   click(900, 240, 0.12, 60);
   click(420, 130, 0.14, 90, 55);
 }
