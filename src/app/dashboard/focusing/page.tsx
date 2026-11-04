@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 
 export default async function FocusingPage() {
   const { count, sessions } = await getFocusingNow(200);
-  const now = Date.now();
   return (
     <div className="mx-auto max-w-[720px] lg:pt-6">
       <PageHeader title="Focusing now" subtitle={`${count} ${count === 1 ? "person is" : "people are"} in a session right now.`} />
@@ -25,7 +24,6 @@ export default async function FocusingPage() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {sessions.map((s) => {
-            const sec = Math.round((now - s.startedAt.getTime()) / 1000);
             return (
               <li key={s.user.id}>
                 <Link href={`/dashboard/u/${s.user.username}`} className="panel flex items-center gap-3 p-4 hover:border-primary/40">
@@ -35,7 +33,7 @@ export default async function FocusingPage() {
                     <span className="block truncate text-xs text-muted">{s.label ?? "Deep work"}</span>
                   </span>
                   <span className="text-right">
-                    <span className="block text-sm font-extrabold tabular">{formatDuration(sec)}</span>
+                    <span className="block text-sm font-extrabold tabular">{formatDuration(s.sec)}</span>
                     <span className="block text-[11px] text-subtle">of {formatDuration(s.goalMin * 60)}</span>
                   </span>
                 </Link>

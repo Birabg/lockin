@@ -100,6 +100,29 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
   );
 }
 
+export function Pager({ page, hasNext, href }: { page: number; hasNext: boolean; href: (page: number) => string }) {
+  if (page === 1 && !hasNext) return null;
+  return (
+    <nav aria-label="Pages" className="mt-4 flex items-center justify-between text-sm font-bold">
+      {page > 1 ? (
+        <Link href={href(page - 1)} className="text-primary">
+          ← Previous
+        </Link>
+      ) : (
+        <span />
+      )}
+      <span className="text-subtle">Page {page}</span>
+      {hasNext ? (
+        <Link href={href(page + 1)} className="text-primary">
+          Next →
+        </Link>
+      ) : (
+        <span />
+      )}
+    </nav>
+  );
+}
+
 export const btnPrimary =
   "btn-3d inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 font-bold text-primary-foreground disabled:opacity-50";
 export const btnGhost =

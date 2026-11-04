@@ -35,11 +35,25 @@ Guests can browse the dashboard (public preview); focusing, posting, liking, com
 - **Focusing now**: an `ACTIVE` session whose `lastBeatAt` is under 90 s old. Every dashboard page sends a heartbeat every 30 s and on tab focus (`FocusHeartbeat` in the dashboard layout).
 - **Going quiet**: with no heartbeat for 3 min (locked phone, closed tab), a session stops adding to totals but stays open until 10 min past its goal. Come back before then and the whole session counts.
 - **Closed tabs**: after that, the session is closed at its last heartbeat and can't be revived (`isExpired`, `reapStaleSessions`). You can still save a note and share it.
-- **Streak**: consecutive days with at least 1 focused minute; today not being done yet doesn't break it. Days are computed in `brand.timeZone`.
+- **Pause**: paused time is stored on the session (`pausedSec`, `pausedAt`) and left out of `durationSec`.
+- **One session at a time**: `activeKey` holds the user id while a session is `ACTIVE`, and its unique index stops a second one. Other tabs follow along through a `BroadcastChannel`.
+- **Days**: each user has a `timeZone`, taken from the browser at signup and editable in settings. Finished time is added to `DailyStat` for the user's own calendar day that the session started on.
+- **Streak**: consecutive days with at least 1 focused minute; today not being done yet doesn't break it.
+- **Leaderboard**: "today" and "this week" are the viewer's dates, matched against each person's own calendar days.
+- **Rate limits**: counters live in the `RateLimit` table so they hold across serverless instances. Limits are in `src/lib/rate-limit.ts`.
+
+## Upgrading an existing database
+
+After pulling schema changes on a database with data in it:
+
+```bash
+npx prisma db push
+npm run db:backfill   # sets time zones and rebuilds DailyStat from sessions
+```
 
 ## Rebrand
 
-- Name, tagline, time zone, default goal: `src/lib/brand.ts`
+- Name, tagline, fallback time zone, default goal: `src/lib/brand.ts`
 - Colors: the `--primary*` tokens at the top of `src/app/globals.css`
 - Logo mark: `Logo` in `src/components/ui.tsx`
 

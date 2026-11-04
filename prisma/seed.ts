@@ -1,6 +1,8 @@
 /* Demo data: npm run db:seed  (all demo accounts use password "password123") */
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { brand } from "../src/lib/brand";
+import { rebuildStats } from "./rebuild-stats";
 
 const db = new PrismaClient();
 const DAY = 86_400_000;
@@ -46,7 +48,15 @@ async function main() {
   for (const [name, username, bio] of PEOPLE) {
     users.push(
       await db.user.create({
-        data: { name, username, bio, email: `${username}@demo.local`, passwordHash, dailyGoalMin: pick([60, 90, 120, 180]) },
+        data: {
+          name,
+          username,
+          bio,
+          email: `${username}@demo.local`,
+          passwordHash,
+          timeZone: brand.timeZone,
+          dailyGoalMin: pick([60, 90, 120, 180]),
+        },
       }),
     );
   }
@@ -110,6 +120,7 @@ async function main() {
       if (a.id !== b.id && Math.random() < 0.4) await db.follow.create({ data: { followerId: a.id, followingId: b.id } });
 
   await db.post.create({ data: { userId: users[5].id, body: "Yo I'm new here 👋" } });
+  await rebuildStats(db);
   console.log(`Seeded ${users.length} users. Log in as abel / password123`);
 }
 

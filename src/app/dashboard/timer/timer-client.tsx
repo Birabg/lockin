@@ -2,13 +2,23 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Play, Radio, Square, Trash2 } from "lucide-react";
-import { discardFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
+import { Check, Pause, Play, Radio, Square, Trash2 } from "lucide-react";
+import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
+import { notifyFocusChange } from "@/components/focus-heartbeat";
 import { GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { activeSeconds } from "@/lib/session-math";
 import { formatDuration, formatTimer } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
 const PRESETS = [25, 50, 90, 120];
+
+const elapsedSeconds = (s: ActiveSession, now: number) =>
+  activeSeconds(
+    { startedAt: new Date(s.startedAt), pausedSec: s.pausedSec, pausedAt: s.pausedAt ? new Date(s.pausedAt) : null },
+    new Date(now),
+  );
+
+const stateKey = (s: ActiveSession | null) => (s ? `${s.id}:${s.pausedSec}:${s.pausedAt}` : "");
 
 type Props = { active: ActiveSession | null; todaySec: number; dailyGoalMin: number; liveCount: number; serverNow: number };
 
@@ -26,7 +36,8 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
   const [pending, start] = useTransition();
   const notified = useRef(false);
 
-  const elapsed = session ? Math.max(0, (now - new Date(session.startedAt).getTime()) / 1000) : 0;
+  const elapsed = session ? elapsedSeconds(session, now) : 0;
+  const paused = !!session?.pausedAt;
   const goalSec = (session?.goalMin ?? goal) * 60;
   const pct = elapsed / goalSec;
 
@@ -38,14 +49,15 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
     return () => clearInterval(id);
   }, [session]);
 
-  // follow the server when the session ends or starts elsewhere (timed out, another tab).
+  // follow the server when the session changes elsewhere (another tab or device, or it timed out).
   // While wrapping up we keep it, so the note can still be saved.
+  const serverState = stateKey(active);
   useEffect(() => {
-    if (pending || finishing || active?.id === session?.id) return;
-    if (session && !active) setError("That session timed out. It was saved up to your last check-in.");
+    if (pending || finishing || serverState === stateKey(session)) return;
+    if (session && !active) setError("That session ended in another tab or timed out. Your time up to then is saved.");
     setSession(active);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id]);
+  }, [serverState]);
 
   // tab title + goal notification
   useEffect(() => {
@@ -68,6 +80,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         setNow(Date.now());
         setSession(s);
         setDone(null);
+        notifyFocusChange();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Couldn't start");
       }
@@ -85,9 +98,25 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         setNote("");
         setDone(res.ok ? res.durationSec : null);
         if (!res.ok) setError("That session was already discarded.");
+        notifyFocusChange();
         router.refresh();
       } catch {
         setError("Couldn't save the session. Check your connection and try again.");
+      }
+    });
+  }
+
+  function onTogglePause() {
+    if (!session) return;
+    setError(null);
+    start(async () => {
+      try {
+        const next = await (paused ? resumeFocus(session.id) : pauseFocus(session.id));
+        setNow(Date.now());
+        setSession(next);
+        notifyFocusChange();
+      } catch {
+        setError("Couldn't update the session. Check your connection and try again.");
       }
     });
   }
@@ -100,6 +129,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         await discardFocus(session.id);
         setSession(null);
         setFinishing(false);
+        notifyFocusChange();
         router.refresh();
       } catch {
         setError("Couldn't discard the session. Check your connection and try again.");
@@ -120,7 +150,7 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
               {session ? formatTimer(elapsed) : formatTimer(goal * 60)}
             </p>
             <p className="mt-2 text-sm font-semibold text-muted">
-              {session ? (pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`) : "Ready"}
+              {!session ? "Ready" : paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
             </p>
             {session?.label && <p className="mt-1 text-xs font-bold text-primary-text">{session.label}</p>}
           </div>
@@ -178,6 +208,14 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
         <div className="mt-10 flex w-full gap-3">
           <button onClick={onDiscard} disabled={pending} className={`${btnGhost} h-14 px-5`} aria-label="Discard session">
             <Trash2 className="size-5 text-muted" />
+          </button>
+          <button
+            onClick={onTogglePause}
+            disabled={pending}
+            className={`${btnGhost} h-14 px-5`}
+            aria-label={paused ? "Resume session" : "Pause session"}
+          >
+            {paused ? <Play className="size-5 fill-current" /> : <Pause className="size-5 fill-current" />}
           </button>
           <button onClick={() => setFinishing(true)} disabled={pending} className={`${btnPrimary} h-14 flex-1 text-base`}>
             <Square className="size-4 fill-current" /> Finish session

@@ -1,30 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Flame, Heart, MessageCircle, Send, Share2 } from "lucide-react";
 import { Avatar, GoalRing } from "./ui";
-import { addComment, toggleLike } from "@/app/actions/social";
+import { addComment, toggleLike, type NewComment } from "@/app/actions/social";
 import { formatClock, formatDuration, timeAgo } from "@/lib/time";
 import type { FeedPost } from "@/lib/queries";
 
-export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean }) {
+export function PostCard({ post, signedIn, timeZone }: { post: FeedPost; signedIn: boolean; timeZone: string }) {
   const [pending, start] = useTransition();
-  const [like, setLike] = useOptimistic({ liked: post.liked, count: post.likeCount }, (s) => ({
-    liked: !s.liked,
-    count: s.count + (s.liked ? -1 : 1),
-  }));
+  const [like, setLike] = useState({ liked: post.liked, count: post.likeCount });
+  const [added, setAdded] = useState<NewComment[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Pages loaded by scrolling never get new props, so this state is what keeps their likes correct.
+  useEffect(() => setLike({ liked: post.liked, count: post.likeCount }), [post.liked, post.likeCount]);
   const [showComments, setShowComments] = useState(false);
   const [draft, setDraft] = useState("");
   const s = post.session;
   const pct = s ? s.durationSec / (s.goalMin * 60) : 0;
   const createdAt = new Date(post.createdAt);
+  const newComments = added.filter((c) => !post.comments.some((x) => x.id === c.id));
+  const comments = [...post.comments, ...newComments];
+  const commentCount = post.commentCount + newComments.length;
 
   function onLike() {
     if (!signedIn) return (window.location.href = "/signup");
+    const before = like;
+    setLike({ liked: !before.liked, count: before.count + (before.liked ? -1 : 1) });
+    setError(null);
     start(async () => {
-      setLike(null);
-      await toggleLike(post.id);
+      const res = await toggleLike(post.id);
+      if (res.error) {
+        setLike(before);
+        setError(res.error);
+      }
     });
   }
 
@@ -32,7 +43,17 @@ export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean
     e.preventDefault();
     const body = draft;
     setDraft("");
-    start(() => addComment(post.id, body));
+    setError(null);
+    start(async () => {
+      const res = await addComment(post.id, body);
+      if (res.comment) {
+        const comment = res.comment;
+        setAdded((list) => [...list, comment]);
+      } else if (res.error) {
+        setDraft(body);
+        setError(res.error);
+      }
+    });
   }
 
   async function onShare() {
@@ -81,8 +102,8 @@ export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean
               </div>
             </div>
             <div className="flex justify-between text-[11px] text-subtle tabular">
-              <span>{formatClock(new Date(s.startedAt))}</span>
-              <span>{s.endedAt ? formatClock(new Date(s.endedAt)) : "now"}</span>
+              <span>{formatClock(new Date(s.startedAt), timeZone)}</span>
+              <span>{s.endedAt ? formatClock(new Date(s.endedAt), timeZone) : "now"}</span>
             </div>
           </div>
           <div className="flex items-center gap-3 sm:border-l sm:border-border sm:pl-4">
@@ -114,17 +135,18 @@ export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean
           onClick={() => setShowComments((v) => !v)}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-muted hover:bg-inset"
         >
-          <MessageCircle className="size-4" /> {post.commentCount || "Comment"}
+          <MessageCircle className="size-4" /> {commentCount || "Comment"}
         </button>
         <button onClick={onShare} className="ml-auto rounded-full p-2 text-muted hover:bg-inset" aria-label="Share">
           <Share2 className="size-4" />
         </button>
       </footer>
+      {error && <p className="px-4 pb-2 text-sm text-danger">{error}</p>}
 
       {showComments && (
         <div className="border-t border-border/60 px-4 py-3">
           <ul className="flex flex-col gap-2.5">
-            {post.comments.map((c) => (
+            {comments.map((c) => (
               <li key={c.id} className="flex gap-2.5 text-sm">
                 <Avatar name={c.user.name} size={26} />
                 <p>
@@ -135,7 +157,7 @@ export function PostCard({ post, signedIn }: { post: FeedPost; signedIn: boolean
                 </p>
               </li>
             ))}
-            {post.comments.length === 0 && <li className="text-sm text-muted">No comments yet.</li>}
+            {comments.length === 0 && <li className="text-sm text-muted">No comments yet.</li>}
           </ul>
           {signedIn ? (
             <form onSubmit={onComment} className="mt-3 flex items-center gap-2">

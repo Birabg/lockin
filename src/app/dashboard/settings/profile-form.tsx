@@ -4,7 +4,9 @@ import { useActionState } from "react";
 import { updateProfile } from "@/app/actions/social";
 import { btnPrimary, inputCls } from "@/components/ui";
 
-export function ProfileForm({ user }: { user: { name: string; bio: string; dailyGoalMin: number } }) {
+type Props = { user: { name: string; bio: string; dailyGoalMin: number; timeZone: string }; timeZones: string[] };
+
+export function ProfileForm({ user, timeZones }: Props) {
   const [state, action, pending] = useActionState(updateProfile, undefined);
   return (
     <form action={action} className="panel space-y-4 p-4">
@@ -19,6 +21,17 @@ export function ProfileForm({ user }: { user: { name: string; bio: string; daily
       <label className="block">
         <span className="mb-1.5 block text-sm font-semibold text-muted">Daily goal (minutes)</span>
         <input name="dailyGoalMin" type="number" min={10} max={960} defaultValue={user.dailyGoalMin} className={inputCls} />
+      </label>
+      <label className="block">
+        <span className="mb-1.5 block text-sm font-semibold text-muted">Time zone</span>
+        <select name="timeZone" defaultValue={user.timeZone} className={inputCls}>
+          {timeZones.map((tz) => (
+            <option key={tz} value={tz}>
+              {tz}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-subtle">Your day and streak follow this. Past days stay as they were.</span>
       </label>
       {state?.error && <p className="text-sm text-danger">{state.error}</p>}
       {state?.ok && <p className="text-sm text-live">Saved.</p>}

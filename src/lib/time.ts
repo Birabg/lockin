@@ -1,63 +1,60 @@
 import { brand } from "./brand";
 
-const TZ = brand.timeZone;
 const DAY = 86_400_000;
 
-/** Offset (ms) of TZ from UTC at a given instant. */
-function tzOffset(date: Date): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(date);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
-  return asUtc - Math.floor(date.getTime() / 1000) * 1000;
+const dayFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** "YYYY-MM-DD" for the calendar day in a time zone. */
+export function dayKey(date: Date, timeZone: string): string {
+  let format = dayFormats.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat("en-CA", { timeZone });
+    dayFormats.set(timeZone, format);
+  }
+  return format.format(date);
 }
 
-/** "YYYY-MM-DD" for the calendar day in TZ. */
-export function dayKey(date: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(date);
+const keyToUtc = (key: string) => {
+  const [y, m, d] = key.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+};
+
+/** Move a day key by whole calendar days. Pure date maths, so daylight saving can't skip a day. */
+export function shiftDayKey(key: string, days: number): string {
+  return new Date(keyToUtc(key) + days * DAY).toISOString().slice(0, 10);
 }
 
-/** Start of the TZ calendar day containing `date`, as a real instant. */
-export function startOfDay(date = new Date()): Date {
-  const [y, m, d] = dayKey(date).split("-").map(Number);
-  const guess = Date.UTC(y, m - 1, d);
-  return new Date(guess - tzOffset(new Date(guess)));
+/** The Monday of the week containing a day key. */
+export function weekStartKey(key: string): string {
+  const weekday = new Date(keyToUtc(key)).getUTCDay(); // 0 = Sun
+  return shiftDayKey(key, -((weekday + 6) % 7));
 }
 
-export function addDays(date: Date, n: number): Date {
-  return new Date(date.getTime() + n * DAY);
+export function weekdayLetter(key: string): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "narrow" }).format(keyToUtc(key));
 }
 
-/** Start of the week (Monday) in TZ. */
-export function startOfWeek(date = new Date()): Date {
-  const sod = startOfDay(date);
-  const weekday = new Date(sod.getTime() + tzOffset(sod)).getUTCDay(); // 0 = Sun
-  const back = (weekday + 6) % 7;
-  return startOfDay(addDays(sod, -back));
+export function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function weekdayLetter(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "narrow" }).format(date);
+export const defaultTimeZone = brand.timeZone;
+
+export function formatClock(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(date);
 }
 
-export function formatClock(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(date);
-}
-
-export function formatDayHeading(date: Date): string {
-  const today = dayKey(new Date());
-  const key = dayKey(date);
+export function formatDayHeading(date: Date, timeZone: string): string {
+  const today = dayKey(new Date(), timeZone);
+  const key = dayKey(date, timeZone);
   if (key === today) return "Today";
-  if (key === dayKey(addDays(new Date(), -1))) return "Yesterday";
-  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", month: "short", day: "numeric" }).format(date);
+  if (key === shiftDayKey(today, -1)) return "Yesterday";
+  return new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric" }).format(date);
 }
 
 /** 5400 -> "1h 30m", 90 -> "1m", 0 -> "0m" */
@@ -70,7 +67,7 @@ export function formatDuration(totalSec: number): string {
   return `${m}m`;
 }
 
-/** 1h 05m 09s style clock for the running timer */
+/** 01:05:09 style clock for the running timer */
 export function formatTimer(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
   const h = Math.floor(s / 3600);

@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import { Flame } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { brand } from "@/lib/brand";
 import { getFeed, getProfile, getStreak } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
 import { Avatar, EmptyState } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
-import { PostCard } from "@/components/post-card";
+import { FeedList } from "@/components/feed-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   return { title: `@${(await params).username}` };
@@ -18,10 +19,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const profile = await getProfile(username, viewer?.id ?? null);
   if (!profile) notFound();
 
-  const [streak, total, posts] = await Promise.all([
-    getStreak(profile.id),
+  const [streak, total, feed] = await Promise.all([
+    getStreak(profile),
     db.focusSession.aggregate({ where: { userId: profile.id, status: "DONE" }, _sum: { durationSec: true } }),
-    getFeed(viewer?.id ?? null, "global", { authorId: profile.id, take: 30 }),
+    getFeed(viewer?.id ?? null, "global", { authorId: profile.id }),
   ]);
 
   const stats = [
@@ -57,10 +58,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       </section>
 
       <div className="mt-4 space-y-3">
-        {posts.length === 0 ? (
+        {feed.posts.length === 0 ? (
           <EmptyState title="No posts yet" body={`${profile.name} hasn’t shared a session yet.`} />
         ) : (
-          posts.map((p) => <PostCard key={p.id} post={p} signedIn={!!viewer} />)
+          <FeedList
+            initial={feed.posts}
+            hasMore={feed.hasMore}
+            tab="global"
+            authorId={profile.id}
+            signedIn={!!viewer}
+            timeZone={viewer?.timeZone ?? brand.timeZone}
+          />
         )}
       </div>
     </div>

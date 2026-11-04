@@ -1,22 +1,12 @@
 import Link from "next/link";
 import { Clapperboard, Globe, RotateCw, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import {
-  getFeed,
-  getFocusingNow,
-  getLeaderboard,
-  getStreak,
-  getTodaySeconds,
-  getWeekStrip,
-  type FeedPost,
-  type FeedTab,
-} from "@/lib/queries";
+import { getFeed, getFocusingNow, getLeaderboard, getStreak, getTodaySeconds, getWeekStrip, type FeedTab } from "@/lib/queries";
 import { brand } from "@/lib/brand";
-import { dayKey, formatDayHeading } from "@/lib/time";
-import { PostCard } from "@/components/post-card";
+import { FeedList } from "@/components/feed-list";
 import { Composer } from "@/components/composer";
 import { FocusingNowCard, GuestBanner, LeaderboardCard, StreakCard } from "@/components/rail";
-import { EmptyState, SectionTitle, btnPrimary } from "@/components/ui";
+import { EmptyState, btnPrimary } from "@/components/ui";
 
 const TABS = [
   { id: "global", label: "Global", icon: Globe },
@@ -29,24 +19,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const tab = (TABS.find((t) => t.id === tabParam)?.id ?? "global") as (typeof TABS)[number]["id"];
   const user = await getCurrentUser();
   const goalMin = user?.dailyGoalMin ?? brand.defaultDailyGoalMin;
+  const timeZone = user?.timeZone ?? brand.timeZone;
 
   const [feed, live, board, streak, todaySec, week] = await Promise.all([
-    tab === "timelapses" ? Promise.resolve([] as FeedPost[]) : getFeed(user?.id ?? null, tab as FeedTab),
+    tab === "timelapses" ? Promise.resolve({ posts: [], hasMore: false }) : getFeed(user?.id ?? null, tab as FeedTab),
     getFocusingNow(),
-    getLeaderboard("today", 3),
-    user ? getStreak(user.id) : Promise.resolve({ current: 0, best: 0 }),
-    user ? getTodaySeconds(user.id) : Promise.resolve(0),
-    getWeekStrip(user?.id ?? null, goalMin),
+    getLeaderboard("today", timeZone, { pageSize: 3 }),
+    user ? getStreak(user) : Promise.resolve({ current: 0, best: 0 }),
+    user ? getTodaySeconds(user) : Promise.resolve(0),
+    getWeekStrip(user, timeZone, goalMin),
   ]);
-
-  // group posts under day headings
-  const groups: { heading: string; posts: typeof feed }[] = [];
-  for (const p of feed) {
-    const heading = formatDayHeading(p.createdAt);
-    const last = groups.at(-1);
-    if (last && dayKey(last.posts[0].createdAt) === dayKey(p.createdAt)) last.posts.push(p);
-    else groups.push({ heading, posts: [p] });
-  }
 
   return (
     <div className="mx-auto flex max-w-[1080px] gap-6 lg:pt-6">
@@ -85,7 +67,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         {tab === "timelapses" ? (
           <EmptyState
             title="Timelapses are coming"
-            body="Screen-recorded session timelapses need media storage. The data model is ready — this tab lights up once uploads are wired in."
+            body="Screen-recorded session timelapses need media storage. This tab lights up once uploads are wired in."
           />
         ) : tab === "following" && !user ? (
           <EmptyState
@@ -97,7 +79,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
               </Link>
             }
           />
-        ) : feed.length === 0 ? (
+        ) : feed.posts.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
             body={
@@ -112,21 +94,22 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             }
           />
         ) : (
-          groups.map((g) => (
-            <section key={g.heading} className="space-y-3">
-              <SectionTitle>{g.heading}</SectionTitle>
-              {g.posts.map((p) => (
-                <PostCard key={p.id} post={p} signedIn={!!user} />
-              ))}
-            </section>
-          ))
+          <FeedList
+            key={tab}
+            initial={feed.posts}
+            hasMore={feed.hasMore}
+            tab={tab as FeedTab}
+            signedIn={!!user}
+            timeZone={timeZone}
+            grouped
+          />
         )}
       </main>
 
       <aside className="sticky top-6 hidden h-fit w-[288px] shrink-0 space-y-3 xl:block">
         <StreakCard streak={streak.current} todaySec={todaySec} goalMin={goalMin} week={week} />
         <FocusingNowCard count={live.count} sessions={live.sessions} />
-        <LeaderboardCard rows={board} />
+        <LeaderboardCard rows={board.rows} />
       </aside>
     </div>
   );

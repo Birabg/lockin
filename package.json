@@ -13,7 +13,8 @@
     "postinstall": "prisma generate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:backfill": "tsx prisma/backfill.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

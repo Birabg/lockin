@@ -56,6 +56,7 @@ export type CurrentUser = {
   email: string;
   bio: string | null;
   dailyGoalMin: number;
+  timeZone: string;
 };
 
 /** The signed-in user, or null for guests. Cached per request. */
@@ -64,7 +65,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!id) return null;
   return db.user.findUnique({
     where: { id },
-    select: { id: true, username: true, name: true, email: true, bio: true, dailyGoalMin: true },
+    select: { id: true, username: true, name: true, email: true, bio: true, dailyGoalMin: true, timeZone: true },
   });
 });
 

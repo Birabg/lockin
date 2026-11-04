@@ -15,14 +15,17 @@ model User {
   passwordHash String
   bio          String?
   dailyGoalMin Int      @default(60)
+  /// IANA zone from the browser at signup. "Today", streaks and day totals use it.
+  timeZone     String   @default("UTC")
   createdAt    DateTime @default(now())
 
-  sessions  FocusSession[]
-  posts     Post[]
-  likes     Like[]
-  comments  Comment[]
-  following Follow[]       @relation("follower")
-  followers Follow[]       @relation("following")
+  dailyStats DailyStat[]
+  sessions   FocusSession[]
+  posts      Post[]
+  likes      Like[]
+  comments   Comment[]
+  following  Follow[]       @relation("follower")
+  followers  Follow[]       @relation("following")
 }
 
 /// One timer run. status: ACTIVE | DONE | ABANDONED
@@ -36,12 +39,41 @@ model FocusSession {
   lastBeatAt  DateTime  @default(now())
   durationSec Int       @default(0)
   status      String    @default("ACTIVE")
+  /// Seconds spent paused so far, not counting a pause still running.
+  pausedSec   Int       @default(0)
+  /// Set while paused.
+  pausedAt    DateTime?
+  /// Holds userId while ACTIVE and null after, so the unique index allows one ACTIVE session per user.
+  activeKey   String?   @unique
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post?
 
   @@index([userId, startedAt])
+  @@index([userId, status])
   @@index([status, lastBeatAt])
+}
+
+/// Focused seconds per user per calendar day in that user's zone. Updated when a session ends.
+model DailyStat {
+  userId  String
+  /// "YYYY-MM-DD"
+  day     String
+  seconds Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+  @@index([day, seconds])
+}
+
+/// Fixed-window counters. In the database so limits hold across serverless instances.
+model RateLimit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
 }
 
 model Post {
@@ -56,7 +88,8 @@ model Post {
   likes    Like[]
   comments Comment[]
 
-  @@index([createdAt])
+  @@index([createdAt, id])
+  @@index([userId, createdAt, id])
 }
 
 model Like {
@@ -68,6 +101,7 @@ model Like {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@id([userId, postId])
+  @@index([postId])
 }
 
 model Comment {
@@ -92,4 +126,5 @@ model Follow {
   following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@id([followerId, followingId])
+  @@index([followingId])
 }

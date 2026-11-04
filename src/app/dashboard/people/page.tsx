@@ -1,21 +1,19 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Avatar, PageHeader, inputCls } from "@/components/ui";
+import { parsePage } from "@/lib/page";
+import { searchPeople } from "@/lib/queries";
+import { Avatar, PageHeader, Pager, inputCls } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
 
 export const metadata = { title: "People" };
 
-export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
-  const q = [(await searchParams).q ?? ""].flat()[0];
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ q?: string | string[]; page?: string }> }) {
+  const params = await searchParams;
+  const q = [params.q ?? ""].flat()[0];
+  const page = parsePage(params.page);
   const viewer = await getCurrentUser();
-  const term = q.trim().toLowerCase();
-  const people = await db.user.findMany({
-    where: term ? { OR: [{ username: { contains: term } }, { name: { contains: q.trim() } }] } : {},
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: { id: true, name: true, username: true, bio: true },
-  });
+  const { people, hasNext } = await searchPeople(q, page);
   const following = viewer
     ? new Set((await db.follow.findMany({ where: { followerId: viewer.id }, select: { followingId: true } })).map((f) => f.followingId))
     : new Set<string>();
@@ -41,6 +39,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
           </li>
         ))}
       </ul>
+      <Pager page={page} hasNext={hasNext} href={(p) => `/dashboard/people?${new URLSearchParams({ q, page: String(p) })}`} />
     </div>
   );
 }

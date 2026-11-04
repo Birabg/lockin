@@ -8,7 +8,7 @@ export const metadata = { title: "Stats" };
 
 export default async function StatsPage() {
   const user = await requireUser("/dashboard/stats");
-  const s = await getStats(user.id);
+  const s = await getStats(user);
   const goalSec = user.dailyGoalMin * 60;
   const max = Math.max(goalSec, ...s.last30.map((d) => d.sec), 1);
   const goalLine = (goalSec / max) * 100;

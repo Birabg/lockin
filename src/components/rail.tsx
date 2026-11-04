@@ -44,7 +44,7 @@ export function StreakCard({ streak, todaySec, goalMin, week }: { streak: number
   );
 }
 
-type LiveSession = { startedAt: Date; label: string | null; user: { id: string; username: string; name: string } };
+type LiveSession = { label: string | null; user: { id: string; username: string; name: string } };
 
 export function FocusingNowCard({ count, sessions }: { count: number; sessions: LiveSession[] }) {
   return (

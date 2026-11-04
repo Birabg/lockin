@@ -1,212 +1,198 @@
 import "server-only";
 import { db } from "./db";
-import { addDays, dayKey, startOfDay, startOfWeek, weekdayLetter } from "./time";
+import { LIVE_MS, activeSeconds, runningSeconds } from "./session-math";
+import { computeStreak } from "./streak";
+import { dayKey, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
 
-/** With no heartbeat for this long, time stops counting until the client checks back in. */
-const STALE_MS = 3 * 60_000;
-/** "Focusing now" = active session with a heartbeat this recent. */
-const LIVE_MS = 90_000;
-/** How long past its goal a silent session (locked phone, sleeping laptop) can still be picked back up. */
-const GRACE_MS = 10 * 60_000;
+type Person = { id: string; timeZone: string };
+type DayTotals = Map<string, number>;
 
-const secondsBetween = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime() - a.getTime()) / 1000));
-
-type SessionTimes = { startedAt: Date; lastBeatAt: Date; goalMin: number };
-
-/** A silent session survives until its goal + grace, so locking your phone mid-session doesn't end it. */
-export function isExpired(s: SessionTimes, now = Date.now()) {
-  const goalEnd = s.startedAt.getTime() + s.goalMin * 60_000 + GRACE_MS;
-  return now > Math.max(s.lastBeatAt.getTime() + STALE_MS, goalEnd);
-}
-
-/** End a session at its last heartbeat. Returns the seconds credited. */
-export async function closeAtLastBeat(s: SessionTimes & { id: string }) {
-  const durationSec = secondsBetween(s.startedAt, s.lastBeatAt);
-  await db.focusSession.updateMany({
-    where: { id: s.id, status: "ACTIVE" },
-    data: { status: "DONE", endedAt: s.lastBeatAt, durationSec },
-  });
-  return durationSec;
-}
-
-/** Time to show for a running session: a silent one only counts up to its last heartbeat. */
-function runningSeconds(s: { startedAt: Date; lastBeatAt: Date }, now: Date) {
-  const silent = now.getTime() - s.lastBeatAt.getTime() > STALE_MS;
-  return secondsBetween(s.startedAt, silent ? s.lastBeatAt : now);
-}
-
-/** Close sessions whose tab was closed without pressing stop. */
-export async function reapStaleSessions() {
-  const cutoff = new Date(Date.now() - STALE_MS);
-  const silent = await db.focusSession.findMany({
-    where: { status: "ACTIVE", lastBeatAt: { lt: cutoff } },
-    select: { id: true, startedAt: true, lastBeatAt: true, goalMin: true },
-  });
-  await Promise.all(silent.filter((s) => isExpired(s)).map(closeAtLastBeat));
-}
-
-/** Seconds focused per user since `from` (finished + still-running sessions). */
-async function totalsSince(from: Date, userIds?: string[]) {
-  const where = { startedAt: { gte: from }, ...(userIds ? { userId: { in: userIds } } : {}) };
-  const [done, active] = await Promise.all([
-    db.focusSession.groupBy({ by: ["userId"], where: { ...where, status: "DONE" }, _sum: { durationSec: true } }),
-    db.focusSession.findMany({ where: { ...where, status: "ACTIVE" }, select: { userId: true, startedAt: true, lastBeatAt: true } }),
+/**
+ * day -> seconds for each user, days being that user's own calendar days.
+ * Two queries however many users: finished time from DailyStat, plus any running session.
+ */
+async function dayTotalsFor(people: Person[], fromDay?: string) {
+  const ids = [...new Set(people.map((p) => p.id))];
+  const zones = new Map(people.map((p) => [p.id, p.timeZone]));
+  const [stats, running] = await Promise.all([
+    db.dailyStat.findMany({
+      where: { userId: { in: ids }, ...(fromDay ? { day: { gte: fromDay } } : {}) },
+      select: { userId: true, day: true, seconds: true },
+    }),
+    db.focusSession.findMany({
+      where: { userId: { in: ids }, status: "ACTIVE" },
+      select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true },
+    }),
   ]);
-  const totals = new Map<string, number>();
-  for (const row of done) totals.set(row.userId, row._sum.durationSec ?? 0);
+  const totals = new Map<string, DayTotals>(ids.map((id) => [id, new Map()]));
+  const add = (userId: string, day: string, seconds: number) => {
+    const days = totals.get(userId);
+    days?.set(day, (days.get(day) ?? 0) + seconds);
+  };
+  for (const s of stats) add(s.userId, s.day, s.seconds);
   const now = new Date();
-  for (const a of active) totals.set(a.userId, (totals.get(a.userId) ?? 0) + runningSeconds(a, now));
+  for (const s of running) {
+    const day = dayKey(s.startedAt, zones.get(s.userId) ?? "UTC");
+    if (!fromDay || day >= fromDay) add(s.userId, day, runningSeconds(s, now));
+  }
   return totals;
 }
 
-/** dayKey -> seconds for one user over the last `days` days. */
-export async function dailyTotals(userId: string, days: number) {
-  const from = startOfDay(addDays(new Date(), -(days - 1)));
-  const sessions = await db.focusSession.findMany({
-    where: { userId, startedAt: { gte: from }, status: { in: ["DONE", "ACTIVE"] } },
-    select: { startedAt: true, lastBeatAt: true, durationSec: true, status: true },
-  });
+export async function getStreak(person: Person) {
+  const totals = await dayTotalsFor([person]);
+  return computeStreak(totals.get(person.id) ?? new Map(), dayKey(new Date(), person.timeZone));
+}
+
+/** Current streaks for many users in two queries. */
+async function getStreaks(people: Person[]) {
+  const totals = await dayTotalsFor(people);
   const now = new Date();
-  const map = new Map<string, number>();
-  for (const s of sessions) {
-    const sec = s.status === "ACTIVE" ? runningSeconds(s, now) : s.durationSec;
-    const k = dayKey(s.startedAt);
-    map.set(k, (map.get(k) ?? 0) + sec);
-  }
-  return map;
-}
-
-const MIN_DAY_SEC = 60; // a day counts toward the streak after 1 focused minute
-
-export async function getStreak(userId: string) {
-  const totals = await dailyTotals(userId, 400);
-  const today = new Date();
-  let current = 0;
-  // today not done yet doesn't break the streak
-  let i = (totals.get(dayKey(today)) ?? 0) >= MIN_DAY_SEC ? 0 : 1;
-  while ((totals.get(dayKey(addDays(today, -i))) ?? 0) >= MIN_DAY_SEC) {
-    current++;
-    i++;
-  }
-  let best = 0;
-  let run = 0;
-  for (let d = 399; d >= 0; d--) {
-    if ((totals.get(dayKey(addDays(today, -d))) ?? 0) >= MIN_DAY_SEC) best = Math.max(best, ++run);
-    else run = 0;
-  }
-  return { current, best };
-}
-
-export async function getStreaks(userIds: string[]) {
-  const unique = [...new Set(userIds)];
-  const entries = await Promise.all(unique.map(async (id) => [id, (await getStreak(id)).current] as const));
-  return new Map(entries);
+  return new Map(people.map((p) => [p.id, computeStreak(totals.get(p.id) ?? new Map(), dayKey(now, p.timeZone)).current]));
 }
 
 export type WeekDay = { key: string; letter: string; sec: number; hit: boolean; isToday: boolean; isFuture: boolean };
 
 /** Monday..Sunday of the current week, for the streak card strip. */
-export async function getWeekStrip(userId: string | null, goalMin: number): Promise<WeekDay[]> {
-  const monday = startOfWeek();
-  const totals = userId ? await dailyTotals(userId, 8) : new Map<string, number>();
-  const todayKey = dayKey(new Date());
+export async function getWeekStrip(person: Person | null, timeZone: string, goalMin: number): Promise<WeekDay[]> {
+  const todayKey = dayKey(new Date(), timeZone);
+  const monday = weekStartKey(todayKey);
+  const totals = person ? ((await dayTotalsFor([person], monday)).get(person.id) ?? new Map<string, number>()) : new Map<string, number>();
   return Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(monday, i);
-    const key = dayKey(date);
+    const key = shiftDayKey(monday, i);
     const sec = totals.get(key) ?? 0;
-    return { key, letter: weekdayLetter(date), sec, hit: sec >= goalMin * 60, isToday: key === todayKey, isFuture: key > todayKey };
+    return { key, letter: weekdayLetter(key), sec, hit: sec >= goalMin * 60, isToday: key === todayKey, isFuture: key > todayKey };
   });
 }
 
-export async function getTodaySeconds(userId: string) {
-  return (await totalsSince(startOfDay(), [userId])).get(userId) ?? 0;
+export async function getTodaySeconds(person: Person) {
+  const today = dayKey(new Date(), person.timeZone);
+  return (await dayTotalsFor([person], today)).get(person.id)?.get(today) ?? 0;
 }
 
 export async function getFocusingNow(limit = 12) {
   const live = await db.focusSession.findMany({
-    where: { status: "ACTIVE", lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) } },
+    where: { status: "ACTIVE", pausedAt: null, lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) } },
     orderBy: { startedAt: "asc" },
     select: {
       startedAt: true,
+      pausedSec: true,
+      pausedAt: true,
       label: true,
       goalMin: true,
       user: { select: { id: true, username: true, name: true } },
     },
   });
-  return { count: live.length, sessions: live.slice(0, limit) };
+  const now = new Date();
+  return {
+    count: live.length,
+    sessions: live
+      .slice(0, limit)
+      .map(({ label, goalMin, user, ...timing }) => ({ label, goalMin, user, sec: activeSeconds(timing, now) })),
+  };
 }
 
 export type Range = "today" | "week" | "all";
 
-export async function getLeaderboard(range: Range, limit = 50) {
-  const from = range === "today" ? startOfDay() : range === "week" ? startOfWeek() : new Date(0);
-  const totals = await totalsSince(from);
-  const top = [...totals.entries()]
-    .filter(([, s]) => s > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit);
+/** Ranked by each person's own calendar days, for the period as the viewer's time zone sees it. */
+export async function getLeaderboard(range: Range, timeZone: string, opts: { page?: number; pageSize?: number } = {}) {
+  const page = opts.page ?? 1;
+  const pageSize = opts.pageSize ?? 50;
+  const offset = (page - 1) * pageSize;
+
+  const today = dayKey(new Date(), timeZone);
+  const from = range === "today" ? today : range === "week" ? weekStartKey(today) : null;
+  const inRange = (day: string) => !from || (day >= from && day <= today);
+
+  const running = await db.focusSession.findMany({
+    where: { status: "ACTIVE" },
+    select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, user: { select: { timeZone: true } } },
+  });
+
+  // Running sessions can only lift people up, so this many finished rows always covers the page.
+  const finished = await db.dailyStat.groupBy({
+    by: ["userId"],
+    where: from ? { day: { gte: from, lte: today } } : {},
+    _sum: { seconds: true },
+    orderBy: { _sum: { seconds: "desc" } },
+    take: offset + pageSize + 1 + running.length,
+  });
+
+  const totals = new Map(finished.map((row) => [row.userId, row._sum.seconds ?? 0]));
+  const now = new Date();
+  for (const s of running) {
+    if (inRange(dayKey(s.startedAt, s.user.timeZone))) totals.set(s.userId, (totals.get(s.userId) ?? 0) + runningSeconds(s, now));
+  }
+
+  const ranked = [...totals.entries()].filter(([, sec]) => sec > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const slice = ranked.slice(offset, offset + pageSize);
   const users = await db.user.findMany({
-    where: { id: { in: top.map(([id]) => id) } },
+    where: { id: { in: slice.map(([id]) => id) } },
     select: { id: true, username: true, name: true },
   });
   const byId = new Map(users.map((u) => [u.id, u]));
-  return top.flatMap(([id, sec], i) => {
+  const rows = slice.flatMap(([id, sec], i) => {
     const user = byId.get(id);
-    return user ? [{ rank: i + 1, user, sec }] : [];
+    return user ? [{ rank: offset + i + 1, user, sec }] : [];
   });
+  return { rows, hasNext: ranked.length > offset + pageSize };
 }
 
 export type FeedTab = "global" | "following";
 
-export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { take?: number; authorId?: string } = {}) {
-  const take = opts.take ?? 20;
+const FEED_PAGE = 20;
+
+export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { take?: number; authorId?: string; cursor?: string } = {}) {
+  const take = opts.take ?? FEED_PAGE;
   let where: { userId?: string | { in: string[] } } = {};
   if (opts.authorId) {
     where = { userId: opts.authorId };
   } else if (tab === "following") {
-    if (!viewerId) return [];
+    if (!viewerId) return { posts: [], hasMore: false };
     const follows = await db.follow.findMany({ where: { followerId: viewerId }, select: { followingId: true } });
     where = { userId: { in: [viewerId, ...follows.map((f) => f.followingId)] } };
   }
-  const posts = await db.post.findMany({
+  const rows = await db.post.findMany({
     where,
-    orderBy: { createdAt: "desc" },
-    take,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     include: {
-      user: { select: { id: true, username: true, name: true } },
+      user: { select: { id: true, username: true, name: true, timeZone: true } },
       session: { select: { goalMin: true, startedAt: true, endedAt: true, durationSec: true, label: true } },
       _count: { select: { likes: true, comments: true } },
       likes: { where: { userId: viewerId ?? "__guest__" }, select: { userId: true } },
       comments: {
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         take: 20,
         select: { id: true, body: true, createdAt: true, user: { select: { username: true, name: true } } },
       },
     },
   });
-  const streaks = await getStreaks(posts.map((p) => p.user.id));
-  return posts.map((p) => ({
+  const page = rows.slice(0, take);
+  const streaks = await getStreaks(page.map((p) => p.user));
+  const posts = page.map((p) => ({
     id: p.id,
     body: p.body,
     createdAt: p.createdAt,
-    user: p.user,
+    user: { id: p.user.id, username: p.user.username, name: p.user.name },
     streak: streaks.get(p.user.id) ?? 0,
     session: p.session,
     likeCount: p._count.likes,
     commentCount: p._count.comments,
     liked: p.likes.length > 0,
-    comments: p.comments,
+    comments: p.comments.toReversed(), // newest 20, shown oldest first
   }));
+  return { posts, hasMore: rows.length > take };
 }
-export type FeedPost = Awaited<ReturnType<typeof getFeed>>[number];
+export type FeedPost = Awaited<ReturnType<typeof getFeed>>["posts"][number];
 
-export async function getStats(userId: string) {
-  const totals = await dailyTotals(userId, 30);
-  const today = new Date();
+export async function getStats(person: Person) {
+  const userId = person.id;
+  const today = dayKey(new Date(), person.timeZone);
+  const totals = (await dayTotalsFor([person], shiftDayKey(today, -29))).get(userId) ?? new Map<string, number>();
   const last30 = Array.from({ length: 30 }, (_, i) => {
-    const date = addDays(today, -(29 - i));
-    const key = dayKey(date);
-    return { key, letter: weekdayLetter(date), sec: totals.get(key) ?? 0 };
+    const key = shiftDayKey(today, i - 29);
+    return { key, letter: weekdayLetter(key), sec: totals.get(key) ?? 0 };
   });
   const [allTime, sessionsCount, byLabel, streak, longest] = await Promise.all([
     db.focusSession.aggregate({ where: { userId, status: "DONE" }, _sum: { durationSec: true } }),
@@ -218,13 +204,13 @@ export async function getStats(userId: string) {
       orderBy: { _sum: { durationSec: "desc" } },
       take: 6,
     }),
-    getStreak(userId),
+    getStreak(person),
     db.focusSession.findFirst({ where: { userId, status: "DONE" }, orderBy: { durationSec: "desc" }, select: { durationSec: true } }),
   ]);
-  const weekKeys = new Set(Array.from({ length: 7 }, (_, i) => dayKey(addDays(startOfWeek(), i))));
+  const monday = weekStartKey(today);
   return {
-    today: totals.get(dayKey(today)) ?? 0,
-    week: last30.filter((d) => weekKeys.has(d.key)).reduce((a, d) => a + d.sec, 0),
+    today: totals.get(today) ?? 0,
+    week: last30.filter((d) => d.key >= monday).reduce((a, d) => a + d.sec, 0),
     allTime: allTime._sum.durationSec ?? 0,
     sessionsCount,
     longestSession: longest?.durationSec ?? 0,
@@ -242,6 +228,7 @@ export async function getProfile(username: string, viewerId: string | null) {
       username: true,
       name: true,
       bio: true,
+      timeZone: true,
       createdAt: true,
       _count: { select: { followers: true, following: true } },
     },
@@ -251,4 +238,18 @@ export async function getProfile(username: string, viewerId: string | null) {
     ? !!(await db.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: user.id } } }))
     : false;
   return { ...user, isFollowing };
+}
+
+const PEOPLE_PAGE = 30;
+
+export async function searchPeople(q: string, page: number) {
+  const term = q.trim();
+  const rows = await db.user.findMany({
+    where: term ? { OR: [{ username: { contains: term.toLowerCase() } }, { name: { contains: term } }] } : {},
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: (page - 1) * PEOPLE_PAGE,
+    take: PEOPLE_PAGE + 1,
+    select: { id: true, name: true, username: true, bio: true },
+  });
+  return { people: rows.slice(0, PEOPLE_PAGE), hasNext: rows.length > PEOPLE_PAGE };
 }

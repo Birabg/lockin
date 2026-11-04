@@ -18,7 +18,10 @@ export default async function SettingsPage() {
           <span className="block text-sm text-muted">@{user.username} · view public profile</span>
         </span>
       </Link>
-      <ProfileForm user={{ name: user.name, bio: user.bio ?? "", dailyGoalMin: user.dailyGoalMin }} />
+      <ProfileForm
+        user={{ name: user.name, bio: user.bio ?? "", dailyGoalMin: user.dailyGoalMin, timeZone: user.timeZone }}
+        timeZones={[...new Set([user.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])].sort()}
+      />
       <form action={logout} className="mt-4">
         <button className={`${btnGhost} h-11 w-full text-sm text-danger`}>Log out</button>
       </form>

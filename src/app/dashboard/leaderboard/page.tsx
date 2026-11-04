@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { brand } from "@/lib/brand";
 import { db } from "@/lib/db";
+import { parsePage } from "@/lib/page";
 import { getLeaderboard, type Range } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
-import { Avatar, EmptyState, PageHeader } from "@/components/ui";
+import { Avatar, EmptyState, PageHeader, Pager } from "@/components/ui";
 import { RankIcon } from "@/components/rail";
 import { FollowButton } from "@/components/follow-button";
 
@@ -15,10 +17,12 @@ const RANGES: { id: Range; label: string }[] = [
   { id: "all", label: "All time" },
 ];
 
-export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  const { range: r } = await searchParams;
+export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ range?: string; page?: string }> }) {
+  const { range: r, page: p } = await searchParams;
+  const page = parsePage(p);
   const range = RANGES.find((x) => x.id === r)?.id ?? "today";
-  const [user, rows] = await Promise.all([getCurrentUser(), getLeaderboard(range, 100)]);
+  const user = await getCurrentUser();
+  const { rows, hasNext } = await getLeaderboard(range, user?.timeZone ?? brand.timeZone, { page });
   const following = user
     ? new Set((await db.follow.findMany({ where: { followerId: user.id }, select: { followingId: true } })).map((f) => f.followingId))
     : new Set<string>();
@@ -72,6 +76,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           ))}
         </ol>
       )}
+      <Pager page={page} hasNext={hasNext} href={(n) => `/dashboard/leaderboard?range=${range}&page=${n}`} />
     </div>
   );
 }

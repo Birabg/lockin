@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { login, signup } from "@/app/actions/auth";
 import { btnPrimary, inputCls } from "@/components/ui";
 
 export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: string }) {
   const [state, action, pending] = useActionState(mode === "login" ? login : signup, undefined);
   const isSignup = mode === "signup";
+  const [timeZone, setTimeZone] = useState("");
+
+  useEffect(() => setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone), []);
 
   return (
     <form action={action} className="panel space-y-3 p-5">
       <h1 className="mb-2 text-xl font-extrabold">{isSignup ? "Create your account" : "Welcome back"}</h1>
       <input type="hidden" name="next" value={next} />
+      {isSignup && <input type="hidden" name="timeZone" value={timeZone} />}
       {isSignup ? (
         <>
           <input name="name" placeholder="Name" autoComplete="name" required className={inputCls} />
@@ -25,6 +29,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next: strin
             autoComplete="new-password"
             required
             minLength={8}
+            maxLength={72}
             className={inputCls}
           />
         </>
