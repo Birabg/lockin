@@ -47,7 +47,7 @@ const NOTES = [
 const COMMENTS = ["let's gooo", "consistency 🔥", "respect", "same energy today", "how do you stay focused this long?", "🫡"];
 
 const PHOTO_COLORS = [
-  ["#3b2f7a", "#e0876a"],
+  ["#1e3a7a", "#e0876a"],
   ["#123b4a", "#6ec9d4"],
   ["#4a2333", "#f5b366"],
 ];

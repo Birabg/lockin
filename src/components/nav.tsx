@@ -108,7 +108,7 @@ export function BottomNav() {
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
     >
-      <div className="flex w-full max-w-[560px] items-center justify-between rounded-full border border-border bg-[#0f0f11]/95 p-1.5 backdrop-blur">
+      <div className="flex w-full max-w-[560px] items-center justify-between rounded-full border border-border bg-[#0d1421]/95 p-1.5 backdrop-blur">
         {BOTTOM.map(({ href, label, icon: Icon }) => {
           const active = isActive(path, href);
           return (

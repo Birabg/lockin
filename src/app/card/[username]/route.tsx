@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ usernam
   const stat = (value: string, label: string, color: string) => (
     <div style={{ display: "flex", flexDirection: "column", marginRight: 72 }}>
       <div style={{ fontSize: 96, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 30, color: "#b8b8bb" }}>{label}</div>
+      <div style={{ fontSize: 30, color: "#b4c0d3" }}>{label}</div>
     </div>
   );
 
@@ -31,19 +31,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ usernam
         width: "100%",
         height: "100%",
         padding: 72,
-        background: "#0a0a0b",
-        color: "#ededee",
+        background: "#0a0f1a",
+        color: "#e8edf5",
       }}
     >
-      <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#8b80f9" }}>{brand.name.toLowerCase()}</div>
+      <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#4f8ff7" }}>{brand.name.toLowerCase()}</div>
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div style={{ fontSize: 64, fontWeight: 800 }}>{user.name}</div>
-        <div style={{ fontSize: 32, color: "#b8b8bb" }}>{`@${user.username}`}</div>
+        <div style={{ fontSize: 32, color: "#b4c0d3" }}>{`@${user.username}`}</div>
       </div>
       <div style={{ display: "flex" }}>
         {stat(`${streak.current}d`, "Current streak", "#f5b366")}
-        {stat(`${streak.best}d`, "Best streak", "#ededee")}
-        {stat(formatDuration(total._sum.seconds ?? 0), "Focused", "#8b80f9")}
+        {stat(`${streak.best}d`, "Best streak", "#e8edf5")}
+        {stat(formatDuration(total._sum.seconds ?? 0), "Focused", "#4f8ff7")}
       </div>
     </div>,
     { width: 1200, height: 630, headers: { "Cache-Control": "public, max-age=600" } },

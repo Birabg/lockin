@@ -14,7 +14,7 @@ export function Logo({ className = "" }: { className?: string }) {
   );
 }
 
-const PALETTE = ["#8b80f9", "#4ade80", "#f5b366", "#6ec9d4", "#e85a6e", "#d4b06f", "#a78bfa", "#60a5fa"];
+const PALETTE = ["#4f8ff7", "#4ade80", "#f5b366", "#6ec9d4", "#e85a6e", "#d4b06f", "#38bdf8", "#60a5fa"];
 
 /** The same name always gets the same colour. */
 export function colorFor(name: string) {
@@ -46,7 +46,7 @@ export function Avatar({ name, src, size = 36, cssSize, live = false }: AvatarPr
         <img src={src} alt="" width={size} height={size} className="size-full rounded-full object-cover" />
       ) : (
         <span
-          className="grid size-full place-items-center rounded-full font-bold text-[#0a0a0b]"
+          className="grid size-full place-items-center rounded-full font-bold text-[#0a0f1a]"
           style={{ background: colorFor(name), fontSize: cssSize ? `calc(${cssSize} * 0.38)` : size * 0.38 }}
           aria-hidden
         >
