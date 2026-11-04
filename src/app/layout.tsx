@@ -13,7 +13,14 @@ export const metadata: Metadata = {
   description: brand.description,
   applicationName: brand.name,
   appleWebApp: { capable: true, title: brand.name, statusBarStyle: "black-translucent" },
-  icons: { apple: "/pwa-icon/192" },
+  // setting icons here turns off the automatic tag for app/icon.svg, so every icon has to be listed
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/pwa-icon/192", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/pwa-icon/192",
+  },
 };
 
 export const viewport: Viewport = {
