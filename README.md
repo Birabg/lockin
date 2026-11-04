@@ -2,17 +2,45 @@
 
 A social focus-timer app: run focus sessions, keep a daily streak, see who's focusing right now, share sessions to a feed and climb the leaderboard. Layout and interaction model modelled on nuzz.space, under its own name and colors.
 
-**Stack:** Next.js 15 (App Router, Server Actions) · React 19 · Tailwind CSS v4 · Prisma (SQLite in dev, Postgres in prod) · JWT cookie auth (jose + bcryptjs)
+**Stack:** Next.js 15 (App Router, Server Actions) · React 19 · Tailwind CSS v4 · Prisma + Postgres · JWT cookie auth (jose + bcryptjs)
 
 ## Run it
 
+You need Node 22 or newer and a Postgres database. A free [Neon](https://neon.tech) project works, or run one locally:
+
+```bash
+docker run -d --name lockin-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=lockin -p 5432:5432 postgres:17
+```
+
 ```bash
 npm install
-cp .env.example .env          # then set AUTH_SECRET to a long random string
-npx prisma db push            # creates prisma/dev.db
+cp .env.example .env          # set AUTH_SECRET and your database URLs
+npm run db:deploy             # applies the migrations
 npm run db:seed               # optional demo data (login: abel / password123)
 npm run dev                   # http://localhost:3000
 ```
+
+## Environment variables
+
+| Variable                                                                                | Required  | What it is                                                                                        |
+| --------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                          | Yes       | Postgres connection the app uses. On Neon, the pooled string.                                     |
+| `DIRECT_URL`                                                                            | Yes       | Direct Postgres connection for migrations. Locally, the same as `DATABASE_URL`.                   |
+| `AUTH_SECRET`                                                                           | Yes       | Signs login cookies. Generate with `openssl rand -base64 32`. Production refuses the placeholder. |
+| `APP_URL`                                                                               | No        | Public address for social preview images. Vercel supplies its own.                                |
+| `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | On Vercel | Bucket for avatars and timelapses.                                                                |
+| `S3_REGION`                                                                             | No        | Defaults to `auto`, which suits R2.                                                               |
+| `UPLOAD_DIR`                                                                            | No        | Folder for local uploads. Defaults to `.uploads`.                                                 |
+
+## Tests
+
+```bash
+npm test                # Vitest: time, streaks, leaderboards, session maths, URL signing
+npm run build           # the e2e tests run against a production build
+npm run test:e2e        # Playwright: signup → focus → share → like → leaderboard
+```
+
+The e2e test needs a migrated database in `DATABASE_URL` and writes to it, so use a scratch one. Run `npx playwright install chromium` once, or set `PW_CHANNEL=chrome` to use your installed Chrome. GitHub Actions runs format, lint, typecheck, unit tests, a migration drift check, build and e2e on every push and pull request.
 
 ## What's in it
 
@@ -57,13 +85,16 @@ The browser uploads files straight to storage, so large videos never pass throug
 
 **Timelapses** are opt-in on the timer. The browser asks to share a screen, keeps a small frame every 5 s, and turns them into a sped-up WebM when the session ends. Recording survives moving between pages, but not a full page reload.
 
-## Upgrading an existing database
+## Changing the database
 
-After pulling schema changes on a database with data in it:
+Edit `prisma/schema.prisma`, then run `npm run db:migrate -- --name what_changed` and commit the new folder in `prisma/migrations`. CI fails if the schema and the migrations disagree.
+
+## Moving from the old SQLite database
 
 ```bash
-npx prisma db push
-npm run db:backfill   # sets time zones and rebuilds DailyStat from sessions
+npm run db:deploy                       # on an empty Postgres database
+npm run db:import -- prisma/dev.db      # copies your accounts, sessions and posts
+npm run db:backfill                     # sets time zones and rebuilds daily totals
 ```
 
 ## Rebrand
@@ -72,11 +103,15 @@ npm run db:backfill   # sets time zones and rebuilds DailyStat from sessions
 - Colors: the `--primary*` tokens at the top of `src/app/globals.css`
 - Logo mark: `Logo` in `src/components/ui.tsx`
 
-## Deploying
+## Deploying to Vercel with Neon
 
-1. In `prisma/schema.prisma` change `provider = "sqlite"` to `"postgresql"`.
-2. Set `DATABASE_URL` (Neon / Supabase / Railway) and `AUTH_SECRET` in your host (e.g. Vercel).
-3. `npx prisma db push`, then deploy. The `build` script runs `prisma generate`.
+1. **Database:** create a [Neon](https://neon.tech) project and copy two connection strings: pooled (`DATABASE_URL`) and direct (`DIRECT_URL`).
+2. **Media:** create a Cloudflare R2 or S3 bucket with public read access, and add a CORS rule allowing `PUT` with a `Content-Type` header from your site's address. Create an access key.
+3. **Project:** import the repo on [Vercel](https://vercel.com/new). It finds Next.js by itself.
+4. **Variables:** add `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` and the `S3_*` variables for Production.
+5. **Deploy.** Vercel runs `vercel-build`, which applies pending migrations and then builds.
+
+Every deployment runs migrations against the database it's configured with. To keep preview deployments away from production data, give the Preview environment its own `DATABASE_URL` and `DIRECT_URL`, such as a Neon branch.
 
 ## Not built yet
 

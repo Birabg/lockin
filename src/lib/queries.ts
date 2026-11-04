@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { rankTotals } from "./leaderboard";
 import { LIVE_MS, activeSeconds, runningSeconds } from "./session-math";
 import { computeStreak } from "./streak";
 import { dayKey, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
@@ -103,10 +104,11 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
   const from = range === "today" ? today : range === "week" ? weekStartKey(today) : null;
   const inRange = (day: string) => !from || (day >= from && day <= today);
 
-  const running = await db.focusSession.findMany({
+  const sessions = await db.focusSession.findMany({
     where: { status: "ACTIVE" },
     select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, user: { select: { timeZone: true } } },
   });
+  const running = sessions.map(({ user, ...s }) => ({ ...s, timeZone: user.timeZone }));
 
   // Running sessions can only lift people up, so this many finished rows always covers the page.
   const finished = await db.dailyStat.groupBy({
@@ -117,13 +119,8 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
     take: offset + pageSize + 1 + running.length,
   });
 
-  const totals = new Map(finished.map((row) => [row.userId, row._sum.seconds ?? 0]));
-  const now = new Date();
-  for (const s of running) {
-    if (inRange(dayKey(s.startedAt, s.user.timeZone))) totals.set(s.userId, (totals.get(s.userId) ?? 0) + runningSeconds(s, now));
-  }
-
-  const ranked = [...totals.entries()].filter(([, sec]) => sec > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const totals = finished.map((row) => ({ userId: row.userId, seconds: row._sum.seconds ?? 0 }));
+  const ranked = rankTotals(totals, running, inRange, new Date());
   const slice = ranked.slice(offset, offset + pageSize);
   const users = await db.user.findMany({
     where: { id: { in: slice.map(([id]) => id) } },
@@ -289,7 +286,7 @@ const PEOPLE_PAGE = 30;
 export async function searchPeople(q: string, page: number) {
   const term = q.trim();
   const rows = await db.user.findMany({
-    where: term ? { OR: [{ username: { contains: term.toLowerCase() } }, { name: { contains: term } }] } : {},
+    where: term ? { OR: [{ username: { contains: term, mode: "insensitive" } }, { name: { contains: term, mode: "insensitive" } }] } : {},
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     skip: (page - 1) * PEOPLE_PAGE,
     take: PEOPLE_PAGE + 1,

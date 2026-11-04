@@ -20,6 +20,15 @@ const PEOPLE = [
   ["Liya Assefa", "liya", "Writing my thesis one session at a time"],
 ] as const;
 
+/** Seeding wipes every table, so it refuses to touch a database with real accounts in it. */
+async function assertDemoOnly() {
+  const demo = PEOPLE.map(([, username]) => username as string);
+  const real = await db.user.count({ where: { username: { notIn: demo } } });
+  if (real > 0 && !process.argv.includes("--force")) {
+    throw new Error(`Refusing to seed: this would delete ${real} real account(s). Pass --force to wipe them.`);
+  }
+}
+
 const LABELS = ["FYP", "Leetcode", "Design", "Thesis", "Reading", "Freelance", "Marketing", null];
 const NOTES = [
   "Session done",
@@ -34,6 +43,7 @@ const NOTES = [
 const COMMENTS = ["let's gooo", "consistency 🔥", "respect", "same energy today", "how do you stay focused this long?", "🫡"];
 
 async function main() {
+  await assertDemoOnly();
   await db.$transaction([
     db.like.deleteMany(),
     db.comment.deleteMany(),

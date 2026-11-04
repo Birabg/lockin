@@ -180,6 +180,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
           disabled={pending}
           className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold hover:bg-inset ${like.liked ? "text-danger" : "text-muted"}`}
           aria-pressed={like.liked}
+          aria-label={`Like, ${like.count} so far`}
         >
           <Heart className="size-4" fill={like.liked ? "currentColor" : "none"} /> {like.count}
         </button>
