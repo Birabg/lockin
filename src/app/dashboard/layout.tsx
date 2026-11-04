@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { getActiveSession } from "@/app/actions/focus";
 import { FocusHeartbeat } from "@/components/focus-heartbeat";
 import { LiveRefresh } from "@/components/live-refresh";
@@ -5,9 +6,10 @@ import { BottomNav, MobileTopBar, Sidebar } from "@/components/nav";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadCount } from "@/lib/notifications";
 import { reapStaleSessions } from "@/lib/sessions";
+import { SIDEBAR_COLLAPSED, SIDEBAR_COOKIE } from "@/lib/sidebar";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [user, active] = await Promise.all([getCurrentUser(), getActiveSession(), reapStaleSessions()]);
+  const [user, active, , jar] = await Promise.all([getCurrentUser(), getActiveSession(), reapStaleSessions(), cookies()]);
   const unread = user ? await getUnreadCount(user.id) : 0;
   return (
     <div data-app-chrome className="flex min-h-dvh">
@@ -16,7 +18,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </a>
       <LiveRefresh />
       <FocusHeartbeat sessionId={active?.id ?? null} paused={!!active?.pausedAt} />
-      <Sidebar user={user ? { name: user.name, username: user.username, avatar: user.avatar } : null} unread={unread} />
+      <Sidebar
+        user={user ? { name: user.name, username: user.username, avatar: user.avatar } : null}
+        unread={unread}
+        initialCollapsed={jar.get(SIDEBAR_COOKIE)?.value === SIDEBAR_COLLAPSED}
+      />
       <div id="main" className="min-w-0 flex-1 px-4 pb-28 lg:px-8 lg:pb-10">
         <MobileTopBar signedIn={!!user} unread={unread} />
         {children}
