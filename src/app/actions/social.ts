@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { notify, unnotify } from "@/lib/notifications";
 import { getFeed, type FeedTab } from "@/lib/queries";
 import { allow, limits } from "@/lib/rate-limit";
+import { storage } from "@/lib/storage";
 import { isValidTimeZone } from "@/lib/time";
 
 async function me() {
@@ -71,6 +72,32 @@ export async function createPost(body: string): Promise<Result> {
   if (!(await allow(`post:${user.id}`, limits.post))) return { error: SLOW_DOWN };
   await db.post.create({ data: { userId: user.id, body: text.data } });
   revalidatePath("/dashboard");
+  return {};
+}
+
+/** Deleting a post keeps its session, so stats and streaks don't change. */
+export async function deletePost(postId: string): Promise<Result> {
+  const user = await me();
+  const id = idSchema.parse(postId);
+  const post = await db.post.findFirst({ where: { id, userId: user.id }, select: { timelapseUrl: true } });
+  if (!post) return { error: "That post is gone" };
+  await db.$transaction([db.notification.deleteMany({ where: { postId: id } }), db.post.delete({ where: { id } })]);
+  // screen recordings can hold private things, so the file goes too, not just the link
+  if (post.timelapseUrl)
+    await storage()
+      .remove(post.timelapseUrl)
+      .catch((e) => console.error("Timelapse not deleted", post.timelapseUrl, e));
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
+
+/** The comment's author or the post's author can remove it. */
+export async function deleteComment(commentId: string): Promise<Result> {
+  const user = await me();
+  const id = idSchema.parse(commentId);
+  const { count } = await db.comment.deleteMany({ where: { id, OR: [{ userId: user.id }, { post: { userId: user.id } }] } });
+  if (count === 0) return { error: "That comment is gone" };
+  revalidatePath("/dashboard", "layout");
   return {};
 }
 

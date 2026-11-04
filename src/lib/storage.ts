@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { SignJWT, jwtVerify } from "jose";
 import { presignUrl } from "./s3-presign";
@@ -17,6 +17,8 @@ export type UploadTicket = { key: string; url: string; headers: Record<string, s
 type StorageAdapter = {
   createUpload(key: string, contentType: string, size: number): Promise<UploadTicket>;
   publicUrl(key: string): string;
+  /** Deletes the file behind a URL from publicUrl. */
+  remove(url: string): Promise<void>;
 };
 
 const SAFE_KEY = /^[a-z]+s\/[A-Za-z0-9_-]+\/[A-Za-z0-9-]+\.[a-z0-9]+$/;
@@ -34,6 +36,10 @@ const local: StorageAdapter = {
     return { key, url: `/api/uploads?token=${token}`, headers: { "Content-Type": contentType } };
   },
   publicUrl: (key) => `/media/${key}`,
+  async remove(url) {
+    const key = url.replace(/^\/media\//, "");
+    if (isSafeKey(key)) await rm(join(localDir(), key), { force: true });
+  },
 };
 
 /** Checks a ticket from local.createUpload and returns what it allows. */
@@ -61,24 +67,33 @@ function s3(): StorageAdapter {
     return value;
   };
   const bucket = env("S3_BUCKET");
+  const signed = (method: "PUT" | "DELETE", key: string, headers?: Record<string, string>) =>
+    presignUrl({
+      method,
+      endpoint: env("S3_ENDPOINT"),
+      path: `/${bucket}/${key}`,
+      region: process.env.S3_REGION ?? "auto",
+      accessKeyId: env("S3_ACCESS_KEY_ID"),
+      secretAccessKey: env("S3_SECRET_ACCESS_KEY"),
+      expiresSec: 600,
+      now: new Date(),
+      headers,
+    });
+  const base = () => env("S3_PUBLIC_URL").replace(/\/$/, "");
   return {
     async createUpload(key, contentType, size) {
       const headers = { "Content-Type": contentType, "Content-Length": String(size) };
-      const url = presignUrl({
-        method: "PUT",
-        endpoint: env("S3_ENDPOINT"),
-        path: `/${bucket}/${key}`,
-        region: process.env.S3_REGION ?? "auto",
-        accessKeyId: env("S3_ACCESS_KEY_ID"),
-        secretAccessKey: env("S3_SECRET_ACCESS_KEY"),
-        expiresSec: 600,
-        now: new Date(),
-        headers,
-      });
+      const url = signed("PUT", key, headers);
       // browsers set Content-Length themselves and refuse to have it set by hand
       return { key, url, headers: { "Content-Type": contentType } };
     },
-    publicUrl: (key) => `${env("S3_PUBLIC_URL").replace(/\/$/, "")}/${key}`,
+    publicUrl: (key) => `${base()}/${key}`,
+    async remove(url) {
+      const key = url.slice(base().length + 1);
+      if (!url.startsWith(base()) || !isSafeKey(key)) return;
+      const res = await fetch(signed("DELETE", key), { method: "DELETE" });
+      if (!res.ok) throw new Error(`Storage delete failed: ${res.status}`);
+    },
   };
 }
 

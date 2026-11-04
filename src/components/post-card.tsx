@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { Flame, Heart, MessageCircle, Send, Share2 } from "lucide-react";
+import { Flame, Heart, MessageCircle, Send, Share2, Trash2 } from "lucide-react";
 import { toast } from "./toaster";
 import { Avatar, GoalRing } from "./ui";
-import { addComment, toggleLike, type NewComment } from "@/app/actions/social";
+import { addComment, deleteComment, deletePost, toggleLike, type NewComment } from "@/app/actions/social";
 import { formatClock, formatDuration, timeAgo } from "@/lib/time";
 import type { FeedPost } from "@/lib/queries";
 
@@ -13,6 +13,9 @@ export type Viewer = { username: string; name: string; avatar: string | null };
 
 export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: Viewer | null; timeZone: string }) {
   const signedIn = !!viewer;
+  const mine = viewer?.username === post.user.username;
+  const [removed, setRemoved] = useState(false);
+  const [goneComments, setGoneComments] = useState<string[]>([]);
   const [pending, start] = useTransition();
   const [like, setLike] = useState({ liked: post.liked, count: post.likeCount });
   const [added, setAdded] = useState<NewComment[]>([]);
@@ -25,8 +28,9 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   const pct = s ? s.durationSec / (s.goalMin * 60) : 0;
   const createdAt = new Date(post.createdAt);
   const newComments = added.filter((c) => !post.comments.some((x) => x.id === c.id));
-  const comments = [...post.comments, ...newComments];
-  const commentCount = post.commentCount + newComments.length;
+  const allComments = [...post.comments, ...newComments];
+  const comments = allComments.filter((c) => !goneComments.includes(c.id));
+  const commentCount = post.commentCount + newComments.length - (allComments.length - comments.length);
 
   function onLike() {
     if (!signedIn) return (window.location.href = "/signup");
@@ -58,11 +62,36 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
     });
   }
 
+  function onDelete() {
+    if (!window.confirm("Delete this post? Your focus time stays in your stats.")) return;
+    setRemoved(true);
+    start(async () => {
+      const res = await deletePost(post.id);
+      if (res.error) {
+        setRemoved(false);
+        toast(res.error, "error");
+      } else toast("Post deleted");
+    });
+  }
+
+  function onDeleteComment(id: string) {
+    setGoneComments((list) => [...list, id]);
+    start(async () => {
+      const res = await deleteComment(id);
+      if (res.error) {
+        setGoneComments((list) => list.filter((c) => c !== id));
+        toast(res.error, "error");
+      }
+    });
+  }
+
   async function onShare() {
     const url = `${window.location.origin}/dashboard/u/${post.user.username}`;
     if (navigator.share) await navigator.share({ title: post.body, url }).catch(() => {});
     else await navigator.clipboard?.writeText(url);
   }
+
+  if (removed) return null;
 
   return (
     <article className="panel overflow-hidden">
@@ -89,6 +118,15 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
             )}
           </p>
         </div>
+        {mine && (
+          <button
+            onClick={onDelete}
+            aria-label="Delete post"
+            className="grid size-9 shrink-0 place-items-center rounded-full text-subtle hover:bg-inset hover:text-danger"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        )}
       </header>
 
       {s && (
@@ -168,6 +206,15 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                   </Link>{" "}
                   <span className="text-foreground/90">{c.body}</span>
                 </p>
+                {(mine || c.user.username === viewer?.username) && !c.id.startsWith("temp-") && (
+                  <button
+                    onClick={() => onDeleteComment(c.id)}
+                    aria-label="Delete comment"
+                    className="ml-auto grid size-6 shrink-0 place-items-center rounded-full text-subtle hover:text-danger"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                )}
               </li>
             ))}
             {comments.length === 0 && <li className="text-sm text-muted">No comments yet.</li>}

@@ -1,7 +1,7 @@
 import { createHash, createHmac } from "node:crypto";
 
 type Presign = {
-  method: "GET" | "PUT";
+  method: "GET" | "PUT" | "DELETE";
   endpoint: string; // e.g. https://<account>.r2.cloudflarestorage.com
   path: string; // /bucket/key
   region: string;
