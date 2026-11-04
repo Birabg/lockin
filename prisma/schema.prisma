@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // change to "postgresql" for production
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  name         String
+  email        String   @unique
+  passwordHash String
+  bio          String?
+  dailyGoalMin Int      @default(60)
+  createdAt    DateTime @default(now())
+
+  sessions  FocusSession[]
+  posts     Post[]
+  likes     Like[]
+  comments  Comment[]
+  following Follow[]       @relation("follower")
+  followers Follow[]       @relation("following")
+}
+
+/// One timer run. status: ACTIVE | DONE | ABANDONED
+model FocusSession {
+  id          String    @id @default(cuid())
+  userId      String
+  label       String?
+  goalMin     Int
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  lastBeatAt  DateTime  @default(now())
+  durationSec Int       @default(0)
+  status      String    @default("ACTIVE")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post?
+
+  @@index([userId, startedAt])
+  @@index([status, lastBeatAt])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String?  @unique
+  body      String
+  createdAt DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session  FocusSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  likes    Like[]
+  comments Comment[]
+
+  @@index([createdAt])
+}
+
+model Like {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}

@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/* ---- Design tokens (dark-first, same structure as the reference) ----
+   Rebrand by changing the --primary* values. */
+:root {
+  --background: #0a0a0b;
+  --foreground: #ededee;
+  --card: #141416;
+  --inset: #1c1c1f;
+  --muted-foreground: #9a9a9d;
+  --subtle-foreground: #6b6b70;
+  --border: #2a2a2d;
+  --border-shadow: #1f1f22;
+  --sidebar: #0c0c0d;
+  --sidebar-foreground: #b8b8bb;
+
+  --primary: #8b80f9;
+  --primary-foreground: #0a0a0b;
+  --primary-shadow: #5b4fd1;
+  --primary-light: #1d1a33;
+  --primary-text: #c4beff;
+
+  --streak: #f5b366;
+  --streak-bg: #2a1e0e;
+  --gold: #fbbf24;
+  --silver: #c9ccd3;
+  --bronze: #d08a52;
+  --live: #4ade80;
+  --danger: #e85a6e;
+
+  --radius: 16px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-inset: var(--inset);
+  --color-muted: var(--muted-foreground);
+  --color-subtle: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
+  --color-primary-text: var(--primary-text);
+  --color-streak: var(--streak);
+  --color-streak-bg: var(--streak-bg);
+  --color-gold: var(--gold);
+  --color-silver: var(--silver);
+  --color-bronze: var(--bronze);
+  --color-live: var(--live);
+  --color-danger: var(--danger);
+  --radius-card: var(--radius);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tactile "pressable" buttons: a solid shadow that collapses on press */
+@utility btn-3d {
+  box-shadow: 0 3px 0 var(--primary-shadow);
+  transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
+  &:hover { filter: brightness(1.06); }
+  &:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--primary-shadow); }
+}
+
+@utility btn-3d-muted {
+  box-shadow: 0 3px 0 var(--border-shadow);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  &:active { transform: translateY(2px); box-shadow: none; }
+}
+
+@utility panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.animate-live { animation: pulse-dot 1.6s ease-in-out infinite; }
