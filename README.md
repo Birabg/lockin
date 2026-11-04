@@ -97,6 +97,12 @@ npm run db:import -- prisma/dev.db      # copies your accounts, sessions and pos
 npm run db:backfill                     # sets time zones and rebuilds daily totals
 ```
 
+## Focus backgrounds
+
+The timer card can show a photo or a drawn theme. Each person's choice is saved to their account and kept in `localStorage` for people without one.
+
+To add a photo, put a `.webp` (up to 2560px wide) in `public/scenes` and a 240px copy in `public/scenes/thumbs`, then add a line to `imageScenes` in `src/lib/scenes.ts` with an accent color for the ring. Full-size originals stay in `scene-originals/`, which git ignores.
+
 ## Rebrand
 
 - Name, tagline, fallback time zone, default goal: `src/lib/brand.ts`

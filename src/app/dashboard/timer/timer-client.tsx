@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import { Check, Pause, Play, Radio, Square, Trash2 } from "lucide-react";
 import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
 import { attachTimelapse } from "@/app/actions/media";
+import { saveScene } from "@/app/actions/scene";
+import { FocusScene } from "@/components/focus-scene";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
+import { ScenePicker } from "@/components/scene-picker";
 import { toast } from "@/components/toaster";
 import { GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { isSceneId, resolveScene } from "@/lib/scenes";
 import { activeSeconds } from "@/lib/session-math";
 import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
 import { uploadBlob } from "@/lib/upload";
@@ -15,6 +19,7 @@ import { formatDuration, formatTimer } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
 const PRESETS = [25, 50, 90, 120];
+const SCENE_KEY = "lockin-scene";
 
 const elapsedSeconds = (s: ActiveSession, now: number) =>
   activeSeconds(
@@ -36,9 +41,16 @@ async function publishTimelapse(postId: string) {
 
 const stateKey = (s: ActiveSession | null) => (s ? `${s.id}:${s.pausedSec}:${s.pausedAt}` : "");
 
-type Props = { active: ActiveSession | null; todaySec: number; dailyGoalMin: number; liveCount: number; serverNow: number };
+type Props = {
+  active: ActiveSession | null;
+  todaySec: number;
+  dailyGoalMin: number;
+  liveCount: number;
+  serverNow: number;
+  savedSceneId: string | null;
+};
 
-export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverNow }: Props) {
+export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverNow, savedSceneId }: Props) {
   const router = useRouter();
   const [session, setSession] = useState<ActiveSession | null>(active);
   const [goal, setGoal] = useState(active?.goalMin ?? 25);
@@ -51,10 +63,12 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
   const [recordable, setRecordable] = useState(false);
   const [recording, setRecording] = useState(false);
   const [done, setDone] = useState<number | null>(null);
+  const [sceneId, setSceneId] = useState(savedSceneId);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const notified = useRef(false);
 
+  const scene = resolveScene(sceneId);
   const elapsed = session ? elapsedSeconds(session, now) : 0;
   const paused = !!session?.pausedAt;
   const goalSec = (session?.goalMin ?? goal) * 60;
@@ -64,6 +78,29 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
     setRecordable(canRecordScreen());
     setRecording(isRecording());
   }, []);
+
+  // the account's choice wins, and this browser's copy covers anyone without one yet
+  useEffect(() => {
+    if (savedSceneId) return;
+    try {
+      const local = localStorage.getItem(SCENE_KEY);
+      if (local && isSceneId(local)) setSceneId(local);
+    } catch {
+      // storage can be blocked, and the default scene is fine then
+    }
+  }, [savedSceneId]);
+
+  function onPickScene(id: string) {
+    setSceneId(id);
+    try {
+      localStorage.setItem(SCENE_KEY, id);
+    } catch {
+      // still saved to the account below
+    }
+    saveScene(id)
+      .then((res) => res.error && toast(res.error, "error"))
+      .catch(() => toast("Couldn't save your background", "error"));
+  }
 
   // space starts and finishes, escape backs out of wrapping up
   const keys = useRef({ onStart, onConfirmFinish, setFinishing, session, finishing, pending });
@@ -191,24 +228,33 @@ export function TimerClient({ active, todaySec, dailyGoalMin, liveCount, serverN
 
   return (
     <div className="flex flex-col items-center">
-      <p className="flex items-center gap-2 text-sm font-semibold text-muted">
-        <Radio className="size-4 text-live animate-live" /> {liveCount} focusing right now
-      </p>
-
-      <div className="mt-8">
-        <GoalRing pct={session ? pct : 0} size={280} stroke={14}>
-          <div className="text-center">
-            <p className="text-[44px] leading-none font-extrabold tracking-tight tabular">
-              {session ? formatTimer(elapsed) : formatTimer(goal * 60)}
-            </p>
-            <p className="mt-2 text-sm font-semibold text-muted">
-              {!session ? "Ready" : paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
-            </p>
-            {session?.label && <p className="mt-1 text-xs font-bold text-primary-text">{session.label}</p>}
-            {recording && <p className="mt-1 text-xs font-bold text-danger">● Recording screen</p>}
-          </div>
-        </GoalRing>
+      <div className="mb-2 flex w-full justify-end">
+        <ScenePicker current={scene} onPick={onPickScene} />
       </div>
+
+      <FocusScene scene={scene}>
+        <div className="flex flex-col items-center px-4 py-5">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Radio className="size-4 animate-live" style={{ color: scene.accent }} /> {liveCount} focusing right now
+          </p>
+
+          <div className="mt-4">
+            <GoalRing pct={session ? pct : 0} size={280} stroke={14} color={scene.accent} track="rgb(255 255 255 / 0.2)">
+              <div className="text-center">
+                <p className="text-[44px] leading-none font-extrabold tracking-tight tabular">
+                  {session ? formatTimer(elapsed) : formatTimer(goal * 60)}
+                </p>
+                <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold">
+                  <span className="size-2 rounded-full" style={{ background: scene.accent }} aria-hidden />
+                  {!session ? "Ready" : paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
+                </p>
+                {session?.label && <p className="mt-1 text-xs font-bold">{session.label}</p>}
+                {recording && <p className="mt-1 text-xs font-bold">● Recording screen</p>}
+              </div>
+            </GoalRing>
+          </div>
+        </div>
+      </FocusScene>
 
       {done !== null && !session && (
         <div className="mt-6 flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-bold text-primary-text">

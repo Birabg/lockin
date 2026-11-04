@@ -15,6 +15,7 @@ export const limits = {
   buddy: { max: 30, windowSec: 60 * 60 },
   nudge: { max: 1, windowSec: 60 * 60 },
   room: { max: 20, windowSec: 60 * 60 },
+  scene: { max: 60, windowSec: 60 },
 } as const;
 
 type Limit = { max: number; windowSec: number };

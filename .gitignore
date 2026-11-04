@@ -13,3 +13,6 @@ next-env.d.ts
 # tests
 /test-results
 /playwright-report
+
+# full-size scene images, kept out of git
+scene-originals/

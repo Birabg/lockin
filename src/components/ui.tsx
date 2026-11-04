@@ -53,11 +53,15 @@ export function GoalRing({
   pct,
   size = 64,
   stroke = 6,
+  color = "var(--primary)",
+  track = "var(--inset)",
   children,
 }: {
   pct: number;
   size?: number;
   stroke?: number;
+  color?: string;
+  track?: string;
   children?: React.ReactNode;
 }) {
   const r = (size - stroke) / 2;
@@ -66,13 +70,13 @@ export function GoalRing({
   return (
     <div className="relative grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--inset)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="var(--primary)"
+          stroke={color}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}

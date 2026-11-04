@@ -57,6 +57,7 @@ export type CurrentUser = {
   bio: string | null;
   avatar: string | null;
   dailyGoalMin: number;
+  sceneId: string | null;
   timeZone: string;
 };
 
@@ -66,7 +67,17 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!id) return null;
   return db.user.findUnique({
     where: { id },
-    select: { id: true, username: true, name: true, email: true, bio: true, avatar: true, dailyGoalMin: true, timeZone: true },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      email: true,
+      bio: true,
+      avatar: true,
+      dailyGoalMin: true,
+      timeZone: true,
+      sceneId: true,
+    },
   });
 });
 
