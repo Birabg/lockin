@@ -5,7 +5,7 @@ const splash = (page: import("@playwright/test").Page) => page.locator("html[dat
 test("plays on the first visit of a session, and not again", async ({ page }) => {
   await page.goto("/login");
   await expect(page.locator(".splash")).toBeVisible();
-  await expect(splash(page)).toHaveCount(0, { timeout: 4000 });
+  await expect(splash(page)).toHaveCount(0, { timeout: 7000 });
   await expect(page.locator(".splash")).toBeHidden();
 
   await page.reload();

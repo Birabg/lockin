@@ -4,8 +4,8 @@ import { brand } from "./brand";
 import { SPLASH, SPLASH_TOTAL, splashScript } from "./splash";
 
 describe("splash", () => {
-  it("lasts about 1.6 seconds, well inside the cap", () => {
-    expect(SPLASH_TOTAL).toBe(1600);
+  it("lasts 5 seconds, inside the cap", () => {
+    expect(SPLASH_TOTAL).toBe(5000);
     expect(SPLASH_TOTAL).toBeLessThan(SPLASH.cap);
   });
 

@@ -5,15 +5,15 @@ const speed = 1;
 const ms = (n: number) => Math.round(n / speed);
 
 export const SPLASH = {
-  draw: ms(400), // the ring traces round and the ticks fade in
-  sweep: ms(500), // the hand makes one fast turn
-  form: ms(300), // the ring becomes the tile and the shackle lifts
-  snap: ms(150), // the shackle drops and bounces
-  word: ms(120), // the wordmark slides in
-  hold: ms(0), // a pause on the finished logo
-  fade: ms(130), // the splash fades to the page
+  draw: ms(1000), // the ring traces round and the ticks fade in
+  sweep: ms(1800), // the hand makes one fast turn
+  form: ms(1000), // the ring becomes the tile and the shackle lifts
+  snap: ms(250), // the shackle drops and bounces
+  word: ms(300), // the wordmark slides in
+  hold: ms(450), // a pause on the finished logo
+  fade: ms(200), // the splash fades to the page
   loop: 1600, // one gentle turn while the page isn't ready
-  cap: 3000, // the longest it can ever last
+  cap: 6000, // the longest it can ever last
   still: 300, // how long the logo shows with reduced motion
 };
 
