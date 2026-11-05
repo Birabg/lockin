@@ -28,6 +28,40 @@ async function holdToStart(page: Page) {
   await page.mouse.up();
 }
 
+test("counts down to the goal, then offers overtime, and saves the real time", async ({ browser }) => {
+  const focuser = `c${run}`;
+  const page = await signUp(browser, `Count ${run}`, focuser);
+  await page.goto("/dashboard/timer");
+  await holdToStart(page);
+  const view = page.locator("[data-immersive-view]");
+  await expect(view).toContainText("focusing · ends at");
+  await expect(page).toHaveTitle(/^(25:00|24:5\d) left/);
+
+  // three seconds short of a 25 minute goal
+  const user = await db.user.findUniqueOrThrow({ where: { username: focuser } });
+  const startedAt = new Date(Date.now() - (25 * 60 - 3) * 1000);
+  await db.focusSession.updateMany({ where: { userId: user.id, status: "ACTIVE" }, data: { startedAt } });
+  await page.reload();
+
+  const prompt = page.getByRole("alertdialog", { name: "Goal reached" });
+  await expect(prompt).toBeVisible({ timeout: 8000 });
+  await expect(view).toContainText("00:00");
+  await prompt.getByRole("button", { name: "Keep going" }).click();
+  await expect(prompt).toBeHidden();
+  await expect(view).toContainText("+00:");
+  await page.reload();
+  await expect(view).toContainText("overtime");
+  await expect(prompt).toBeHidden();
+
+  await page.mouse.move(300, 300);
+  await page.mouse.move(320, 320);
+  await page.getByRole("button", { name: "Finish session" }).click();
+  await page.getByRole("button", { name: "Save session" }).click();
+  await expect(page.getByRole("button", { name: "Hold to lock in" })).toBeVisible();
+  const saved = await db.focusSession.findFirstOrThrow({ where: { userId: user.id, status: "DONE" } });
+  expect(saved.durationSec).toBeGreaterThan(25 * 60);
+});
+
 test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   const focuser = `f${run}`;
   const liker = `l${run}`;

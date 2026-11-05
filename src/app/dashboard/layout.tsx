@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getActiveSession } from "@/app/actions/focus";
 import { FocusHeartbeat } from "@/components/focus-heartbeat";
+import { GoalAlert } from "@/components/goal-alert";
 import { LiveRefresh } from "@/components/live-refresh";
 import { BottomNav, MobileTopBar, Sidebar } from "@/components/nav";
 import { getCurrentUser } from "@/lib/auth";
@@ -21,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </a>
       <LiveRefresh />
       <FocusHeartbeat sessionId={active?.id ?? null} paused={!!active?.pausedAt} />
+      <GoalAlert session={active} />
       <Sidebar
         user={user ? { name: user.name, username: user.username, avatar: user.avatar, streak: streak?.current ?? 0 } : null}
         unread={unread}

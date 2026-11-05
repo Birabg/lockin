@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   dayKey,
   formatCount,
+  formatCountdown,
   formatDuration,
-  formatTimer,
   isValidTimeZone,
   sessionWindow,
   shiftDayKey,
@@ -34,6 +34,23 @@ describe("sessionWindow", () => {
     const w = sessionWindow(new Date("2026-01-01T21:59:50Z"), new Date("2026-01-01T22:00:00Z"), "UTC");
     expect(w.widthPct).toBe(2);
     expect(w.leftPct + w.widthPct).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("formatCountdown", () => {
+  it("shows minutes and seconds under an hour", () => {
+    expect(formatCountdown(1500)).toBe("25:00");
+    expect(formatCountdown(59)).toBe("00:59");
+    expect(formatCountdown(3599)).toBe("59:59");
+  });
+
+  it("adds hours from an hour up", () => {
+    expect(formatCountdown(3600)).toBe("1:00:00");
+    expect(formatCountdown(5409)).toBe("1:30:09");
+  });
+
+  it("stops at zero", () => {
+    expect(formatCountdown(-5)).toBe("00:00");
   });
 });
 
@@ -104,10 +121,5 @@ describe("formatting", () => {
     expect(formatDuration(59 * 60)).toBe("59m");
     expect(formatDuration(3 * 3600)).toBe("3h");
     expect(formatDuration(2 * 3600 + 24 * 60)).toBe("2h 24m");
-  });
-
-  it("formats the running timer", () => {
-    expect(formatTimer(0)).toBe("00:00:00");
-    expect(formatTimer(3661)).toBe("01:01:01");
   });
 });

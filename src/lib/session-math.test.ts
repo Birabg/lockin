@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GRACE_MS, STALE_MS, activeSeconds, isExpired, pausedSeconds, runningSeconds } from "./session-math";
+import { GRACE_MS, STALE_MS, activeSeconds, goalEndsAt, isExpired, pausedSeconds, remainingSeconds, runningSeconds } from "./session-math";
 
 const start = new Date("2026-11-04T10:00:00Z");
 const after = (min: number) => new Date(start.getTime() + min * 60_000);
@@ -34,6 +34,35 @@ describe("activeSeconds", () => {
 
   it("is never negative", () => {
     expect(activeSeconds({ ...base, pausedSec: 9999 }, after(1))).toBe(0);
+  });
+});
+
+describe("remainingSeconds", () => {
+  const goal = { ...base, goalMin: 25 };
+
+  it("starts at the goal, and holds it for the whole first second", () => {
+    expect(remainingSeconds(goal, start)).toBe(1500);
+    expect(remainingSeconds(goal, new Date(start.getTime() + 900))).toBe(1500);
+    expect(remainingSeconds(goal, new Date(start.getTime() + 1000))).toBe(1499);
+  });
+
+  it("reaches zero at the goal and goes below it in overtime", () => {
+    expect(remainingSeconds(goal, after(25))).toBe(0);
+    expect(remainingSeconds(goal, after(28))).toBe(-180);
+  });
+
+  it("freezes during a pause and carries on after", () => {
+    const paused = { ...goal, pausedAt: after(10) };
+    expect(remainingSeconds(paused, after(10))).toBe(900);
+    expect(remainingSeconds(paused, after(40))).toBe(900);
+    expect(remainingSeconds({ ...goal, pausedSec: 300 }, after(15))).toBe(900);
+  });
+});
+
+describe("goalEndsAt", () => {
+  it("moves later by the time spent paused", () => {
+    expect(goalEndsAt({ ...base, goalMin: 25 })).toEqual(after(25));
+    expect(goalEndsAt({ ...base, goalMin: 25, pausedSec: 300 })).toEqual(after(30));
   });
 });
 

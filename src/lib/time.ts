@@ -68,14 +68,13 @@ export function formatDuration(totalSec: number): string {
   return `${m}m`;
 }
 
-/** 01:05:09 style clock for the running timer */
-export function formatTimer(totalSec: number): string {
+/** 1500 -> "25:00", 5400 -> "1:30:00" */
+export function formatCountdown(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
   const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  const rest = `${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+  return h ? `${h}:${rest}` : rest;
 }
 
 const tickFormats = new Map<string, Intl.DateTimeFormat>();

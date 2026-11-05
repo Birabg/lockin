@@ -6,6 +6,11 @@ import { Avatar, EmptyState, PageHeader, btnPrimary } from "@/components/ui";
 export const metadata = { title: "Focusing now" };
 export const dynamic = "force-dynamic";
 
+function timeLeft(remaining: number) {
+  if (remaining > 0) return `${formatDuration(Math.ceil(remaining / 60) * 60)} left`;
+  return remaining > -60 ? "Goal reached" : `+${formatDuration(-remaining)}`;
+}
+
 export default async function FocusingPage() {
   const { count, sessions } = await getFocusingNow(200);
   return (
@@ -33,7 +38,9 @@ export default async function FocusingPage() {
                     <span className="block truncate text-xs text-muted">{s.label ?? "Deep work"}</span>
                   </span>
                   <span className="text-right">
-                    <span className="block text-sm font-extrabold tabular">{formatDuration(s.sec)}</span>
+                    <span className={`block text-sm font-extrabold tabular ${s.remaining > 0 ? "" : "text-streak"}`}>
+                      {timeLeft(s.remaining)}
+                    </span>
                     <span className="block text-[11px] text-subtle">of {formatDuration(s.goalMin * 60)}</span>
                   </span>
                 </Link>

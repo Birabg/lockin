@@ -35,7 +35,7 @@ function click(from: number, to: number, volume: number, ms: number, delayMs = 0
   osc.stop(end);
 }
 
-function buzz(ms: number) {
+function buzz(ms: number | number[]) {
   // Chrome complains about vibrating before the first tap, which a mouse wheel can do
   if (typeof navigator.vibrate === "function" && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate(ms);
 }
@@ -53,6 +53,30 @@ export function playLock(vibrateMs = 20, sound = true) {
   if (muted || !sound) return;
   click(900, 240, 0.12, 60);
   click(420, 130, 0.14, 90, 55);
+}
+
+/** Three soft rising notes for reaching the goal. Can play long after the last press, so it wakes the audio itself. */
+export function playChime() {
+  buzz([120, 80, 120]);
+  if (loadSoundMuted()) return;
+  const ctx = audio();
+  ctx
+    ?.resume()
+    .then(() => {
+      [659, 831, 988].forEach((frequency, i) => {
+        const start = ctx.currentTime + i * 0.14;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.09, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 1);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 1);
+      });
+    })
+    .catch(() => {});
 }
 
 export function setSoundMuted(value: boolean) {

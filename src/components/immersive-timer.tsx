@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { FocusScene } from "./focus-scene";
 import { Icon } from "./icon";
 import { ScenePanel } from "./scene-picker";
-import { Avatar, GoalRing } from "./ui";
+import { Avatar, ClockDigits, GoalRing } from "./ui";
 import { brand } from "@/lib/brand";
 import type { Scene } from "@/lib/scenes";
 import { formatDuration } from "@/lib/time";
@@ -55,7 +55,9 @@ function useRecentActivity() {
 
 type Props = {
   scene: Scene;
-  elapsed: number;
+  clock: string;
+  status: string;
+  overtime: boolean;
   pct: number;
   paused: boolean;
   label: string | null;
@@ -71,6 +73,8 @@ type Props = {
   finishing: boolean;
   /** The wrap-up form, shown in a glass panel while finishing. */
   wrapUp: ReactNode;
+  /** The choice shown once the goal is reached, until it's answered. */
+  goalPrompt: ReactNode;
   error: string | null;
   pending: boolean;
   onTogglePause: () => void;
@@ -91,15 +95,16 @@ const fluid = {
 } as CSSProperties;
 
 export function ImmersiveTimer(props: Props) {
-  const { scene, elapsed, pct, paused, label, recording, streak, todaySec, user, timeZone, now } = props;
-  const { leaving, fadeIn, finishing, wrapUp, error, pending, onPickScene, onFinish, onDiscard, onMinimize, onTogglePause } = props;
+  const { scene, clock, status, overtime, pct, paused, label, recording, streak, todaySec, user, timeZone, now } = props;
+  const { leaving, fadeIn, finishing, wrapUp, goalPrompt, error, pending, onPickScene, onFinish, onDiscard, onMinimize, onTogglePause } =
+    props;
   const recent = useRecentActivity();
   const [picking, setPicking] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
 
-  const showBar = recent && !finishing && !picking && !leaving;
-  const hideCursor = !recent && !finishing && !picking;
+  const showBar = recent && !finishing && !picking && !leaving && !goalPrompt;
+  const hideCursor = !recent && !finishing && !picking && !goalPrompt;
 
   useEffect(() => {
     setCanFullscreen(document.fullscreenEnabled);
@@ -163,17 +168,21 @@ export function ImmersiveTimer(props: Props) {
               pct={pct}
               size={300}
               stroke={16}
-              minArc={0.02}
               cssSize="var(--ring)"
-              color={scene.accent}
+              color={overtime ? "var(--streak)" : scene.accent}
               track="rgb(255 255 255 / 0.2)"
+              drain
+              glow={overtime}
             >
               <div className="text-center">
-                <p className="leading-none font-extrabold tracking-tight tabular" style={{ fontSize: "calc(var(--ring) * 0.17)" }}>
-                  {formatDuration(elapsed)}
+                <p
+                  className={`leading-none font-extrabold whitespace-nowrap tabular ${overtime ? "text-streak" : ""}`}
+                  style={{ fontSize: "calc(var(--ring) * 0.16)" }}
+                >
+                  <ClockDigits value={clock} />
                 </p>
-                <p className="font-semibold" style={{ fontSize: "calc(var(--ring) * 0.07)", marginTop: "0.4em" }}>
-                  {paused ? "paused" : "focused"}
+                <p className="font-semibold whitespace-nowrap" style={{ fontSize: "calc(var(--ring) * 0.05)", marginTop: "0.6em" }}>
+                  {status}
                 </p>
               </div>
             </GoalRing>
@@ -255,6 +264,17 @@ export function ImmersiveTimer(props: Props) {
         </div>
 
         {picking && <ScenePanel current={scene} onPick={onPickScene} onClose={() => setPicking(false)} centered />}
+
+        {goalPrompt && !picking && (
+          <div
+            role="alertdialog"
+            aria-label="Goal reached"
+            style={{ bottom: "calc(var(--pad) + 3em)" }}
+            className="absolute left-1/2 w-[min(24rem,calc(100%-2rem))] -translate-x-1/2 space-y-3 rounded-3xl border border-white/15 bg-black/55 p-4 text-[15px] backdrop-blur-xl [text-shadow:none]"
+          >
+            {goalPrompt}
+          </div>
+        )}
 
         {finishing && (
           <div className="absolute inset-0 grid place-items-center overflow-y-auto bg-black/30 p-4 text-[15px] [text-shadow:none]">

@@ -15,7 +15,7 @@ import {
 } from "@/lib/dial";
 import { playTick, wakeSound } from "@/lib/dial-sound";
 import { ClockDigits } from "./ui";
-import { formatClock } from "@/lib/time";
+import { formatClock, formatCountdown } from "@/lib/time";
 
 const SIZE = 340;
 const CENTER = SIZE / 2;
@@ -296,7 +296,7 @@ export function FocusDial({ value, onChange, label, now, timeZone, accent, locke
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
         {label && <p className="mb-1 max-w-[46cqw] truncate text-xs font-bold">{label}</p>}
         <p className="text-[13cqw] leading-none font-extrabold whitespace-nowrap tabular">
-          <ClockDigits value={formatDialTime(shown)} />
+          <ClockDigits value={formatCountdown(shown * 60)} />
         </p>
         <p className="mt-2 text-sm font-semibold whitespace-nowrap">ends at {endsAt(now, shown, timeZone)}</p>
       </div>

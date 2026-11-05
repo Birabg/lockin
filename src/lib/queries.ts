@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { rankTotals } from "./leaderboard";
-import { LIVE_MS, activeSeconds, runningSeconds } from "./session-math";
+import { LIVE_MS, remainingSeconds, runningSeconds } from "./session-math";
 import { computeStreak } from "./streak";
 import { dayKey, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
 
@@ -110,7 +110,7 @@ export async function getFocusingNow(limit = 12) {
     count: live.length,
     sessions: live
       .slice(0, limit)
-      .map(({ label, goalMin, user, ...timing }) => ({ label, goalMin, user, sec: activeSeconds(timing, now) })),
+      .map(({ label, goalMin, user, ...timing }) => ({ label, goalMin, user, remaining: remainingSeconds({ ...timing, goalMin }, now) })),
   };
 }
 

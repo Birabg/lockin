@@ -3,17 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Avatar, ClockDigits, GoalRing } from "@/components/ui";
-import { activeSeconds } from "@/lib/session-math";
+import { remainingSeconds, sessionTiming } from "@/lib/session-math";
 import type { RoomView } from "@/lib/social-features";
-import { formatDuration, formatTimer } from "@/lib/time";
-
-type Session = NonNullable<RoomView["members"][number]["session"]>;
-
-const elapsed = (s: Session, now: number) =>
-  activeSeconds(
-    { startedAt: new Date(s.startedAt), pausedSec: s.pausedSec, pausedAt: s.pausedAt ? new Date(s.pausedAt) : null },
-    new Date(now),
-  );
+import { formatCountdown, formatDuration } from "@/lib/time";
 
 export function RoomGrid({ members, serverNow }: { members: RoomView["members"]; serverNow: number }) {
   const [now, setNow] = useState(serverNow);
@@ -27,15 +19,18 @@ export function RoomGrid({ members, serverNow }: { members: RoomView["members"];
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {members.map(({ user, session }) => {
-        const sec = session ? elapsed(session, now) : 0;
+        const left = session ? remainingSeconds(sessionTiming(session), new Date(now)) : 0;
+        const over = !!session && left <= 0;
         return (
           <li key={user.id} className="panel flex flex-col items-center gap-3 p-4 text-center">
             <Link href={`/dashboard/u/${user.username}`} className="flex items-center gap-2 font-bold">
               <Avatar name={user.name} src={user.avatar} size={28} live={!!session && !session.pausedAt} />
               <span className="truncate">{user.name}</span>
             </Link>
-            <GoalRing pct={session ? sec / (session.goalMin * 60) : 0} size={116} stroke={8}>
-              <span className="text-lg font-extrabold tabular">{session ? <ClockDigits value={formatTimer(sec)} /> : "—"}</span>
+            <GoalRing pct={session ? (over ? 1 : left / (session.goalMin * 60)) : 0} size={116} stroke={8} drain glow={over}>
+              <span className={`text-lg font-extrabold tabular ${over ? "text-streak" : ""}`}>
+                {session ? <ClockDigits value={over ? `+${formatCountdown(-left)}` : formatCountdown(left)} /> : "—"}
+              </span>
             </GoalRing>
             <p className="min-h-4 truncate text-xs text-muted">
               {!session

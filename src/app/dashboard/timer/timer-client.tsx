@@ -16,25 +16,22 @@ import { Icon } from "@/components/icon";
 import { ClockDigits, GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
-import { activeSeconds } from "@/lib/session-math";
+import { GOAL_PROMPT_SEC, activeSeconds, goalEndsAt, remainingSeconds, sessionTiming } from "@/lib/session-math";
 import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
 import { uploadBlob } from "@/lib/upload";
 import { useWakeLock } from "@/lib/use-wake-lock";
-import { formatDuration, formatTimer } from "@/lib/time";
+import { formatClock, formatCountdown, formatDuration } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
 const SCENE_KEY = "lockin-scene";
+const KEPT_GOING_KEY = "lockin-kept-going";
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const FADE_MS = 400;
 /** Long enough for the lock to click shut and its pulse to play before the session takes over. */
 const LOCK_MS = 600;
 
-const elapsedSeconds = (s: ActiveSession, now: number) =>
-  activeSeconds(
-    { startedAt: new Date(s.startedAt), pausedSec: s.pausedSec, pausedAt: s.pausedAt ? new Date(s.pausedAt) : null },
-    new Date(now),
-  );
+const elapsedSeconds = (s: ActiveSession, now: number) => activeSeconds(sessionTiming(s), new Date(now));
 
 async function publishTimelapse(postId: string) {
   try {
@@ -95,22 +92,30 @@ export function TimerClient(props: Props) {
   const [mounted, setMounted] = useState(false);
   // arriving at a running session opens straight into it, with no fade from the page
   const [fadeIn, setFadeIn] = useState(!active);
+  const [keptGoing, setKeptGoing] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const notified = useRef(false);
 
   const scene = resolveScene(sceneId);
   const elapsed = session ? elapsedSeconds(session, now) : 0;
   const paused = !!session?.pausedAt;
   const goalSec = (session?.goalMin ?? goal) * 60;
-  const pct = elapsed / goalSec;
+  const remaining = session ? remainingSeconds(sessionTiming(session), new Date(now)) : goalSec;
+  const over = Math.max(0, -remaining);
+  const reached = !!session && remaining <= 0;
+  const overtime = reached && (keptGoing === session.id || over >= GOAL_PROMPT_SEC);
+  const asking = reached && !overtime && !finishing;
+  const pct = overtime ? 1 : Math.max(0, remaining) / goalSec;
+  const clock = overtime ? `+${formatCountdown(over)}` : formatCountdown(remaining);
+  const endsAt = session ? formatClock(goalEndsAt(sessionTiming(session)), timeZone) : "";
+  const status = paused ? "paused" : overtime ? "overtime" : reached ? "goal reached" : `focusing · ends at ${endsAt}`;
   const immersive = !!session && !minimized;
   const showOverlay = useStaysFor(immersive, FADE_MS);
   // todaySec already holds this session up to when the page was rendered, so only add what's come since
   const todayNow = todaySec + (session ? Math.max(0, elapsed - elapsedSeconds(session, serverNow)) : 0);
 
   // what the overlay keeps showing while it fades out after the session has gone
-  const lastView = useRef({ elapsed, pct, paused, label: session?.label ?? null, todayNow });
-  if (session) lastView.current = { elapsed, pct, paused, label: session.label, todayNow };
+  const lastView = useRef({ clock, status, overtime, pct, paused, label: session?.label ?? null, todayNow });
+  if (session) lastView.current = { clock, status, overtime, pct, paused, label: session.label, todayNow };
 
   useWakeLock(!!session);
   useEffect(() => setMounted(true), []);
@@ -135,6 +140,31 @@ export function TimerClient(props: Props) {
     setRecordable(canRecordScreen());
     setRecording(isRecording());
   }, []);
+
+  // "Keep going" is kept per browser, so a refresh or a second tab doesn't ask again
+  useEffect(() => {
+    const read = () => {
+      try {
+        setKeptGoing(localStorage.getItem(KEPT_GOING_KEY));
+      } catch {
+        // it just asks again after a refresh
+      }
+    };
+    read();
+    window.addEventListener("storage", read);
+    return () => window.removeEventListener("storage", read);
+  }, []);
+
+  function keepGoing() {
+    if (!session) return;
+    setKeptGoing(session.id);
+    setFinishing(false);
+    try {
+      localStorage.setItem(KEPT_GOING_KEY, session.id);
+    } catch {
+      // it just asks again after a refresh
+    }
+  }
 
   // the account's choice wins, and this browser's copy covers anyone without one yet
   useEffect(() => {
@@ -177,12 +207,18 @@ export function TimerClient(props: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // tick
+  // tick just after each of the session's own seconds, so the clock never skips one
   useEffect(() => {
     if (!session) return;
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
+    const startMs = new Date(session.startedAt).getTime();
+    let id: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const t = Date.now();
+      setNow(t);
+      id = setTimeout(tick, 1000 - ((t - startMs) % 1000) + 5);
+    };
+    tick();
+    return () => clearTimeout(id);
   }, [session]);
 
   // follow the server when the session changes elsewhere (another tab or device, or it timed out).
@@ -195,16 +231,11 @@ export function TimerClient(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverState]);
 
-  // tab title + goal notification
+  const hasSession = !!session;
   useEffect(() => {
-    document.title = session ? `${formatTimer(elapsed)} · ${brand.name}` : `Focus · ${brand.name}`;
-    if (session && pct >= 1 && !notified.current) {
-      notified.current = true;
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Goal reached 🎯", { body: `You hit ${formatDuration(goalSec)}. Keep going or wrap up.` });
-      }
-    }
-  }, [session, elapsed, pct, goalSec]);
+    const time = !hasSession ? "Focus" : overtime ? clock : reached ? "Goal reached" : `${clock} left`;
+    document.title = `${time} · ${brand.name}`;
+  }, [hasSession, overtime, reached, clock, now]); // on every tick, because Next puts its own title back when the page refreshes
 
   function onStart() {
     setError(null);
@@ -218,7 +249,6 @@ export function TimerClient(props: Props) {
         }
         const lockPlayed = new Promise((done) => setTimeout(done, prefersReducedMotion() ? 0 : LOCK_MS));
         const [s] = await Promise.all([startFocus(goal, label), lockPlayed]);
-        notified.current = false;
         setNow(Date.now());
         setSession(s);
         setDone(null);
@@ -328,11 +358,28 @@ export function TimerClient(props: Props) {
         </div>
       )}
       <div className="flex gap-2">
-        <button onClick={() => setFinishing(false)} className={`${btnGhost} h-11 flex-1 text-sm`}>
+        <button onClick={reached ? keepGoing : () => setFinishing(false)} className={`${btnGhost} h-11 flex-1 text-sm`}>
           Keep going
         </button>
         <button onClick={onConfirmFinish} disabled={pending} className={`${btnPrimary} h-11 flex-1 text-sm`}>
           Save session
+        </button>
+      </div>
+    </>
+  );
+
+  const goalPrompt = (
+    <>
+      <div>
+        <p className="font-bold">Goal reached 🎯</p>
+        <p className="text-sm">You focused for {formatDuration(elapsed)}.</p>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={keepGoing} className={`${btnGhost} h-11 flex-1 text-sm`}>
+          Keep going
+        </button>
+        <button onClick={() => setFinishing(true)} className={`${btnPrimary} h-11 flex-1 text-sm`}>
+          Finish & save
         </button>
       </div>
     </>
@@ -355,6 +402,7 @@ export function TimerClient(props: Props) {
             fadeIn={fadeIn}
             finishing={finishing}
             wrapUp={wrapUp}
+            goalPrompt={asking ? goalPrompt : null}
             error={error}
             pending={pending}
             onTogglePause={onTogglePause}
@@ -390,14 +438,22 @@ export function TimerClient(props: Props) {
             </p>
 
             <div className="mt-4">
-              <GoalRing pct={pct} size={280} stroke={14} color={scene.accent} track="rgb(255 255 255 / 0.2)">
+              <GoalRing
+                pct={pct}
+                size={280}
+                stroke={14}
+                color={overtime ? "var(--streak)" : scene.accent}
+                track="rgb(255 255 255 / 0.2)"
+                drain
+                glow={overtime}
+              >
                 <div className="text-center">
-                  <p className="text-[44px] leading-none font-extrabold tabular">
-                    <ClockDigits value={formatTimer(elapsed)} />
+                  <p className={`text-[44px] leading-none font-extrabold tabular ${overtime ? "text-streak" : ""}`}>
+                    <ClockDigits value={clock} />
                   </p>
                   <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold">
                     <span className="size-2 rounded-full" style={{ background: scene.accent }} aria-hidden />
-                    {paused ? "Paused" : pct >= 1 ? "Goal reached — keep going" : `Goal ${formatDuration(goalSec)}`}
+                    {status}
                   </p>
                   {session.label && <p className="mt-1 text-xs font-bold">{session.label}</p>}
                   {recording && <p className="mt-1 text-xs font-bold">● Recording screen</p>}
@@ -468,6 +524,11 @@ export function TimerClient(props: Props) {
       )}
 
       {session && finishing && !immersive && <div className="panel mt-8 w-full space-y-3 p-4">{wrapUp}</div>}
+      {asking && !immersive && (
+        <div role="alertdialog" aria-label="Goal reached" className="panel mt-8 w-full space-y-3 p-4">
+          {goalPrompt}
+        </div>
+      )}
 
       {error && <p className="mt-4 text-center text-sm text-danger">{error}</p>}
     </div>

@@ -75,6 +75,8 @@ export function GoalRing({
   track = "var(--inset)",
   minArc = 0,
   cssSize,
+  drain = false,
+  glow = false,
   children,
 }: {
   pct: number;
@@ -86,6 +88,9 @@ export function GoalRing({
   minArc?: number;
   /** Any CSS length, for rings that scale with the screen. size and stroke then only set the proportions. */
   cssSize?: string;
+  /** Fills from the far side, so as pct falls the ring empties clockwise from 12 o'clock. */
+  drain?: boolean;
+  glow?: boolean;
   children?: React.ReactNode;
 }) {
   const r = (size - stroke) / 2;
@@ -94,7 +99,7 @@ export function GoalRing({
   const shown = clamped > 0 ? Math.max(clamped, minArc) : 0;
   return (
     <div className="relative grid shrink-0 place-items-center" style={{ width: cssSize ?? size, height: cssSize ?? size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="size-full -rotate-90">
+      <svg viewBox={`0 0 ${size} ${size}`} className={`size-full -rotate-90 ${glow ? "streak-glow" : ""}`}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         {shown > 0 && (
           <circle
@@ -106,7 +111,7 @@ export function GoalRing({
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={c}
-            strokeDashoffset={c * (1 - shown)}
+            strokeDashoffset={drain ? c * (1 + shown) : c * (1 - shown)}
             style={{ transition: "stroke-dashoffset 400ms ease" }}
           />
         )}
