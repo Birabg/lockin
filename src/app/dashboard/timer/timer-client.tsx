@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
 import { attachPhoto, attachTimelapse } from "@/app/actions/media";
-import { saveScene } from "@/app/actions/scene";
+import { saveClockStyle, saveScene } from "@/app/actions/scene";
 import { prefersReducedMotion } from "@/components/focus-dial";
 import { FocusScene } from "@/components/focus-scene";
 import { FocusSetup } from "@/components/focus-setup";
@@ -14,16 +14,18 @@ import { ScenePicker } from "@/components/scene-picker";
 import { toast } from "@/components/toaster";
 import { Icon } from "@/components/icon";
 import { ClockDigits, GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
+import { DEFAULT_CLOCK_STYLE, clockText, isClockStyle, resolveClockStyle, type ClockStyle } from "@/lib/clock-styles";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
 import { GOAL_PROMPT_SEC, activeSeconds, goalEndsAt, remainingSeconds, sessionTiming } from "@/lib/session-math";
 import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
 import { uploadBlob } from "@/lib/upload";
 import { useWakeLock } from "@/lib/use-wake-lock";
-import { formatClock, formatCountdown, formatDuration } from "@/lib/time";
+import { formatClock, formatDuration } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
 const SCENE_KEY = "lockin-scene";
+const CLOCK_KEY = "lockin-clock-style";
 const KEPT_GOING_KEY = "lockin-kept-going";
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
@@ -66,13 +68,15 @@ type Props = {
   labels: string[];
   serverNow: number;
   savedSceneId: string | null;
+  savedClockStyle: string;
   streak: number;
   user: { name: string; username: string; avatar: string | null };
   timeZone: string;
 };
 
 export function TimerClient(props: Props) {
-  const { active, todaySec, dailyGoalMin, liveCount, liveUsers, labels, serverNow, savedSceneId, streak, user, timeZone } = props;
+  const { active, todaySec, dailyGoalMin, liveCount, liveUsers, labels, serverNow, savedSceneId, savedClockStyle, streak, user, timeZone } =
+    props;
   const router = useRouter();
   const [session, setSession] = useState<ActiveSession | null>(active);
   const [goal, setGoal] = useState(snapMinutes(active?.goalMin ?? 25)); // the dial has no 37 or 8h, and a running session keeps its own
@@ -87,6 +91,7 @@ export function TimerClient(props: Props) {
   const [recording, setRecording] = useState(false);
   const [done, setDone] = useState<number | null>(null);
   const [sceneId, setSceneId] = useState(savedSceneId);
+  const [clockStyle, setClockStyle] = useState(resolveClockStyle(savedClockStyle));
   const [error, setError] = useState<string | null>(null);
   const [minimized, setMinimized] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -105,7 +110,9 @@ export function TimerClient(props: Props) {
   const overtime = reached && (keptGoing === session.id || over >= GOAL_PROMPT_SEC);
   const asking = reached && !overtime && !finishing;
   const pct = overtime ? 1 : Math.max(0, remaining) / goalSec;
-  const clock = overtime ? `+${formatCountdown(over)}` : formatCountdown(remaining);
+  const clock = clockText(remaining, overtime);
+  const shownRemaining = overtime ? remaining : Math.max(0, remaining);
+  const running = !!session && !paused && (!reached || overtime);
   const endsAt = session ? formatClock(goalEndsAt(sessionTiming(session)), timeZone) : "";
   const status = paused ? "paused" : overtime ? "overtime" : reached ? "goal reached" : `focusing · ends at ${endsAt}`;
   const immersive = !!session && !minimized;
@@ -114,8 +121,9 @@ export function TimerClient(props: Props) {
   const todayNow = todaySec + (session ? Math.max(0, elapsed - elapsedSeconds(session, serverNow)) : 0);
 
   // what the overlay keeps showing while it fades out after the session has gone
-  const lastView = useRef({ clock, status, overtime, pct, paused, label: session?.label ?? null, todayNow });
-  if (session) lastView.current = { clock, status, overtime, pct, paused, label: session.label, todayNow };
+  const view = { remainingSec: shownRemaining, totalSec: goalSec, running, status, overtime, paused, todayNow };
+  const lastView = useRef({ ...view, label: session?.label ?? null });
+  if (session) lastView.current = { ...view, label: session.label };
 
   useWakeLock(!!session);
   useEffect(() => setMounted(true), []);
@@ -176,6 +184,29 @@ export function TimerClient(props: Props) {
       // storage can be blocked, and the default scene is fine then
     }
   }, [savedSceneId]);
+
+  // the same goes for the clock, where an account that never chose still has the default
+  useEffect(() => {
+    if (resolveClockStyle(savedClockStyle) !== DEFAULT_CLOCK_STYLE) return;
+    try {
+      const local = localStorage.getItem(CLOCK_KEY);
+      if (local && isClockStyle(local)) setClockStyle(local);
+    } catch {
+      // storage can be blocked, and the ring is fine then
+    }
+  }, [savedClockStyle]);
+
+  function onPickClock(style: ClockStyle) {
+    setClockStyle(style);
+    try {
+      localStorage.setItem(CLOCK_KEY, style);
+    } catch {
+      // still saved to the account below
+    }
+    saveClockStyle(style)
+      .then((res) => res.error && toast(res.error, "error"))
+      .catch(() => toast("Couldn't save your clock style", "error"));
+  }
 
   function onPickScene(id: string) {
     setSceneId(id);
@@ -391,6 +422,7 @@ export function TimerClient(props: Props) {
         (mounted ? (
           <ImmersiveTimer
             scene={scene}
+            clockStyle={clockStyle}
             {...lastView.current}
             recording={recording}
             streak={streak}
@@ -414,6 +446,7 @@ export function TimerClient(props: Props) {
               setFinishing(false);
             }}
             onPickScene={onPickScene}
+            onPickClock={onPickClock}
           />
         ) : (
           // holds the screen until the portal can render, so the page never flashes first
@@ -478,6 +511,8 @@ export function TimerClient(props: Props) {
           timeZone={timeZone}
           starting={pending}
           onStart={onStart}
+          clockStyle={clockStyle}
+          onClockStyle={onPickClock}
           footer={
             recordable && (
               <label className="flex items-center gap-2 text-sm font-semibold text-muted">

@@ -31,16 +31,17 @@ function Thumb({ scene, selected, onPick }: { scene: Scene; selected: boolean; o
   );
 }
 
-type PanelProps = {
-  current: Scene;
-  onPick: (id: string) => void;
+type SheetProps = {
+  title: string;
   onClose: () => void;
   /** Centred above the bottom of the screen, instead of hanging from a button. */
   centered?: boolean;
+  wide?: boolean;
+  children: React.ReactNode;
 };
 
 /** A popover on desktop and a bottom sheet on mobile, from one element. */
-export function ScenePanel({ current, onPick, onClose, centered = false }: PanelProps) {
+export function PickerSheet({ title, onClose, centered = false, wide = false, children }: SheetProps) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -64,22 +65,32 @@ export function ScenePanel({ current, onPick, onClose, centered = false }: Panel
       <div
         ref={panel}
         role="dialog"
-        aria-label="Choose a background"
-        className={`fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-[16px] text-foreground [text-shadow:none] sm:w-[360px] sm:rounded-2xl ${desktop}`}
+        aria-label={`Choose a ${title.toLowerCase()}`}
+        className={`fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-t-2xl border border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-[16px] text-foreground [text-shadow:none] sm:rounded-2xl ${wide ? "sm:w-[600px]" : "sm:w-[360px]"} ${desktop}`}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold">Background</h2>
+          <h2 className="font-bold">{title}</h2>
           <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-full text-muted hover:bg-inset">
             <Icon name="close" size={18} />
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {scenes.map((s) => (
-            <Thumb key={s.id} scene={s} selected={s.id === current.id} onPick={() => onPick(s.id)} />
-          ))}
-        </div>
+        {children}
       </div>
     </>
+  );
+}
+
+type PanelProps = { current: Scene; onPick: (id: string) => void; onClose: () => void; centered?: boolean };
+
+export function ScenePanel({ current, onPick, onClose, centered }: PanelProps) {
+  return (
+    <PickerSheet title="Background" onClose={onClose} centered={centered}>
+      <div className="grid grid-cols-3 gap-2">
+        {scenes.map((s) => (
+          <Thumb key={s.id} scene={s} selected={s.id === current.id} onPick={() => onPick(s.id)} />
+        ))}
+      </div>
+    </PickerSheet>
   );
 }
 

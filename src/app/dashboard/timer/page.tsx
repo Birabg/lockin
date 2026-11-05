@@ -25,6 +25,7 @@ export default async function TimerPage() {
         labels={labels}
         serverNow={Date.now()}
         savedSceneId={user.sceneId}
+        savedClockStyle={user.clockStyle}
         streak={streak.current}
         user={{ name: user.name, username: user.username, avatar: user.avatar }}
         timeZone={user.timeZone}

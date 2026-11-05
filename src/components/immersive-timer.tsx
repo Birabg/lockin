@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Clock } from "./clocks/clock";
+import { ClockPicker } from "./clocks/clock-picker";
 import { FocusScene } from "./focus-scene";
 import { Icon } from "./icon";
-import { ScenePanel } from "./scene-picker";
-import { Avatar, ClockDigits, GoalRing } from "./ui";
+import { PickerSheet, ScenePanel } from "./scene-picker";
+import { Avatar } from "./ui";
 import { brand } from "@/lib/brand";
+import type { ClockStyle } from "@/lib/clock-styles";
 import type { Scene } from "@/lib/scenes";
 import { formatDuration } from "@/lib/time";
 
@@ -55,10 +58,12 @@ function useRecentActivity() {
 
 type Props = {
   scene: Scene;
-  clock: string;
+  clockStyle: ClockStyle;
+  remainingSec: number;
+  totalSec: number;
+  running: boolean;
   status: string;
   overtime: boolean;
-  pct: number;
   paused: boolean;
   label: string | null;
   recording: boolean;
@@ -83,6 +88,7 @@ type Props = {
   onDiscard: () => void;
   onMinimize: () => void;
   onPickScene: (id: string) => void;
+  onPickClock: (style: ClockStyle) => void;
 };
 
 const barButton = "grid size-11 place-items-center rounded-full text-white hover:bg-white/15 disabled:opacity-50";
@@ -95,11 +101,25 @@ const fluid = {
 } as CSSProperties;
 
 export function ImmersiveTimer(props: Props) {
-  const { scene, clock, status, overtime, pct, paused, label, recording, streak, todaySec, user, timeZone, now } = props;
-  const { leaving, fadeIn, finishing, wrapUp, goalPrompt, error, pending, onPickScene, onFinish, onDiscard, onMinimize, onTogglePause } =
-    props;
+  const { scene, clockStyle, remainingSec, totalSec, running, status, overtime, paused } = props;
+  const { label, recording, streak, todaySec, user, timeZone, now } = props;
+  const {
+    leaving,
+    fadeIn,
+    finishing,
+    wrapUp,
+    goalPrompt,
+    error,
+    pending,
+    onPickScene,
+    onPickClock,
+    onFinish,
+    onDiscard,
+    onMinimize,
+    onTogglePause,
+  } = props;
   const recent = useRecentActivity();
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState<"scene" | "clock" | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
 
@@ -140,6 +160,7 @@ export function ImmersiveTimer(props: Props) {
   }
 
   const date = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric" }).format(now);
+  const centred = clockStyle === "ring" ? "portrait:justify-center" : "justify-center";
   const fade = leaving ? "pointer-events-none opacity-0 transition-opacity duration-400" : fadeIn ? "animate-immersive-in" : "";
 
   return createPortal(
@@ -163,46 +184,40 @@ export function ImmersiveTimer(props: Props) {
             <span>{date}</span>
           </header>
 
-          <div className="flex min-h-0 flex-1 items-center justify-center portrait:flex-col" style={{ gap: "clamp(20px, 8vmin, 200px)" }}>
-            <GoalRing
-              pct={pct}
-              size={300}
-              stroke={16}
-              cssSize="var(--ring)"
-              color={overtime ? "var(--streak)" : scene.accent}
-              track="rgb(255 255 255 / 0.2)"
-              drain
-              glow={overtime}
-            >
-              <div className="text-center">
-                <p
-                  className={`leading-none font-extrabold whitespace-nowrap tabular ${overtime ? "text-streak" : ""}`}
-                  style={{ fontSize: "calc(var(--ring) * 0.16)" }}
-                >
-                  <ClockDigits value={clock} />
+          <div
+            className={`flex min-h-0 flex-1 items-center justify-center ${clockStyle === "ring" ? "portrait:flex-col" : "flex-col"}`}
+            style={{ gap: clockStyle === "ring" ? "clamp(20px, 8vmin, 200px)" : "clamp(16px, 4vmin, 96px)" }}
+          >
+            <Clock
+              clockStyle={clockStyle}
+              remainingSec={remainingSec}
+              totalSec={totalSec}
+              running={running}
+              paused={paused}
+              overtime={overtime}
+              accent={scene.accent}
+              status={status}
+            />
+            {clockStyle !== "minimal" && (
+              <div className={`min-w-0 ${clockStyle === "ring" ? "portrait:text-center" : "text-center"}`}>
+                <p className={`flex items-center gap-[0.5em] font-extrabold ${centred}`} style={{ fontSize: "1.6em" }}>
+                  <span className="size-[0.55em] shrink-0 rounded-full" style={{ background: scene.accent }} aria-hidden />
+                  <span className="truncate">{label ?? "Focus"}</span>
                 </p>
-                <p className="font-semibold whitespace-nowrap" style={{ fontSize: "calc(var(--ring) * 0.05)", marginTop: "0.6em" }}>
-                  {status}
+                <p className={`mt-[0.5em] flex items-center gap-[0.4em] font-semibold ${centred}`}>
+                  {streak > 0 && (
+                    <>
+                      <Icon name="streak" size="1em" solid className="streak-glow text-streak" />
+                      <span className="tabular">{streak}d</span>
+                      <span aria-hidden>·</span>
+                    </>
+                  )}
+                  <span className="tabular">{formatDuration(todaySec)}</span> today
                 </p>
+                {clockStyle !== "ring" && !paused && <p className="mt-[0.5em] font-semibold">{status}</p>}
+                {recording && <p className="mt-[0.5em] font-bold">● Recording screen</p>}
               </div>
-            </GoalRing>
-            <div className="min-w-0 portrait:text-center">
-              <p className="flex items-center gap-[0.5em] font-extrabold portrait:justify-center" style={{ fontSize: "1.6em" }}>
-                <span className="size-[0.55em] shrink-0 rounded-full" style={{ background: scene.accent }} aria-hidden />
-                <span className="truncate">{label ?? "Focus"}</span>
-              </p>
-              <p className="mt-[0.5em] flex items-center gap-[0.4em] font-semibold portrait:justify-center">
-                {streak > 0 && (
-                  <>
-                    <Icon name="streak" size="1em" solid className="streak-glow text-streak" />
-                    <span className="tabular">{streak}d</span>
-                    <span aria-hidden>·</span>
-                  </>
-                )}
-                <span className="tabular">{formatDuration(todaySec)}</span> today
-              </p>
-              {recording && <p className="mt-[0.5em] font-bold">● Recording screen</p>}
-            </div>
+            )}
           </div>
 
           <footer className="flex items-center justify-between gap-4 font-semibold">
@@ -245,8 +260,11 @@ export function ImmersiveTimer(props: Props) {
           <button onClick={onDiscard} disabled={pending} aria-label="Discard session" title="Discard" className={barButton}>
             <Icon name="delete" />
           </button>
-          <button onClick={() => setPicking(true)} aria-label="Change background" title="Background" className={barButton}>
+          <button onClick={() => setPicking("scene")} aria-label="Change background" title="Background" className={barButton}>
             <Icon name="image" />
+          </button>
+          <button onClick={() => setPicking("clock")} aria-label="Change clock style" title="Clock style" className={barButton}>
+            <Icon name="clockStyle" />
           </button>
           {canFullscreen && (
             <button
@@ -263,7 +281,12 @@ export function ImmersiveTimer(props: Props) {
           </button>
         </div>
 
-        {picking && <ScenePanel current={scene} onPick={onPickScene} onClose={() => setPicking(false)} centered />}
+        {picking === "scene" && <ScenePanel current={scene} onPick={onPickScene} onClose={() => setPicking(null)} centered />}
+        {picking === "clock" && (
+          <PickerSheet title="Clock style" onClose={() => setPicking(null)} centered wide>
+            <ClockPicker current={clockStyle} accent={scene.accent} onPick={onPickClock} />
+          </PickerSheet>
+        )}
 
         {goalPrompt && !picking && (
           <div

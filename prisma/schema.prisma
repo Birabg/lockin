@@ -17,6 +17,7 @@ model User {
   bio          String?
   avatar       String?
   sceneId      String?
+  clockStyle   String   @default("ring")
   passwordChangedAt DateTime?
   dailyGoalMin Int      @default(60)
   /// IANA zone from the browser at signup. "Today", streaks and day totals use it.

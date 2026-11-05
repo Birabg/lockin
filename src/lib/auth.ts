@@ -58,6 +58,7 @@ export type CurrentUser = {
   avatar: string | null;
   dailyGoalMin: number;
   sceneId: string | null;
+  clockStyle: string;
   timeZone: string;
 };
 
@@ -77,6 +78,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       dailyGoalMin: true,
       timeZone: true,
       sceneId: true,
+      clockStyle: true,
       passwordChangedAt: true,
     },
   });

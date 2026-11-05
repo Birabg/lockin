@@ -1,0 +1,398 @@
+/* Sizes are in em, so a style scales from --clock-size alone: the screen sets it through clamp(), and a preview card sets it directly. */
+
+.clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.clock[data-clock="reel"] {
+  width: 100%;
+}
+.clock-face {
+  max-width: 100%;
+  transition: opacity 300ms ease;
+}
+.clock[data-clock="reel"] .clock-face {
+  width: 100%;
+}
+.clock[data-paused] .clock-face {
+  opacity: 0.68;
+}
+.clock[data-paused] * {
+  animation-play-state: paused;
+}
+.clock-paused {
+  margin-top: 0.8em;
+  font-size: clamp(12px, 2vmin, 34px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.clock[data-overtime] .clock-rolling,
+.clock[data-overtime] .clock-minimal,
+.clock[data-overtime] .reel-row,
+.clock[data-overtime] .flip-card,
+.clock[data-overtime] .clock-sign {
+  color: var(--streak);
+}
+.clock-sign {
+  line-height: 1;
+}
+
+/* Rolling */
+.clock-rolling {
+  display: flex;
+  align-items: flex-start;
+  font-size: var(--clock-size, clamp(52px, min(15vw, 30vh), 460px));
+  font-weight: 200;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.clock-rolling .clock-sign {
+  line-height: 1.15;
+  margin-right: 0.05em;
+}
+.roll-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.roll-digits {
+  display: flex;
+}
+.roll-digit {
+  position: relative;
+  width: 0.62em;
+  height: 1.15em;
+  overflow: clip;
+}
+.roll-digit > span {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+}
+.roll-in {
+  animation: roll-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.roll-out {
+  animation: roll-out 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes roll-in {
+  from {
+    opacity: 0;
+    transform: translateY(70%);
+    filter: blur(0.04em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+@keyframes roll-out {
+  from {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-70%);
+    filter: blur(0.04em);
+  }
+}
+.roll-label {
+  margin-top: 0.5em;
+  font-family: var(--font-app);
+  font-size: max(0.1em, 10px);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.roll-dots {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2em;
+  width: 0.34em;
+  height: 1.15em;
+  align-items: center;
+}
+.roll-dots i {
+  width: 0.06em;
+  height: 0.06em;
+  border-radius: 50%;
+  background: var(--clock-accent);
+}
+.clock[data-overtime] .roll-dots i {
+  background: var(--streak);
+}
+
+/* Flip */
+.clock-flip {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.14em;
+  font-size: var(--clock-size, clamp(50px, min(13.5vw, 24vh), 400px));
+  line-height: 1;
+}
+.clock-flip .clock-sign {
+  align-self: center;
+  font-size: 0.8em;
+}
+.flip-card {
+  --flip-top: #17181b;
+  --flip-bottom: #101113;
+  position: relative;
+  display: block;
+  flex: none;
+  width: 1.62em;
+  height: 1.8em;
+  border-radius: 0.14em;
+  color: #d9dbe0;
+  box-shadow:
+    0 0.05em 0.04em rgb(0 0 0 / 0.65),
+    0 0.14em 0.34em rgb(0 0 0 / 0.5);
+}
+.flip-card[data-small] {
+  font-size: 0.56em;
+}
+/* the split the two halves meet at, with the shadow it throws on the lower half */
+.flip-card::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 50% 0 auto;
+  height: max(1px, 0.018em);
+  background: #000;
+  box-shadow: 0 0.015em 0.03em rgb(0 0 0 / 0.7);
+}
+.flip-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+.flip-top {
+  top: 0;
+  background: var(--flip-top);
+  border-radius: 0.14em 0.14em 0 0;
+  transform-origin: 50% 100%;
+}
+.flip-bottom {
+  bottom: 0;
+  background: var(--flip-bottom);
+  border-radius: 0 0 0.14em 0.14em;
+  transform-origin: 50% 0;
+}
+.flip-number {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 200%;
+  display: grid;
+  place-items: center;
+  /* Bebas sits high in its line, so this puts the middle of the digits on the split */
+  padding-top: 0.115em;
+  font-size: 1.5em;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-shadow: none;
+}
+.flip-top .flip-number {
+  top: 0;
+}
+.flip-bottom .flip-number {
+  bottom: 0;
+}
+.flip-flap {
+  z-index: 2;
+  will-change: transform;
+}
+.flip-flap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+}
+.flip-flap.flip-top {
+  animation: flip-fold 250ms cubic-bezier(0.55, 0, 0.9, 0.5) both;
+}
+.flip-flap.flip-top::after {
+  animation: flip-darken 250ms ease-in both;
+}
+.flip-flap.flip-bottom {
+  animation: flip-land 250ms cubic-bezier(0.1, 0.5, 0.45, 1) 250ms both;
+}
+.flip-flap.flip-bottom::after {
+  animation: flip-lighten 250ms ease-out 250ms both;
+}
+@keyframes flip-fold {
+  from {
+    transform: perspective(9em) rotateX(0deg);
+  }
+  to {
+    transform: perspective(9em) rotateX(-90deg);
+  }
+}
+@keyframes flip-land {
+  from {
+    transform: perspective(9em) rotateX(90deg);
+  }
+  to {
+    transform: perspective(9em) rotateX(0deg);
+  }
+}
+@keyframes flip-darken {
+  to {
+    opacity: 0.6;
+  }
+}
+@keyframes flip-lighten {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.flip-tag {
+  position: absolute;
+  z-index: 4;
+  left: 0.95em;
+  bottom: 0.8em;
+  font-family: var(--font-app);
+  font-size: max(0.1em, 9px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  color: rgb(217 219 224 / 0.65);
+  text-shadow: none;
+}
+.flip-card[data-small] .flip-tag {
+  font-size: max(0.14em, 9px);
+  left: 0.7em;
+  bottom: 0.6em;
+}
+
+/* a phone-sized seconds card has no room beside its digits, so the tag tucks into the corner */
+@media (max-width: 480px) {
+  .flip-card[data-small] .flip-tag {
+    left: 0.5em;
+    bottom: 0.3em;
+    font-size: 6px;
+  }
+}
+
+/* Reel. Its strip hangs from the nearest positioned box: the screen, or a preview card. */
+.clock-reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.reel-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.28em;
+  font-size: var(--clock-size, clamp(46px, min(10.5vw, 22vh), 320px));
+  line-height: 1;
+  white-space: nowrap;
+}
+.reel-unit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1em;
+  color: rgb(255 255 255 / 0.72);
+}
+.reel-unit[data-current] {
+  color: var(--clock-accent);
+}
+.clock[data-overtime] .reel-unit {
+  color: inherit;
+}
+.reel-unit[data-current] .reel-value {
+  font-size: 1.4em;
+}
+.reel-value > span {
+  width: 0.42em;
+}
+.reel-label {
+  font-size: 0.42em;
+  letter-spacing: 0.02em;
+}
+.reel-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 2.6em;
+  overflow: hidden;
+  pointer-events: none;
+  font-size: var(--reel-size, clamp(30px, 6vmin, 120px));
+  line-height: 1;
+}
+.reel-number {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+@media (orientation: portrait) {
+  .reel-strip {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    right: auto;
+    width: 100%;
+    height: 2em;
+    margin-top: 0.6em;
+  }
+}
+
+/* Minimal */
+.clock-minimal {
+  font-size: var(--clock-size, clamp(68px, min(20vw, 42vh), 640px));
+  font-weight: 100;
+  font-feature-settings: "case", "tnum";
+  line-height: 1;
+  white-space: nowrap;
+}
+.clock-minimal > span {
+  width: 0.58em;
+}
+
+/* A preview card has no room for the small print */
+.clock-preview .roll-label,
+.clock-preview .flip-tag,
+.clock-preview .reel-label {
+  display: none;
+}
+.clock-preview .reel-row {
+  padding-right: 1.6em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roll-in,
+  .flip-flap.flip-bottom,
+  .flip-flap.flip-bottom::after {
+    animation: none;
+  }
+  .flip-flap.flip-bottom::after {
+    opacity: 0;
+  }
+  .roll-out,
+  .flip-flap.flip-top {
+    display: none;
+  }
+}

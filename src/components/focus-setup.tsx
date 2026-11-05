@@ -6,7 +6,9 @@ import { FocusDial, prefersReducedMotion } from "./focus-dial";
 import { Icon } from "./icon";
 import { FocusScene } from "./focus-scene";
 import { Avatar } from "./ui";
+import { ClockPicker } from "./clocks/clock-picker";
 import { reachesDailyGoal } from "@/lib/dial";
+import type { ClockStyle } from "@/lib/clock-styles";
 import { loadSoundMuted, playLock, setSoundMuted, wakeSound } from "@/lib/dial-sound";
 import type { Scene } from "@/lib/scenes";
 import { formatDuration } from "@/lib/time";
@@ -129,6 +131,8 @@ type Props = {
   timeZone: string;
   starting: boolean;
   onStart: () => void;
+  clockStyle: ClockStyle;
+  onClockStyle: (style: ClockStyle) => void;
   footer: React.ReactNode;
 };
 
@@ -284,6 +288,10 @@ export function FocusSetup(props: Props) {
       </FocusScene>
 
       <div className="mt-4 space-y-3">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-muted">Clock style</p>
+          <ClockPicker current={props.clockStyle} accent={scene.accent} onPick={props.onClockStyle} />
+        </div>
         {props.footer}
         <p className="text-center text-xs text-subtle">
           Hold space to start. Today {formatDuration(todaySec)} of {formatDuration(dailyGoalMin * 60)} daily goal

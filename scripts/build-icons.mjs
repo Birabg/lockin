@@ -54,6 +54,7 @@ const ICONS = {
   add: { line: "add-linear" },
   more: { line: "menu-dots-bold" },
   time: { line: "clock-circle-linear" },
+  clockStyle: { line: "clock-square-linear" },
   target: { line: "target-linear" },
 };
 
