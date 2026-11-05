@@ -13,7 +13,7 @@ import { getBuddyState } from "@/lib/social-features";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
-  return { title: `@${username}`, openGraph: { images: [`/card/${username}`] } };
+  return { title: `@${username}`, openGraph: { type: "website", siteName: brand.name, images: [`/card/${username}`] } };
 }
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {

@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
   applicationName: brand.name,
+  // no title or description here, so each page shares its own
+  openGraph: { type: "website", siteName: brand.name },
+  twitter: { card: "summary_large_image" },
   appleWebApp: { capable: true, title: brand.name, statusBarStyle: "black-translucent" },
   // setting icons here turns off the automatic tag for app/icon.svg, so every icon has to be listed
   icons: {
