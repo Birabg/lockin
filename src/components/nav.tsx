@@ -46,8 +46,9 @@ function UnreadCount({ count }: { count: number }) {
 
 type SidebarProps = { user: NavUser; unread: number; activity: Activity; initialCollapsed: boolean };
 
-const navItem =
-  "icon-lift relative flex h-12 shrink-0 items-center gap-4 rounded-full text-[15.5px] leading-[23.25px] tracking-[-0.025em] transition-colors";
+const navItem = "relative flex h-14 shrink-0 items-center gap-4 rounded-full text-[17px] leading-6 tracking-[-0.025em] transition-colors";
+const navItemOn = "bg-inset font-semibold text-white";
+const navItemOff = "font-medium text-muted hover:text-white";
 
 function UserMenu({ username }: { username: string }) {
   const [open, setOpen] = useState(false);
@@ -78,7 +79,7 @@ function UserMenu({ username }: { username: string }) {
         aria-expanded={open}
         className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-inset hover:text-foreground"
       >
-        <Icon name="more" size={20} weight="regular" />
+        <Icon name="more" size={20} />
       </button>
       {open && (
         <div className="panel absolute inset-x-0 bottom-full z-20 mb-2 p-1.5">
@@ -103,7 +104,7 @@ function StreakLine({ days }: { days: number }) {
   if (days === 0) return <span className="block truncate text-[12.5px] leading-[18.75px] text-muted">No streak yet</span>;
   return (
     <span className="flex items-center gap-1 truncate text-[12.5px] leading-[18.75px] text-muted tabular-nums">
-      <Icon name="streak" size={14} weight="fill" className="streak-glow text-streak" />
+      <Icon name="streak" size={14} solid className="streak-glow text-streak" />
       {days} day streak
     </span>
   );
@@ -120,7 +121,7 @@ export function Sidebar({ user, unread, activity, initialCollapsed }: SidebarPro
   return (
     <aside
       className={`sticky top-0 ml-[min(4vw,76.8px)] hidden h-dvh shrink-0 flex-col overflow-x-hidden overflow-y-auto px-3 py-4 whitespace-nowrap transition-[width] duration-200 [scrollbar-width:none] lg:flex ${
-        collapsed ? "w-[72px]" : "w-(--sidebar-width)"
+        collapsed ? "w-20" : "w-(--sidebar-width)"
       }`}
     >
       <div className={`flex shrink-0 items-center ${collapsed ? "flex-col gap-3" : "h-8 justify-between pl-3.5"}`}>
@@ -132,7 +133,7 @@ export function Sidebar({ user, unread, activity, initialCollapsed }: SidebarPro
           title={toggleLabel}
           className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-inset/60 hover:text-foreground"
         >
-          <Icon name={collapsed ? "chevron" : "collapse"} size={18} weight="regular" />
+          <Icon name={collapsed ? "chevron" : "collapse"} size={18} />
         </button>
       </div>
       <nav aria-label="Main" className="mt-4 flex flex-col gap-0.5">
@@ -144,13 +145,9 @@ export function Sidebar({ user, unread, activity, initialCollapsed }: SidebarPro
               href={href}
               aria-current={active ? "page" : undefined}
               title={collapsed ? label : undefined}
-              className={`${navItem} ${inset} ${
-                active
-                  ? "bg-inset font-extrabold text-foreground"
-                  : "font-medium text-foreground/80 hover:bg-inset/60 hover:text-foreground"
-              }`}
+              className={`${navItem} ${inset} ${active ? navItemOn : navItemOff}`}
             >
-              <Icon name={icon} size={24} active={active} badge={signal && activity[signal] ? "live" : false} className="text-muted" />
+              <Icon name={icon} size={26} active={active} badge={signal && activity[signal] ? "live" : false} />
               <span className={collapsed ? "sr-only" : ""}>{label}</span>
             </Link>
           );
@@ -161,13 +158,9 @@ export function Sidebar({ user, unread, activity, initialCollapsed }: SidebarPro
             aria-current={path === "/dashboard/notifications" ? "page" : undefined}
             aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
             title={collapsed ? "Notifications" : undefined}
-            className={`${navItem} ${inset} ${
-              path === "/dashboard/notifications"
-                ? "bg-inset font-extrabold text-foreground"
-                : "font-medium text-foreground/80 hover:bg-inset/60 hover:text-foreground"
-            }`}
+            className={`${navItem} ${inset} ${path === "/dashboard/notifications" ? navItemOn : navItemOff}`}
           >
-            <Icon name="notifications" size={24} active={path === "/dashboard/notifications"} badge={unread > 0} className="text-muted" />
+            <Icon name="notifications" size={26} active={path === "/dashboard/notifications"} badge={unread > 0} />
             {!collapsed && "Notifications"}
             {!collapsed && <UnreadCount count={unread} />}
           </Link>
@@ -178,7 +171,7 @@ export function Sidebar({ user, unread, activity, initialCollapsed }: SidebarPro
         title={collapsed ? "Start focus" : undefined}
         className={`${btnPrimary} mt-3.5 h-12 shrink-0 text-[15.5px] font-extrabold ${collapsed ? "px-0!" : ""}`}
       >
-        <Icon name="startFocus" size={18} weight="fill" /> <span className={collapsed ? "sr-only" : ""}>Start focus</span>
+        <Icon name="startFocus" size={18} /> <span className={collapsed ? "sr-only" : ""}>Start focus</span>
       </Link>
 
       <div className="relative mt-auto pt-4">
@@ -227,7 +220,7 @@ export function BottomNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={`flex flex-1 flex-col items-center gap-0.5 rounded-full py-2 text-[11px] font-bold ${
-                active ? "bg-primary-light text-primary" : "text-sidebar-foreground"
+                active ? "bg-primary-light text-primary" : "text-muted"
               }`}
             >
               <Icon name={icon} size={22} active={active} />

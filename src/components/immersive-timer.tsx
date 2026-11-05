@@ -194,7 +194,7 @@ export function ImmersiveTimer(props: Props) {
               <p className="mt-[0.5em] flex items-center gap-[0.4em] font-semibold portrait:justify-center">
                 {streak > 0 && (
                   <>
-                    <Icon name="streak" size="1em" weight="fill" className="streak-glow text-streak" />
+                    <Icon name="streak" size="1em" solid className="streak-glow text-streak" />
                     <span className="tabular">{streak}d</span>
                     <span aria-hidden>·</span>
                   </>
@@ -237,10 +237,10 @@ export function ImmersiveTimer(props: Props) {
             title={paused ? "Resume" : "Pause"}
             className={barButton}
           >
-            <Icon name={paused ? "startFocus" : "pause"} weight="fill" />
+            <Icon name={paused ? "startFocus" : "pause"} />
           </button>
           <button onClick={onFinish} disabled={pending} aria-label="Finish session" title="Finish" className={barButton}>
-            <Icon name="stop" weight="fill" />
+            <Icon name="stop" />
           </button>
           <button onClick={onDiscard} disabled={pending} aria-label="Discard session" title="Discard" className={barButton}>
             <Icon name="delete" />

@@ -11,7 +11,6 @@
   --subtle-foreground: #8f9db3;
   --border: #263248;
   --border-shadow: #1a2436;
-  --sidebar-foreground: #b4c0d3;
 
   --primary: #4f8ff7;
   --primary-foreground: #0a0f1a;
@@ -43,7 +42,6 @@
   --color-muted: var(--muted-foreground);
   --color-subtle: var(--subtle-foreground);
   --color-border: var(--border);
-  --color-sidebar-foreground: var(--sidebar-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-light: var(--primary-light);
@@ -519,22 +517,6 @@ html[data-splash-phase="end"] .splash-word {
 /* A lit streak flame */
 @utility streak-glow {
   filter: drop-shadow(0 0 5px color-mix(in srgb, var(--streak) 60%, transparent));
-}
-
-/* On hover, a duotone icon's pale layer comes up and the icon brightens */
-@utility icon-lift {
-  & svg,
-  & svg [opacity] {
-    transition:
-      color 150ms ease,
-      opacity 150ms ease;
-  }
-  &:hover svg {
-    color: var(--foreground);
-  }
-  &:hover svg [opacity] {
-    opacity: 0.4;
-  }
 }
 
 @utility tabular {

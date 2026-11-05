@@ -24,7 +24,7 @@ function Thumb({ scene, selected, onPick }: { scene: Scene; selected: boolean; o
       </span>
       {selected && (
         <span className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
-          <Icon name="check" size={14} weight="regular" />
+          <Icon name="check" size={14} />
         </span>
       )}
     </button>
@@ -70,7 +70,7 @@ export function ScenePanel({ current, onPick, onClose, centered = false }: Panel
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-bold">Background</h2>
           <button onClick={onClose} aria-label="Close" className="grid size-8 place-items-center rounded-full text-muted hover:bg-inset">
-            <Icon name="close" size={18} weight="regular" />
+            <Icon name="close" size={18} />
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">

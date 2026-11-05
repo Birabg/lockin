@@ -352,7 +352,7 @@ export function TimerClient(props: Props) {
           </label>
           {photo && (
             <button onClick={() => setPhoto(null)} aria-label="Remove photo" className="rounded-full p-1 hover:bg-inset">
-              <Icon name="close" size={18} weight="regular" />
+              <Icon name="close" size={18} />
             </button>
           )}
         </div>
@@ -426,7 +426,7 @@ export function TimerClient(props: Props) {
 
       {done !== null && !session && (
         <div className="mb-4 flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-bold text-primary-text">
-          <Icon name="check" size={18} weight="regular" /> Logged {formatDuration(done)} · today {formatDuration(todaySec)}
+          <Icon name="check" size={18} /> Logged {formatDuration(done)} · today {formatDuration(todaySec)}
         </div>
       )}
 
@@ -505,7 +505,7 @@ export function TimerClient(props: Props) {
             className={`${btnGhost} h-14 px-5`}
             aria-label={paused ? "Resume session" : "Pause session"}
           >
-            <Icon name={paused ? "startFocus" : "pause"} weight="fill" />
+            <Icon name={paused ? "startFocus" : "pause"} />
           </button>
           <button
             onClick={() => {
@@ -518,7 +518,7 @@ export function TimerClient(props: Props) {
             <Icon name="fullscreen" />
           </button>
           <button onClick={() => setFinishing(true)} disabled={pending} className={`${btnPrimary} h-14 flex-1 text-base`}>
-            <Icon name="stop" size={18} weight="fill" /> Finish session
+            <Icon name="stop" size={18} /> Finish session
           </button>
         </div>
       )}

@@ -107,7 +107,7 @@ function LabelChips({ labels, label, onChange }: { labels: string[]; label: stri
           aria-label="Add something new to work on"
           className="flex h-9 items-center gap-1 rounded-full border border-dashed border-white/40 bg-black/30 px-3 text-sm font-bold text-white backdrop-blur-sm hover:bg-black/60"
         >
-          <Icon name="add" size={16} weight="regular" /> new
+          <Icon name="add" size={16} /> new
         </button>
       )}
     </div>
@@ -202,7 +202,7 @@ export function FocusSetup(props: Props) {
 
   const buttonText = (
     <>
-      {starting ? <Icon name="lock" weight="fill" className="animate-lock-snap" /> : <Icon name="unlock" />}
+      {starting ? <Icon name="lock" className="animate-lock-snap" /> : <Icon name="unlock" />}
       {starting ? "Locked in" : "Hold to lock in"}
     </>
   );

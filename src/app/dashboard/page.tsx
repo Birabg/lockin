@@ -65,7 +65,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             className="grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
           >
-            <Icon name="refresh" size={18} weight="regular" />
+            <Icon name="refresh" size={18} />
           </Link>
         </div>
 

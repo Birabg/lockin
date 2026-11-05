@@ -138,7 +138,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                 <>
                   <span aria-hidden>·</span>
                   <span className="flex items-center gap-0.5 font-bold text-streak tabular">
-                    <Icon name="streak" size={13} weight="fill" className="streak-glow" />
+                    <Icon name="streak" size={13} solid className="streak-glow" />
                     {post.streak}d
                   </span>
                 </>
@@ -168,7 +168,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
           aria-pressed={like.liked}
           aria-label={`Like, ${like.count} so far`}
         >
-          <Icon name="like" size={18} weight={like.liked ? "fill" : "regular"} className={popping ? "animate-like-pop" : ""} />{" "}
+          <Icon name="like" size={18} solid={like.liked} className={popping ? "animate-like-pop" : ""} />{" "}
           <span className="tabular">{like.count}</span>
         </button>
         <button
@@ -227,7 +227,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                 className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
                 aria-label="Send"
               >
-                <Icon name="send" size={18} weight="fill" />
+                <Icon name="send" size={18} />
               </button>
             </form>
           ) : (

@@ -133,6 +133,10 @@ After the first deploy, check that you can sign up, finish a session, upload an 
 
 Every deployment runs migrations against the database it's configured with. To keep preview deployments away from production data, give the Preview environment its own `DATABASE_URL` and `DIRECT_URL`, such as a Neon branch.
 
+## Icons
+
+Icons are from [Solar](https://www.figma.com/community/file/1166831539721848736) by 480 Design, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Only the ones Lockin uses are copied into `src/components/icon-data.ts`, so nothing is fetched at runtime. To add or swap one, edit the list in `scripts/build-icons.mjs` and run `npm run icons`.
+
 ## Not built yet
 
 - Distraction blocking and a desktop app.

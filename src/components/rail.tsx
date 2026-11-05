@@ -12,7 +12,7 @@ export function StreakCard({ streak, todaySec, goalMin, week }: { streak: number
     <section className="panel p-3.5">
       <div className="flex items-center gap-2.5">
         <span className={`grid size-10 place-items-center rounded-xl ${streak > 0 ? "bg-streak-bg text-streak" : "bg-inset text-subtle"}`}>
-          <Icon name="streak" size={22} weight={streak > 0 ? "fill" : "duotone"} className={streak > 0 ? "streak-glow" : ""} />
+          <Icon name="streak" size={22} solid={streak > 0} className={streak > 0 ? "streak-glow" : ""} />
         </span>
         <div>
           <p className="text-[18px] leading-[18px] font-extrabold tracking-[-0.45px]">
@@ -61,7 +61,7 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
             {count === 0 ? "Nobody yet — be the first" : `${count} ${count === 1 ? "person" : "people"} in a session`}
           </p>
         </div>
-        <Icon name="chevron" size={16} weight="regular" className="text-subtle" />
+        <Icon name="chevron" size={16} className="text-subtle" />
       </div>
       {sessions.length > 0 && (
         <div className="mt-3 flex -space-x-1.5 overflow-hidden">
@@ -77,9 +77,9 @@ export function FocusingNowCard({ count, sessions }: { count: number; sessions: 
 }
 
 export function RankIcon({ rank }: { rank: number }) {
-  if (rank === 1) return <Icon name="crown" size={18} weight="fill" className="text-gold" />;
-  if (rank === 2) return <Icon name="medal" size={18} weight="fill" className="text-silver" />;
-  if (rank === 3) return <Icon name="medal" size={18} weight="fill" className="text-bronze" />;
+  if (rank === 1) return <Icon name="crown" size={18} solid className="text-gold" />;
+  if (rank === 2) return <Icon name="medal" size={18} className="text-silver" />;
+  if (rank === 3) return <Icon name="medal" size={18} className="text-bronze" />;
   return <span className="w-[18px] text-center text-xs font-bold text-subtle tabular">{rank}</span>;
 }
 
@@ -93,7 +93,7 @@ export function LeaderboardCard({ rows }: { rows: Row[] }) {
           <Icon name="crown" size={18} />
         </span>
         <p className={`${railTitle} flex-1`}>Today’s leaderboard</p>
-        <Icon name="chevron" size={16} weight="regular" className="text-subtle" />
+        <Icon name="chevron" size={16} className="text-subtle" />
       </Link>
       <ul className="-mx-1.5 mt-1 flex flex-col">
         {rows.length === 0 && <li className="px-1.5 py-2 text-[13.5px] text-muted">No focus logged today yet.</li>}
@@ -116,7 +116,7 @@ export function GuestBanner({ next = "/dashboard" }: { next?: string }) {
   return (
     <div className="panel flex items-center gap-3 px-3.5 py-3">
       <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-light text-primary">
-        <Icon name="streak" size={20} weight="fill" />
+        <Icon name="streak" size={20} solid />
       </span>
       <p className="flex-1 text-sm font-bold">{brand.tagline} Start free.</p>
       <Link

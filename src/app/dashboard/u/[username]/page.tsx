@@ -59,7 +59,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             <div key={x.k} className="flex flex-col-reverse rounded-xl bg-inset py-3">
               <dt className="text-[11px] font-semibold text-muted">{x.k}</dt>
               <dd className="flex items-center justify-center gap-1 font-extrabold tabular">
-                {x.flame && <Icon name="streak" size={16} weight="fill" className="streak-glow text-streak" />}
+                {x.flame && <Icon name="streak" size={16} solid className="streak-glow text-streak" />}
                 {x.v}
               </dd>
             </div>

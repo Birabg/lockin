@@ -34,6 +34,16 @@ export default async function SettingsPage() {
           Privacy
         </Link>
       </p>
+      <p className="mt-2 text-center text-xs text-subtle">
+        Icons:{" "}
+        <a href="https://www.figma.com/community/file/1166831539721848736" className="underline" target="_blank" rel="noreferrer">
+          Solar by 480 Design
+        </a>
+        ,{" "}
+        <a href="https://creativecommons.org/licenses/by/4.0/" className="underline" target="_blank" rel="noreferrer">
+          CC BY 4.0
+        </a>
+      </p>
     </div>
   );
 }

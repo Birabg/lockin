@@ -58,7 +58,7 @@ export default async function BuddiesPage() {
                     </span>
                   </Link>
                   <span className="flex items-center gap-1 text-sm font-bold text-streak tabular">
-                    <Icon name="streak" size={16} weight="fill" className={b.streak > 0 ? "streak-glow" : ""} />
+                    <Icon name="streak" size={16} solid className={b.streak > 0 ? "streak-glow" : ""} />
                     <span className="sr-only">Streak</span>
                     {b.streak}d
                   </span>

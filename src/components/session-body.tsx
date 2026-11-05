@@ -51,7 +51,7 @@ function Timelapse({ src, label }: { src: string; label: string | null }) {
         className="absolute inset-0 size-full object-cover"
       />
       <span className={`${pill} top-3 right-3 flex items-center gap-1`}>
-        <Icon name={playing ? "pause" : "startFocus"} size={12} weight="fill" /> Timelapse
+        <Icon name={playing ? "pause" : "startFocus"} size={12} /> Timelapse
       </span>
       <LabelPill label={label} />
     </button>

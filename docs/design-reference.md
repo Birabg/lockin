@@ -58,16 +58,16 @@ The sidebar sits 4% in from the left. The three gaps then share what is left: of
 
 ## Sidebar
 
-| Part        | Value                                                                       |
-| ----------- | --------------------------------------------------------------------------- |
-| Container   | padding 16px 12px, transparent background, no border                        |
-| Logo row    | logo inset 14px, collapse button 32×32 round, muted                         |
-| Nav list    | starts 16px under the logo row, gap 2px                                     |
-| Nav item    | 196×48, padding 0 12px 0 14px, gap 16px, fully round                        |
-| Active item | inset background                                                            |
-| Icon        | 23×23                                                                       |
-| Start focus | 196×48, fully round, 14px under the nav, gap 8px, icon 18px, shadow 0 3px 0 |
-| User row    | 196×56, padding 8px, gap 12px, fully round, "…" on the right                |
+| Part        | Value                                                                         |
+| ----------- | ----------------------------------------------------------------------------- |
+| Container   | padding 16px 12px, transparent background, no border                          |
+| Logo row    | logo inset 14px, collapse button 32×32 round, muted                           |
+| Nav list    | starts 16px under the logo row, gap 2px                                       |
+| Nav item    | 196×56, padding 0 12px 0 14px, gap 16px, fully round, label 17px              |
+| Active item | inset background, semibold white label, bold duotone icon in primary          |
+| Icon        | 26×26 Solar. Lockin chose these three sizes over the measured 48, 15.5 and 23 |
+| Start focus | 196×48, fully round, 14px under the nav, gap 8px, icon 18px, shadow 0 3px 0   |
+| User row    | 196×56, padding 8px, gap 12px, fully round, "…" on the right                  |
 
 ## Feed column
 

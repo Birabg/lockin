@@ -38,7 +38,7 @@ export default async function StatsPage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(({ label, value, sub, icon, tone, lit }) => (
           <div key={label} className="panel p-4">
-            <Icon name={icon} size={22} weight={lit ? "fill" : "duotone"} className={`${tone} ${lit ? "streak-glow" : ""}`} />
+            <Icon name={icon} size={22} solid={lit} className={`${tone} ${lit ? "streak-glow" : ""}`} />
             <p className="mt-3 text-2xl font-extrabold tabular">{value}</p>
             <p className="text-xs font-semibold text-muted">{label}</p>
             {sub && <p className="mt-0.5 text-[11px] text-subtle">{sub}</p>}
