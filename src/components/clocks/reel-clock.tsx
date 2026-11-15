@@ -3,8 +3,8 @@
 import { memo, useEffect, useRef } from "react";
 import { ClockDigits } from "../ui";
 import type { ClockProps } from "./clock";
-import { boldDigits } from "./fonts";
-import { prefersReducedMotion } from "../focus-dial";
+import { thinDigits } from "./fonts";
+import { prefersReducedMotion } from "@/lib/motion";
 import { clockParts, reelNumber, reelPlacement, twoDigits } from "@/lib/clock-styles";
 
 const MAX_REACH = 7;
@@ -106,7 +106,7 @@ function Unit({ value, label, current = false }: { value: number; label: string;
 export function ReelClock({ remainingSec, running, overtime }: ClockProps) {
   const { hours, minutes, seconds } = clockParts(remainingSec, overtime);
   return (
-    <div className={`clock-reel ${boldDigits.className}`}>
+    <div className={`clock-reel ${thinDigits.className}`}>
       <div className="reel-row">
         {overtime && <span className="clock-sign">+</span>}
         {hours > 0 && <Unit value={hours} label="hrs" />}

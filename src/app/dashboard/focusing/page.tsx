@@ -14,7 +14,7 @@ function timeLeft(remaining: number) {
 export default async function FocusingPage() {
   const { count, sessions } = await getFocusingNow(200);
   return (
-    <div className="mx-auto max-w-[720px] lg:pt-6">
+    <div className="mx-auto max-w-[720px]">
       <PageHeader title="Focusing now" subtitle={`${count} ${count === 1 ? "person is" : "people are"} in a session right now.`} />
       {sessions.length === 0 ? (
         <EmptyState

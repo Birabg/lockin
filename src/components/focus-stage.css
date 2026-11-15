@@ -1,0 +1,556 @@
+/* The focus stage: one full-bleed, centred layout shared by the setup screen and the running session.
+   Every value comes from the --stage-* tokens in globals.css. */
+
+@layer components {
+  .focus-stage {
+    --ring: var(--stage-ring);
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    color: var(--stage-text);
+    background: var(--stage-base);
+  }
+
+  .stage-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: var(--stage-base);
+  }
+  /* dark enough everywhere for the muted text, with a soft glow rising from the bottom */
+  .stage-veil {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(90% 55% at 50% 112%, color-mix(in srgb, var(--stage-accent) 26%, transparent), transparent 70%),
+      radial-gradient(70% 60% at 50% 45%, rgb(14 14 16 / 0.35), rgb(14 14 16 / 0.72)),
+      linear-gradient(to bottom, rgb(14 14 16 / 0.62), rgb(14 14 16 / 0.5) 45%, rgb(14 14 16 / 0.78));
+  }
+
+  .stage-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: var(--stage-pill-h);
+  }
+  .stage-top-group {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stage-center {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--stage-gap);
+    padding-block: var(--stage-gap);
+  }
+
+  .stage-hero {
+    display: flex;
+    max-width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--stage-gap) * 0.8);
+  }
+  .stage-pills {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .stage-caption {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--stage-muted);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .stage-note {
+    min-height: 18px;
+    font-size: 12.5px;
+    line-height: 18px;
+    font-weight: 600;
+    color: var(--stage-faint);
+    text-align: center;
+  }
+
+  /* The zone under the time: presets and tags while setting up, a quiet info line during a session.
+   Same height both ways, so the time and the main button don't move when a session starts. */
+  .stage-mid {
+    display: flex;
+    width: 100%;
+    min-height: calc(var(--stage-chip-h) * 2 + 12px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* ---- Pills and chips ---- */
+  .stage-pill {
+    display: inline-flex;
+    height: var(--stage-pill-h);
+    min-width: 0;
+    max-width: 100%;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--stage-line);
+    border-radius: 999px;
+    background: var(--stage-fill);
+    padding-inline: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stage-muted);
+    white-space: nowrap;
+    backdrop-filter: blur(var(--stage-blur));
+    -webkit-backdrop-filter: blur(var(--stage-blur));
+  }
+  .stage-pill[data-strong] {
+    color: var(--stage-text);
+  }
+  a.stage-pill:hover {
+    background: var(--stage-fill-hover);
+    color: var(--stage-text);
+  }
+  .stage-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--stage-accent);
+  }
+  .stage-dot[data-tone="live"] {
+    background: var(--live);
+  }
+
+  .stage-row {
+    display: flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  /* one line that scrolls sideways, fading out at the edges */
+  .stage-scroll-row {
+    display: flex;
+    width: min(640px, 100%);
+    align-items: center;
+    justify-content: safe center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 3px 24px;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  }
+  .stage-scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stage-chip {
+    display: inline-flex;
+    height: var(--stage-chip-h);
+    max-width: 160px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--stage-line);
+    border-radius: 999px;
+    background: transparent;
+    padding-inline: 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--stage-muted);
+    transition:
+      background 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+  .stage-chip > .truncate {
+    min-width: 0;
+  }
+  .stage-chip:hover {
+    background: var(--stage-fill-hover);
+    color: var(--stage-text);
+  }
+  .stage-chip[aria-pressed="true"],
+  .stage-chip[data-active] {
+    border-color: transparent;
+    background: var(--stage-fill-active);
+    color: var(--stage-on-active);
+  }
+  .stage-chip[data-dashed] {
+    border-style: dashed;
+  }
+  .stage-chip:disabled {
+    opacity: 0.5;
+  }
+  .stage-chip input {
+    width: 3.2ch;
+    background: transparent;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+  }
+  .stage-chip input::-webkit-inner-spin-button {
+    display: none;
+  }
+  .stage-chip-step {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border-radius: 50%;
+  }
+  .stage-chip-step:hover {
+    background: rgb(0 0 0 / 0.1);
+  }
+  .stage-input {
+    height: var(--stage-chip-h);
+    width: 200px;
+    max-width: 70vw;
+    flex-shrink: 0;
+    border: 1px solid var(--stage-muted);
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.3);
+    padding-inline: 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--stage-text);
+    outline: none;
+  }
+  .stage-input::placeholder {
+    color: var(--stage-faint);
+  }
+
+  /* ---- Round actions: the hold-to-start button, and pause, end and discard in a session ---- */
+  .stage-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(20px, 5vw, 40px);
+  }
+  /* the small buttons sit level with the middle of the big one */
+  .stage-actions > .stage-action:not([data-big]) {
+    margin-top: calc((var(--stage-action) - var(--stage-action-small)) / 2);
+  }
+  .stage-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stage-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .stage-action:focus-visible {
+    outline: none;
+  }
+  .stage-action:focus-visible .stage-action-disc {
+    outline: 2px solid var(--stage-text);
+    outline-offset: 5px;
+  }
+  .stage-action-disc {
+    position: relative;
+    display: grid;
+    width: var(--stage-action-small);
+    height: var(--stage-action-small);
+    place-items: center;
+    border: 1px solid var(--stage-line);
+    border-radius: 50%;
+    background: var(--stage-fill);
+    color: var(--stage-text);
+    backdrop-filter: blur(var(--stage-blur));
+    -webkit-backdrop-filter: blur(var(--stage-blur));
+    transition:
+      background 150ms ease,
+      transform 150ms ease,
+      filter 150ms ease;
+  }
+  .stage-action:hover .stage-action-disc {
+    background: var(--stage-fill-hover);
+  }
+  .stage-action:hover {
+    color: var(--stage-text);
+  }
+  .stage-action[data-big] .stage-action-disc {
+    width: var(--stage-action);
+    height: var(--stage-action);
+  }
+  .stage-action[data-tone="accent"] .stage-action-disc {
+    border-color: transparent;
+    background: var(--stage-accent);
+    color: var(--stage-on-active);
+    box-shadow: 0 10px 34px color-mix(in srgb, var(--stage-accent) 32%, transparent);
+  }
+  .stage-action[data-tone="accent"]:hover .stage-action-disc {
+    filter: brightness(1.07);
+  }
+  .stage-action:active .stage-action-disc {
+    transform: scale(0.96);
+  }
+  .stage-action:disabled {
+    opacity: 0.5;
+  }
+  .stage-action[data-hold] {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .stage-action[data-hold]:disabled {
+    opacity: 1;
+  }
+  /* the hold progress, filling round the outside of the button */
+  .stage-hold-ring {
+    position: absolute;
+    inset: -9px;
+    width: calc(100% + 18px);
+    height: calc(100% + 18px);
+    transform: rotate(-90deg);
+    pointer-events: none;
+    overflow: visible;
+  }
+  .stage-hold-ring circle {
+    fill: none;
+    stroke-width: 2.5;
+  }
+  .stage-hold-pulse {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--stage-accent);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* ---- The dock ---- */
+  .stage-dock-wrap {
+    position: relative;
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+  }
+  .stage-dock {
+    display: flex;
+    height: var(--stage-dock-h);
+    max-width: 100%;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--stage-line);
+    border-radius: 999px;
+    background: var(--stage-surface);
+    padding: 5px;
+    box-shadow: var(--stage-shadow);
+    backdrop-filter: blur(var(--stage-blur));
+    -webkit-backdrop-filter: blur(var(--stage-blur));
+    transition: opacity 300ms ease;
+  }
+  .stage-dock-btn {
+    display: inline-flex;
+    height: 100%;
+    min-width: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 999px;
+    padding-inline: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stage-muted);
+    transition:
+      background 150ms ease,
+      color 150ms ease,
+      opacity 300ms ease;
+  }
+  .stage-dock-btn:hover,
+  .stage-dock-btn[aria-expanded="true"] {
+    background: var(--stage-fill-hover);
+    color: var(--stage-text);
+  }
+  .stage-dock-btn:disabled {
+    opacity: 0.5;
+  }
+  .stage-dock-divider {
+    width: 1px;
+    height: 22px;
+    flex-shrink: 0;
+    margin-inline: 4px;
+    background: var(--stage-line);
+    transition: opacity 300ms ease;
+  }
+
+  /* ---- Popovers rising from the dock ---- */
+  .stage-popover {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    z-index: 10;
+    width: min(380px, calc(100vw - 32px));
+    max-height: min(70dvh, 560px);
+    overflow-y: auto;
+    border: 1px solid var(--stage-line);
+    border-radius: var(--stage-radius-pop);
+    background: rgb(22 22 25 / 0.97);
+    padding: 14px;
+    color: var(--stage-text);
+    text-shadow: none;
+    box-shadow: var(--stage-shadow);
+    backdrop-filter: blur(var(--stage-blur));
+    -webkit-backdrop-filter: blur(var(--stage-blur));
+    transform: translateX(-50%);
+    animation: stage-rise 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .stage-popover[data-wide] {
+    width: min(600px, calc(100vw - 32px));
+  }
+  .stage-popover-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .stage-popover-close {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--stage-muted);
+  }
+  .stage-popover-close:hover {
+    background: var(--stage-fill-hover);
+    color: var(--stage-text);
+  }
+  @keyframes stage-rise {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 8px);
+    }
+  }
+
+  /* ---- Panels over the stage: the goal prompt and the wrap-up form ---- */
+  .stage-panel {
+    width: min(24rem, calc(100vw - 32px));
+    border: 1px solid var(--stage-line);
+    border-radius: 24px;
+    background: var(--stage-surface);
+    padding: 18px;
+    font-size: 15px;
+    color: var(--stage-text);
+    text-shadow: none;
+    box-shadow: var(--stage-shadow);
+    backdrop-filter: blur(var(--stage-blur));
+    -webkit-backdrop-filter: blur(var(--stage-blur));
+  }
+  .stage-btn {
+    display: inline-flex;
+    height: 44px;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--stage-line);
+    border-radius: 999px;
+    background: var(--stage-fill);
+    padding-inline: 18px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--stage-text);
+  }
+  .stage-btn:hover {
+    background: var(--stage-fill-hover);
+  }
+  .stage-btn[data-tone="accent"] {
+    border-color: transparent;
+    background: var(--stage-accent);
+    color: var(--stage-on-active);
+  }
+  .stage-btn[data-tone="accent"]:hover {
+    filter: brightness(1.07);
+  }
+  .stage-btn:disabled {
+    opacity: 0.5;
+  }
+  .stage-field {
+    width: 100%;
+    resize: none;
+    border: 1px solid var(--stage-line);
+    border-radius: 16px;
+    background: rgb(0 0 0 / 0.3);
+    padding: 10px 14px;
+    font-size: 15px;
+    color: var(--stage-text);
+    outline: none;
+  }
+  .stage-field:focus {
+    border-color: var(--stage-muted);
+  }
+  .stage-field::placeholder {
+    color: var(--stage-faint);
+  }
+
+  /* ---- Moving between setup and session ---- */
+  .stage-fade {
+    transition: opacity 300ms ease;
+  }
+  .focus-stage[data-starting] [data-setup-only] {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .stage-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .stage-enter {
+    animation: stage-enter 480ms ease 120ms both;
+  }
+  @keyframes stage-enter {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* narrow screens: icons only in the dock, and less room around everything */
+  @media (max-width: 640px) {
+    .stage-dock-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+    .stage-dock-btn {
+      padding-inline: 0;
+      min-width: 42px;
+    }
+    .focus-stage {
+      --stage-action: 68px;
+      --stage-action-small: 50px;
+    }
+  }
+  @media (max-height: 700px) {
+    .focus-stage {
+      --stage-action: 64px;
+      --stage-action-small: 48px;
+      --stage-chip-h: 32px;
+    }
+  }
+}

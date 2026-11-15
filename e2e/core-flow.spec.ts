@@ -34,7 +34,8 @@ test("counts down to the goal, then offers overtime, and saves the real time", a
   await page.goto("/dashboard/timer");
   await holdToStart(page);
   const view = page.locator("[data-immersive-view]");
-  await expect(view).toContainText("focusing · ends at");
+  await expect(view).toContainText("Focusing");
+  await expect(view).toContainText("Ends at");
   await expect(page).toHaveTitle(/^(25:00|24:5\d) left/);
 
   // three seconds short of a 25 minute goal
@@ -50,7 +51,7 @@ test("counts down to the goal, then offers overtime, and saves the real time", a
   await expect(prompt).toBeHidden();
   await expect(view).toContainText("+00:");
   await page.reload();
-  await expect(view).toContainText("overtime");
+  await expect(view).toContainText("Overtime");
   await expect(prompt).toBeHidden();
 
   await page.mouse.move(300, 300);
@@ -71,18 +72,21 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
 
   await page.goto("/dashboard/timer");
 
-  const dial = page.getByRole("slider", { name: "Session length" });
-  await dial.focus();
-  await page.keyboard.press("ArrowUp");
-  await expect(dial).toHaveAttribute("aria-valuenow", "30");
+  await page.getByRole("button", { name: "Custom" }).click();
+  const minutes = page.getByRole("textbox", { name: "Session length in minutes" });
+  await minutes.press("ArrowUp");
+  await expect(minutes).toHaveValue("30");
+  await minutes.fill("45");
+  await minutes.press("Enter");
+  await expect(minutes).toHaveValue("45");
   await page.getByRole("button", { name: "Set to 1h 30m" }).click();
-  await expect(dial).toHaveAttribute("aria-valuenow", "90");
+  await expect(page.getByRole("button", { name: "Set to 1h 30m" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Set to 25 min" }).click();
 
   await page.getByRole("button", { name: "Hold to lock in" }).click(); // a quick press isn't a hold
-  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+  await expect(page.locator("[data-immersive-view]")).toHaveCount(0);
   await holdToStart(page);
-  await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden(); // the session owns the screen
+  await expect(page.getByRole("link", { name: "Home" })).toBeHidden(); // the session owns the screen
 
   // sessions under a minute aren't posted, so move this one 20 minutes into the past instead of waiting
   const user = await db.user.findUniqueOrThrow({ where: { username: focuser } });
@@ -97,7 +101,7 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   await page.getByPlaceholder(/how did it go/i).fill(note);
   await page.getByRole("button", { name: "Save session" }).click();
   await expect(page.getByRole("button", { name: "Hold to lock in" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home" })).toBeVisible();
 
   await page.goto("/dashboard");
 

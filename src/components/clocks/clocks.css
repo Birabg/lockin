@@ -5,7 +5,7 @@
   flex-direction: column;
   align-items: center;
   max-width: 100%;
-  color: #fff;
+  color: var(--stage-numeral);
   font-variant-numeric: tabular-nums;
 }
 .clock[data-clock="reel"] {
@@ -24,13 +24,7 @@
 .clock[data-paused] * {
   animation-play-state: paused;
 }
-.clock-paused {
-  margin-top: 0.8em;
-  font-size: clamp(12px, 2vmin, 34px);
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
+.clock[data-overtime] .clock-ring-time,
 .clock[data-overtime] .clock-rolling,
 .clock[data-overtime] .clock-minimal,
 .clock[data-overtime] .reel-row,
@@ -42,11 +36,23 @@
   line-height: 1;
 }
 
+/* Ring: the numerals inside the hairline */
+.clock-ring-time {
+  font-size: calc(var(--ring) * 0.2);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.clock-ring-time > span {
+  width: 0.58em;
+}
+
 /* Rolling */
 .clock-rolling {
   display: flex;
   align-items: flex-start;
-  font-size: var(--clock-size, clamp(52px, min(15vw, 30vh), 460px));
+  font-size: var(--clock-size, clamp(60px, min(9vw, 17vh), 280px));
   font-weight: 200;
   line-height: 1.15;
   letter-spacing: -0.01em;
@@ -112,7 +118,7 @@
   letter-spacing: 0.22em;
   line-height: 1;
   text-transform: uppercase;
-  opacity: 0.8;
+  color: var(--stage-faint);
 }
 .roll-dots {
   display: flex;
@@ -124,10 +130,10 @@
   align-items: center;
 }
 .roll-dots i {
-  width: 0.06em;
-  height: 0.06em;
+  width: 0.05em;
+  height: 0.05em;
   border-radius: 50%;
-  background: var(--clock-accent);
+  background: var(--stage-faint);
 }
 .clock[data-overtime] .roll-dots i {
   background: var(--streak);
@@ -138,7 +144,7 @@
   display: flex;
   align-items: flex-end;
   gap: 0.14em;
-  font-size: var(--clock-size, clamp(50px, min(13.5vw, 24vh), 400px));
+  font-size: var(--clock-size, clamp(48px, min(7.5vw, 14vh), 230px));
   line-height: 1;
 }
 .clock-flip .clock-sign {
@@ -146,18 +152,17 @@
   font-size: 0.8em;
 }
 .flip-card {
-  --flip-top: #17181b;
-  --flip-bottom: #101113;
+  --flip-top: rgb(255 255 255 / 0.07);
+  --flip-bottom: rgb(255 255 255 / 0.045);
   position: relative;
   display: block;
   flex: none;
   width: 1.62em;
   height: 1.8em;
   border-radius: 0.14em;
-  color: #d9dbe0;
-  box-shadow:
-    0 0.05em 0.04em rgb(0 0 0 / 0.65),
-    0 0.14em 0.34em rgb(0 0 0 / 0.5);
+  color: var(--stage-numeral);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .flip-card[data-small] {
   font-size: 0.56em;
@@ -168,9 +173,8 @@
   position: absolute;
   z-index: 3;
   inset: 50% 0 auto;
-  height: max(1px, 0.018em);
-  background: #000;
-  box-shadow: 0 0.015em 0.03em rgb(0 0 0 / 0.7);
+  height: max(1px, 0.012em);
+  background: rgb(0 0 0 / 0.45);
 }
 .flip-half {
   position: absolute;
@@ -199,11 +203,10 @@
   height: 200%;
   display: grid;
   place-items: center;
-  /* Bebas sits high in its line, so this puts the middle of the digits on the split */
-  padding-top: 0.115em;
-  font-size: 1.5em;
+  font-size: 1.2em;
+  font-weight: 200;
   line-height: 1;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
   text-shadow: none;
 }
 .flip-top .flip-number {
@@ -220,7 +223,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: #000;
+  background: rgb(0 0 0 / 0.5);
   opacity: 0;
 }
 .flip-flap.flip-top {
@@ -274,7 +277,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   line-height: 1;
-  color: rgb(217 219 224 / 0.65);
+  color: var(--stage-faint);
   text-shadow: none;
 }
 .flip-card[data-small] .flip-tag {
@@ -304,7 +307,8 @@
   align-items: baseline;
   justify-content: center;
   gap: 0.28em;
-  font-size: var(--clock-size, clamp(46px, min(10.5vw, 22vh), 320px));
+  font-size: var(--clock-size, clamp(44px, min(6.5vw, 13vh), 200px));
+  font-weight: 200;
   line-height: 1;
   white-space: nowrap;
 }
@@ -312,10 +316,10 @@
   display: inline-flex;
   align-items: baseline;
   gap: 0.1em;
-  color: rgb(255 255 255 / 0.72);
+  color: var(--stage-faint);
 }
 .reel-unit[data-current] {
-  color: var(--clock-accent);
+  color: var(--stage-numeral);
 }
 .clock[data-overtime] .reel-unit {
   color: inherit;
@@ -324,7 +328,7 @@
   font-size: 1.4em;
 }
 .reel-value > span {
-  width: 0.42em;
+  width: 0.58em;
 }
 .reel-label {
   font-size: 0.42em;
@@ -338,8 +342,10 @@
   width: 2.6em;
   overflow: hidden;
   pointer-events: none;
-  font-size: var(--reel-size, clamp(30px, 6vmin, 120px));
+  font-size: var(--reel-size, clamp(24px, 4.5vmin, 90px));
+  font-weight: 200;
   line-height: 1;
+  color: var(--stage-faint);
 }
 .reel-number {
   position: absolute;
@@ -362,8 +368,8 @@
 
 /* Minimal */
 .clock-minimal {
-  font-size: var(--clock-size, clamp(68px, min(20vw, 42vh), 640px));
-  font-weight: 100;
+  font-size: var(--clock-size, clamp(68px, min(13vw, 22vh), 400px));
+  font-weight: 200;
   font-feature-settings: "case", "tnum";
   line-height: 1;
   white-space: nowrap;

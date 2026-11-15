@@ -1,0 +1,445 @@
+/* The app chrome: a slim top bar, a floating dock on wider screens, and a bottom nav on phones.
+   Values come from the tokens in globals.css. */
+
+@layer components {
+  /* ---- Top bar ---- */
+  .app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: var(--topbar-h);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    background: var(--background);
+    transition: background 200ms ease;
+  }
+  .app-topbar[data-scrolled] {
+    background: var(--chrome-bar);
+    backdrop-filter: blur(var(--chrome-blur));
+    -webkit-backdrop-filter: blur(var(--chrome-blur));
+  }
+  .app-topbar-inner {
+    display: grid;
+    height: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding-inline: 12px;
+  }
+  .app-topbar-center {
+    display: flex;
+    min-width: 0;
+    justify-content: center;
+  }
+  /* wide enough to keep the middle truly centred */
+  @media (width >= 48rem) {
+    .app-topbar-inner {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 12px;
+      padding-inline: 16px;
+    }
+    .app-topbar-center {
+      max-width: 420px;
+    }
+  }
+  .app-topbar-actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+  .app-title {
+    overflow: hidden;
+    font-size: 15.5px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* the feed tabs, as one segmented pill that scrolls if it doesn't fit */
+  .app-tabs {
+    display: flex;
+    max-width: 100%;
+    gap: 2px;
+    overflow-x: auto;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--inset) 60%, transparent);
+    padding: 4px;
+    scrollbar-width: none;
+  }
+  .app-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .app-tab {
+    display: flex;
+    height: 32px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding-inline: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    transition:
+      background 150ms ease,
+      color 150ms ease;
+  }
+  .app-tab:hover {
+    color: var(--foreground);
+  }
+  .app-tab[aria-current="page"] {
+    background: var(--background);
+    font-weight: 800;
+    color: var(--foreground);
+  }
+
+  .app-icon-btn {
+    position: relative;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+    transition:
+      background 150ms ease,
+      color 150ms ease;
+  }
+  .app-icon-btn:hover,
+  .app-icon-btn[aria-expanded="true"] {
+    background: var(--inset);
+    color: var(--foreground);
+  }
+  .app-streak-chip {
+    display: inline-flex;
+    height: 32px;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    background: var(--streak-bg);
+    padding-inline: 10px 12px;
+    margin-inline: 4px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--streak);
+    font-variant-numeric: tabular-nums;
+  }
+  /* a 40px touch target round the 32px chip */
+  .app-streak-chip::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+
+  /* ---- Popovers and menus, one look everywhere ---- */
+  .app-pop {
+    z-index: 50;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: var(--chrome-shadow);
+    animation: app-pop-in 160ms ease-out;
+  }
+  .app-pop[data-menu] {
+    min-width: 200px;
+    padding: 6px;
+  }
+  @keyframes app-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+  .app-menu-row {
+    display: flex;
+    height: 40px;
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+    border-radius: 14px;
+    padding-inline: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--foreground);
+  }
+  .app-menu-row:hover,
+  .app-menu-row[aria-current="page"] {
+    background: var(--inset);
+  }
+
+  /* ---- Floating dock (768px and up) ---- */
+  /* centred with flex, not a transform, so its fixed popovers measure from the window */
+  .app-dock-wrap {
+    position: fixed;
+    inset-inline: 0;
+    bottom: calc(var(--dock-gap) + env(safe-area-inset-bottom));
+    z-index: 40;
+    display: none;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .app-dock-wrap > * {
+    pointer-events: auto;
+  }
+  @media (width >= 48rem) {
+    .app-dock-wrap {
+      display: flex;
+    }
+  }
+  .app-dock {
+    position: relative;
+    display: flex;
+    height: var(--dock-h);
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--chrome-surface);
+    padding-inline: 10px;
+    box-shadow: var(--chrome-shadow);
+    backdrop-filter: blur(var(--chrome-blur));
+    -webkit-backdrop-filter: blur(var(--chrome-blur));
+  }
+  .app-dock-btn {
+    position: relative;
+    display: inline-flex;
+    height: var(--dock-item);
+    min-width: var(--dock-item);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    transition:
+      background 150ms ease,
+      color 150ms ease;
+  }
+  .app-dock-btn[data-text] {
+    padding-inline: 10px 12px;
+  }
+  .app-dock-btn:hover,
+  .app-dock-btn[aria-expanded="true"],
+  .app-dock-btn[aria-current="page"],
+  .app-dock-btn[data-active] {
+    background: var(--inset);
+    color: var(--foreground);
+  }
+  .app-dock-primary {
+    display: inline-flex;
+    height: 50px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    margin-inline: 8px;
+    border-radius: 999px;
+    background: var(--primary);
+    padding-inline: 20px 22px;
+    font-size: 15.5px;
+    font-weight: 800;
+    color: var(--primary-foreground);
+    white-space: nowrap;
+    box-shadow: 0 3px 0 var(--primary-shadow);
+    transition:
+      transform 80ms ease,
+      box-shadow 80ms ease,
+      filter 150ms ease;
+  }
+  .app-dock-primary:hover {
+    filter: brightness(1.06);
+  }
+  .app-dock-primary:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--primary-shadow);
+  }
+  .app-dock-divider {
+    width: 1px;
+    height: 30px;
+    flex-shrink: 0;
+    margin-inline: 8px;
+    background: var(--border);
+  }
+  .app-flame {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--streak-bg);
+    color: var(--streak);
+  }
+  .app-flame[data-off] {
+    background: var(--inset);
+    color: var(--subtle-foreground);
+  }
+  /* tablets: the same dock a little tighter, so it fits from 768px */
+  @media (width < 64rem) {
+    .app-dock {
+      --dock-item: 42px;
+      padding-inline: 8px;
+    }
+    .app-dock-extra {
+      display: none;
+    }
+    .app-dock-primary {
+      margin-inline: 6px;
+      padding-inline: 16px 18px;
+    }
+    .app-dock-divider {
+      margin-inline: 5px;
+    }
+  }
+  /* the active page's dot, sliding between items */
+  .app-dock-dot {
+    position: absolute;
+    bottom: 3px;
+    left: 0;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--primary);
+    pointer-events: none;
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 200ms ease;
+  }
+
+  /* tooltips for icon-only buttons */
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    z-index: 60;
+    border-radius: 8px;
+    background: var(--foreground);
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    color: var(--background);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 4px);
+    transition:
+      opacity 120ms ease,
+      transform 120ms ease;
+  }
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  [data-tip][aria-expanded="true"]::after {
+    opacity: 0;
+  }
+  .app-topbar [data-tip]::after {
+    top: calc(100% + 8px);
+    bottom: auto;
+  }
+
+  /* ---- Mobile bottom nav (under 768px) ---- */
+  .app-mobile-nav {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 0 12px max(12px, env(safe-area-inset-bottom));
+  }
+  @media (width >= 48rem) {
+    .app-mobile-nav {
+      display: none;
+    }
+  }
+  .app-mobile-bar {
+    display: flex;
+    height: 74px;
+    max-width: 520px;
+    margin-inline: auto;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--chrome-surface);
+    padding-inline: 6px;
+    box-shadow: var(--chrome-shadow);
+    backdrop-filter: blur(var(--chrome-blur));
+    -webkit-backdrop-filter: blur(var(--chrome-blur));
+  }
+  .app-mobile-item {
+    display: flex;
+    height: 64px;
+    min-width: 48px;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+  .app-mobile-item[aria-current="page"] {
+    color: var(--foreground);
+  }
+  .app-mobile-focus {
+    display: grid;
+    width: 66px;
+    height: 66px;
+    flex-shrink: 0;
+    place-items: center;
+    margin: -30px 8px 0;
+    border: 4px solid var(--background);
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 0 3px 0 var(--primary-shadow);
+  }
+
+  /* ---- Bottom sheet, for the streak card on phones ---- */
+  .app-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgb(0 0 0 / 0.55);
+  }
+  .app-sheet {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 51;
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+    background: var(--card);
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+    animation: app-sheet-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes app-sheet-in {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+
+  /* ---- The page column ---- */
+  .app-main {
+    width: 100%;
+    max-width: 960px;
+    margin-inline: auto;
+    padding: 16px 16px calc(var(--dock-clearance) + env(safe-area-inset-bottom));
+  }
+}

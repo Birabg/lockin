@@ -19,7 +19,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     : new Set<string>();
 
   return (
-    <div className="mx-auto max-w-[680px] lg:pt-6">
+    <div className="mx-auto max-w-[680px]">
       <PageHeader title="People" subtitle="Find friends to focus with." />
       <form className="mb-4">
         <input name="q" defaultValue={q} aria-label="Search people" placeholder="Search by name or @username" className={inputCls} />

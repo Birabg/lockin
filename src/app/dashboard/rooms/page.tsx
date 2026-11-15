@@ -11,7 +11,7 @@ export default async function RoomsPage() {
   const rooms = await getMyRooms(user.id);
 
   return (
-    <div className="mx-auto max-w-[680px] lg:pt-6">
+    <div className="mx-auto max-w-[680px]">
       <PageHeader title="Live rooms" subtitle="Focus together and watch everyone’s timers in one place." />
       <RoomForms />
       <SectionTitle>Your rooms</SectionTitle>

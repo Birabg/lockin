@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
-/* ---- Design tokens (dark-first, same structure as the reference) ----
+/* ---- Design tokens: a neutral charcoal dark theme (no blue cast in the greys) ----
    Rebrand by changing the --primary* values. */
 :root {
-  --background: #0a0f1a;
-  --foreground: #e8edf5;
-  --card: #111827;
-  --inset: #1a2334;
-  --muted-foreground: #9aa7bb;
-  --subtle-foreground: #8f9db3;
-  --border: #263248;
-  --border-shadow: #1a2436;
+  --background: #141416;
+  --foreground: #ededef;
+  --card: #1b1b1e;
+  --inset: #242428;
+  --muted-foreground: #a1a1a8;
+  --subtle-foreground: #8e8e96;
+  --border: #303035;
+  --border-shadow: #0d0d0f;
 
   --primary: #4f8ff7;
-  --primary-foreground: #0a0f1a;
+  --primary-foreground: #111113;
   --primary-shadow: #2563c9;
-  --primary-light: #10203d;
+  --primary-light: #172338;
   --primary-text: #a9cbff;
 
   --streak: #f5b366;
@@ -28,10 +28,42 @@
 
   --radius: 20px;
 
-  /* Dashboard proportions, measured in docs/design-reference.md */
-  --sidebar-width: 220px;
-  --feed-width: 672px;
-  --rail-width: 288px;
+  /* ---- App chrome: the top bar, the floating dock and the mobile nav share these ---- */
+  --topbar-h: 56px;
+  --content-width: 640px;
+  --chrome-bar: rgb(20 20 22 / 0.82);
+  --chrome-surface: rgb(27 27 30 / 0.94);
+  --chrome-shadow: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 0 var(--border-shadow);
+  --chrome-blur: 14px;
+  --dock-h: 68px;
+  --dock-item: 46px;
+  --dock-gap: 16px;
+  /* room under the page so the last item never sits behind the dock or the mobile nav */
+  --dock-clearance: calc(var(--dock-h) + var(--dock-gap) + 40px);
+
+  /* ---- Focus stage: the setup screen and the running session share these, so they read as one screen.
+     The accent (--stage-accent) comes from the chosen background, and is only used for the primary action and progress. */
+  --stage-base: #0e0e10;
+  --stage-text: #f3f5f9;
+  --stage-numeral: rgb(243 245 249 / 0.92);
+  --stage-muted: rgb(243 245 249 / 0.72);
+  --stage-faint: rgb(243 245 249 / 0.56);
+  --stage-line: rgb(255 255 255 / 0.12);
+  --stage-fill: rgb(255 255 255 / 0.06);
+  --stage-fill-hover: rgb(255 255 255 / 0.12);
+  --stage-fill-active: rgb(243 245 249 / 0.92);
+  --stage-on-active: #0a0d14;
+  --stage-surface: rgb(22 22 25 / 0.84);
+  --stage-shadow: 0 12px 40px rgb(0 0 0 / 0.45);
+  --stage-blur: 18px;
+  --stage-pill-h: 30px;
+  --stage-chip-h: 34px;
+  --stage-dock-h: 52px;
+  --stage-radius-pop: 22px;
+  --stage-action: 76px;
+  --stage-action-small: 56px;
+  --stage-ring: clamp(180px, min(36vmin, 40vh), 620px);
+  --stage-gap: clamp(12px, 2.4vh, 28px);
 }
 
 @theme inline {
@@ -497,21 +529,6 @@ html[data-splash-phase="end"] .splash-word {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 2px 0 var(--border-shadow);
-}
-
-/* Feed and rail side by side. The window's spare width goes mostly to the gaps either side of the feed. */
-@utility dash-columns {
-  @media (width >= 80rem) {
-    display: flex;
-    &::before {
-      content: "";
-      flex: 221 1 20px;
-    }
-    &::after {
-      content: "";
-      flex: 52 1 58px;
-    }
-  }
 }
 
 /* A lit streak flame */

@@ -17,7 +17,7 @@ export default function OpenGraphImage() {
         height: "100%",
         padding: 72,
         background: brand.background,
-        color: "#e8edf5",
+        color: "#ededef",
       }}
     >
       <div style={{ display: "flex", alignItems: "center" }}>
