@@ -9,36 +9,43 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  name         String
-  email        String   @unique
-  passwordHash String
-  bio          String?
-  avatar       String?
-  sceneId      String?
-  clockStyle   String   @default("ring")
+  id                String    @id @default(cuid())
+  username          String    @unique
+  name              String
+  email             String    @unique
+  passwordHash      String
+  bio               String?
+  avatar            String?
+  sceneId           String?
+  clockStyle        String    @default("ring")
   passwordChangedAt DateTime?
-  dailyGoalMin Int      @default(60)
+  dailyGoalMin      Int       @default(60)
   /// IANA zone from the browser at signup. "Today", streaks and day totals use it.
-  timeZone     String   @default("UTC")
-  createdAt    DateTime @default(now())
+  timeZone          String    @default("UTC")
+  createdAt         DateTime  @default(now())
 
-  dailyStats    DailyStat[]
-  sessions      FocusSession[]
-  posts         Post[]
-  likes         Like[]
-  comments      Comment[]
-  following     Follow[]       @relation("follower")
-  followers     Follow[]       @relation("following")
-  notifications Notification[] @relation("recipient")
-  actions       Notification[] @relation("actor")
-  buddyRequests Buddy[] @relation("requester")
-  buddyInvites  Buddy[] @relation("addressee")
-  roomsOwned    Room[]
-  roomMembers   RoomMember[]
+  dailyStats     DailyStat[]
+  sessions       FocusSession[]
+  posts          Post[]
+  likes          Like[]
+  comments       Comment[]
+  following      Follow[]           @relation("follower")
+  followers      Follow[]           @relation("following")
+  notifications  Notification[]     @relation("recipient")
+  actions        Notification[]     @relation("actor")
+  buddyRequests  Buddy[]            @relation("requester")
+  buddyInvites   Buddy[]            @relation("addressee")
+  roomsOwned     Room[]
+  roomMembers    RoomMember[]
   passwordResets PasswordReset[]
-  postViews     PostView[]
+  postViews      PostView[]
+  quests         Quest[]
+  questsJoined   QuestParticipant[]
+  questionsMade  DailyQuestion[]
+  questionVotes  QuestionVote[]
+  takes          Take[]
+  takeReactions  TakeReaction[]
+  reports        Report[]
 }
 
 /// One timer run. status: ACTIVE | DONE | ABANDONED
@@ -158,15 +165,15 @@ model RateLimit {
 }
 
 model Post {
-  id           String   @id @default(cuid())
-  userId       String
-  sessionId    String?  @unique
-  mediaUrl     String?
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String?  @unique
+  mediaUrl  String?
   /// "image" | "timelapse"
-  mediaType    String?
-  views        Int      @default(0)
-  body         String
-  createdAt    DateTime @default(now())
+  mediaType String?
+  views     Int      @default(0)
+  body      String
+  createdAt DateTime @default(now())
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   session  FocusSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
@@ -227,4 +234,122 @@ model Follow {
 
   @@id([followerId, followingId])
   @@index([followingId])
+}
+
+/// A focus challenge on the Home quest board.
+model Quest {
+  id             String    @id @default(cuid())
+  creatorId      String
+  title          String
+  description    String?
+  /// "solo": everyone races their own target. "group": everyone's time adds up to one target.
+  type           String
+  /// At least one of these two is set.
+  targetMinutes  Int?
+  targetSessions Int?
+  /// Only sessions at least this long count.
+  minSessionMin  Int?
+  /// Only sessions with this label count, matched without case.
+  tag            String?
+  /// One of the fixed pastels in src/lib/quests.ts.
+  color          String
+  startsAt       DateTime  @default(now())
+  endsAt         DateTime
+  /// Set when a group quest reaches its target.
+  completedAt    DateTime?
+  hidden         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  creator      User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  participants QuestParticipant[]
+
+  @@index([hidden, endsAt])
+  @@index([creatorId, createdAt])
+}
+
+model QuestParticipant {
+  questId          String
+  userId           String
+  joinedAt         DateTime  @default(now())
+  progressSec      Int       @default(0)
+  progressSessions Int       @default(0)
+  /// Set when this person meets a solo quest's target, or when their group quest is done.
+  completedAt      DateTime?
+
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([questId, userId])
+  @@index([userId, completedAt])
+  @@index([questId, joinedAt])
+}
+
+/// The wall's question of the day. Days without one use the built-in bank in src/lib/wall.ts.
+model DailyQuestion {
+  id          String   @id @default(cuid())
+  /// "YYYY-MM-DD", in the app's time zone
+  day         String   @unique
+  question    String
+  options     String[]
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  createdBy User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  votes     QuestionVote[]
+}
+
+model QuestionVote {
+  questionId String
+  userId     String
+  option     Int
+  createdAt  DateTime @default(now())
+
+  question DailyQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, userId])
+}
+
+/// A short opinion on the wall.
+model Take {
+  id        String   @id @default(cuid())
+  authorId  String
+  body      String
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reactions TakeReaction[]
+
+  @@index([hidden, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model TakeReaction {
+  takeId    String
+  userId    String
+  /// "agree" | "disagree"
+  value     String
+  createdAt DateTime @default(now())
+
+  take Take @relation(fields: [takeId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([takeId, userId])
+  @@index([takeId, value])
+}
+
+/// Someone flagging a quest or a take. Enough reports hide it.
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  /// "quest" | "take"
+  targetType String
+  targetId   String
+  createdAt  DateTime @default(now())
+
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([targetType, targetId])
 }

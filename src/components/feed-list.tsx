@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadMoreFeed } from "@/app/actions/social";
 import { PostCard, type Viewer } from "./post-card";
 import { SectionTitle, btnGhost } from "./ui";
@@ -15,12 +15,14 @@ type Props = {
   viewer: Viewer | null;
   timeZone: string;
   grouped?: boolean;
+  /** Shown after the second post (or after the last, when there are fewer): Home puts the question of the day here. */
+  afterSecond?: React.ReactNode;
 };
 
 const newestFirst = (a: FeedPost, b: FeedPost) =>
   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id.localeCompare(a.id);
 
-export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, grouped = false }: Props) {
+export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, grouped = false, afterSecond }: Props) {
   const [posts, setPosts] = useState(initial);
   const [more, setMore] = useState(hasMore);
   const [failed, setFailed] = useState(false);
@@ -88,7 +90,10 @@ export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, gr
           {grouped && <SectionTitle>{g.heading}</SectionTitle>}
           <div className="flex flex-col gap-6">
             {g.posts.map((p) => (
-              <PostCard key={p.id} post={p} viewer={viewer} timeZone={timeZone} />
+              <Fragment key={p.id}>
+                <PostCard post={p} viewer={viewer} timeZone={timeZone} />
+                {afterSecond && p.id === posts[Math.min(1, posts.length - 1)]?.id && afterSecond}
+              </Fragment>
             ))}
           </div>
         </section>
