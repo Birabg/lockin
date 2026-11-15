@@ -177,3 +177,20 @@ export async function updateProfile(_prev: ProfileState, form: FormData): Promis
   revalidatePath("/dashboard", "layout");
   return { ok: true };
 }
+
+export type Reactor = { username: string; name: string; avatar: string | null };
+
+/** Who reacted to a post, newest first. Read-only, loaded when someone hovers or long-presses the reaction. */
+export async function getReactors(postId: string): Promise<{ people: Reactor[]; more: number }> {
+  const id = idSchema.parse(postId);
+  const [rows, total] = await Promise.all([
+    db.like.findMany({
+      where: { postId: id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { user: { select: { username: true, name: true, avatar: true } } },
+    }),
+    db.like.count({ where: { postId: id } }),
+  ]);
+  return { people: rows.map((r) => r.user), more: Math.max(0, total - rows.length) };
+}

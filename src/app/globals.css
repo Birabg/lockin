@@ -43,6 +43,11 @@
 
   /* ---- Focus stage: the setup screen and the running session share these, so they read as one screen.
      The accent (--stage-accent) comes from the chosen background, and is only used for the primary action and progress. */
+  /* the chapters on a session post's filmstrip */
+  --chapter-focus: #d4d4d8;
+  --chapter-break: #f5a35c;
+  --chapter-goal: #4ade80;
+
   --stage-base: #0e0e10;
   --stage-text: #f3f5f9;
   --stage-numeral: rgb(243 245 249 / 0.92);

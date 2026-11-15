@@ -111,7 +111,7 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   const other = await signUp(browser, `Like ${run}`, liker);
   await other.goto("/dashboard");
   const card = other.locator("article", { hasText: note });
-  await card.getByRole("button", { name: /^Like/ }).click();
+  await card.getByRole("button", { name: /^React/ }).click();
   await expect.poll(() => db.like.count({ where: { post: { userId: user.id } } })).toBe(1);
 
   await other.goto("/dashboard/leaderboard");

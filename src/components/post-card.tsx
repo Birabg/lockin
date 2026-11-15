@@ -2,17 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { usePopover } from "./app-shell";
 import { Icon } from "./icon";
-import { SessionBody } from "./session-body";
+import { SessionPlayer } from "./session-card";
 import { toast } from "./toaster";
 import { Avatar } from "./ui";
-import { addComment, deleteComment, deletePost, toggleLike, type NewComment } from "@/app/actions/social";
-import { formatCount, timeAgo } from "@/lib/time";
+import { addComment, deleteComment, deletePost, getReactors, toggleLike, type NewComment, type Reactor } from "@/app/actions/social";
+import { formatCount, formatDuration, timeAgo } from "@/lib/time";
 import { trackView } from "@/lib/view-tracker";
 import type { FeedPost } from "@/lib/queries";
 
 export type Viewer = { username: string; name: string; avatar: string | null };
+
+/** A like shows as this. Other reactions would need the database to store which one. */
+const REACTION = "🔥";
+const LONG_PRESS_MS = 450;
+const HOVER_MS = 350;
 
 export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: Viewer | null; timeZone: string }) {
   const router = useRouter();
@@ -22,7 +28,6 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   const [goneComments, setGoneComments] = useState<string[]>([]);
   const [pending, start] = useTransition();
   const [like, setLike] = useState({ liked: post.liked, count: post.likeCount });
-  const [popping, setPopping] = useState(false);
   const [added, setAdded] = useState<NewComment[]>([]);
 
   // Pages loaded by scrolling never get new props, so this state is what keeps their likes correct.
@@ -31,7 +36,6 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   const [draft, setDraft] = useState("");
   const card = useRef<HTMLElement>(null);
   const s = post.session;
-  const createdAt = new Date(post.createdAt);
   const newComments = added.filter((c) => !post.comments.some((x) => x.id === c.id));
   const allComments = [...post.comments, ...newComments];
   const comments = allComments.filter((c) => !goneComments.includes(c.id));
@@ -56,7 +60,6 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   function onLike() {
     if (!signedIn) return router.push("/signup");
     const before = like;
-    setPopping(!before.liked);
     setLike({ liked: !before.liked, count: before.count + (before.liked ? -1 : 1) });
     start(async () => {
       const res = await toggleLike(post.id);
@@ -110,82 +113,45 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   async function onShare() {
     const url = `${window.location.origin}/dashboard/u/${post.user.username}`;
     if (navigator.share) await navigator.share({ title: post.body, url }).catch(() => {});
-    else await navigator.clipboard?.writeText(url);
+    else {
+      await navigator.clipboard?.writeText(url);
+      toast("Link copied");
+    }
   }
 
   if (removed) return null;
 
+  const menu = <PostMenu views={post.views} onDelete={mine ? onDelete : undefined} overlay={!!s} />;
+
   return (
-    <article ref={card} className="panel @container overflow-hidden">
-      <div className="px-5 pt-5 pb-4">
-        <header className="flex items-center gap-3">
-          <Link href={`/dashboard/u/${post.user.username}`} aria-label={`${post.user.name}’s profile`}>
-            <Avatar name={post.user.name} src={post.user.avatar} size={40} />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <p className="flex items-baseline gap-1.5 text-[14.5px] leading-[21.75px] font-semibold tracking-[-0.01em]">
-              <Link href={`/dashboard/u/${post.user.username}`} className="truncate hover:underline">
-                {post.user.name}
-              </Link>
-              {/* a verified badge goes here once accounts can earn one */}
-              <span className="truncate text-[11.5px] leading-[17.25px] font-normal tracking-normal text-muted">@{post.user.username}</span>
-            </p>
-            <p className="flex items-center gap-1.5 text-[11px] leading-4 text-muted tabular-nums">
-              <time dateTime={createdAt.toISOString()} suppressHydrationWarning>
-                {timeAgo(createdAt).replace(" ago", "")}
-              </time>
-              {post.streak > 0 && (
-                <>
-                  <span aria-hidden>·</span>
-                  <span className="flex items-center gap-0.5 font-bold text-streak tabular">
-                    <Icon name="streak" size={13} solid className="streak-glow" />
-                    {post.streak}d
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
-          {mine && (
+    <article ref={card} className="panel overflow-hidden">
+      {s ? <SessionPlayer post={post} session={s} timeZone={timeZone} menu={menu} /> : <TextHeader post={post} menu={menu} />}
+
+      <div className={s ? "px-4 pt-2 pb-2.5" : "px-4 pb-2.5"}>
+        <Caption text={post.body} big={!s} />
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+          {s && <SessionStats session={s} streak={post.streak} />}
+          <div className="ml-auto flex items-center gap-0.5">
+            <ReactButton postId={post.id} liked={like.liked} count={like.count} disabled={pending} onToggle={onLike} />
             <button
-              onClick={onDelete}
-              aria-label="Delete post"
-              className="grid size-9 shrink-0 place-items-center rounded-full text-subtle hover:bg-inset hover:text-danger"
+              onClick={() => setShowComments((v) => !v)}
+              aria-expanded={showComments}
+              aria-label={`Comments, ${commentCount}`}
+              className="flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold text-muted hover:bg-inset hover:text-foreground"
             >
-              <Icon name="delete" size={18} />
+              <Icon name="comment" size={18} />
+              {commentCount > 0 && <span className="tabular">{commentCount}</span>}
             </button>
-          )}
-        </header>
-
-        {s && <SessionBody post={post} session={s} timeZone={timeZone} />}
-        <p className="mt-3.5 text-[14.5px] leading-[1.55] whitespace-pre-wrap">{post.body}</p>
+            <button
+              onClick={onShare}
+              className="grid size-9 place-items-center rounded-full text-muted hover:bg-inset hover:text-foreground"
+              aria-label="Share a link to this profile"
+            >
+              <Icon name="share" size={18} />
+            </button>
+          </div>
+        </div>
       </div>
-
-      <footer className="flex h-[53px] items-center gap-1 border-t border-border/60 px-3 py-2">
-        <button
-          onClick={onLike}
-          disabled={pending}
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold hover:bg-inset ${like.liked ? "text-danger" : "text-muted"}`}
-          aria-pressed={like.liked}
-          aria-label={`Like, ${like.count} so far`}
-        >
-          <Icon name="like" size={18} solid={like.liked} className={popping ? "animate-like-pop" : ""} />{" "}
-          <span className="tabular">{like.count}</span>
-        </button>
-        <button
-          onClick={() => setShowComments((v) => !v)}
-          aria-expanded={showComments}
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-muted hover:bg-inset"
-        >
-          <Icon name="comment" size={18} /> Comment {commentCount > 0 && <span className="tabular">{commentCount}</span>}
-        </button>
-        <span className="ml-auto flex items-center gap-1.5 px-2 text-[13px] text-muted tabular">
-          <Icon name="views" size={18} />
-          <span className="sr-only">Views:</span> {formatCount(post.views)}
-        </span>
-        <button onClick={onShare} className="rounded-full p-2 text-muted hover:bg-inset" aria-label="Copy a link to this profile">
-          <Icon name="share" size={18} />
-        </button>
-      </footer>
 
       {showComments && (
         <div className="border-t border-border px-4 py-3">
@@ -238,5 +204,230 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
         </div>
       )}
     </article>
+  );
+}
+
+function TextHeader({ post, menu }: { post: FeedPost; menu: React.ReactNode }) {
+  const createdAt = new Date(post.createdAt);
+  return (
+    <header className="flex items-center gap-3 px-4 pt-4 pb-2">
+      <Link href={`/dashboard/u/${post.user.username}`} aria-label={`${post.user.name}’s profile`}>
+        <Avatar name={post.user.name} src={post.user.avatar} size={38} />
+      </Link>
+      <p className="flex min-w-0 flex-1 items-baseline gap-1.5 text-[14.5px] font-semibold tracking-[-0.01em]">
+        <Link href={`/dashboard/u/${post.user.username}`} className="truncate hover:underline">
+          {post.user.name}
+        </Link>
+        <span className="truncate text-[12px] font-normal tracking-normal text-muted">@{post.user.username}</span>
+        <span className="text-[12px] font-normal text-muted" aria-hidden>
+          ·
+        </span>
+        <time dateTime={createdAt.toISOString()} suppressHydrationWarning className="shrink-0 text-[12px] font-normal text-muted tabular">
+          {timeAgo(createdAt).replace(" ago", "")}
+        </time>
+      </p>
+      {menu}
+    </header>
+  );
+}
+
+/** Two lines, with a toggle for the rest when there is more. */
+function Caption({ text, big }: { text: string; big: boolean }) {
+  const el = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+
+  useLayoutEffect(() => {
+    const p = el.current;
+    if (p && !open) setLong(p.scrollHeight > p.clientHeight + 1);
+  }, [text, open]);
+
+  return (
+    <div>
+      <p
+        ref={el}
+        className={`${big ? "text-[15px]" : "text-[14px]"} leading-[1.5] break-words whitespace-pre-wrap ${open ? "" : "line-clamp-2"}`}
+      >
+        {text}
+      </p>
+      {(long || open) && (
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="text-[13px] font-semibold text-muted hover:text-foreground"
+        >
+          {open ? "less" : "more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SessionStats({ session, streak }: { session: NonNullable<FeedPost["session"]>; streak: number }) {
+  const pct = Math.round(Math.min(session.durationSec / (session.goalMin * 60), 9.99) * 100);
+  const bits = [session.label, `${pct}% of goal`].filter(Boolean);
+  return (
+    <p className="flex min-w-0 items-baseline gap-2 text-[13px] text-muted tabular">
+      <span className="text-[16px] font-extrabold tracking-[-0.02em] text-foreground">{formatDuration(session.durationSec)}</span>
+      <span className="min-w-0 truncate">
+        {bits.join(" · ")}
+        {streak > 0 && (
+          <>
+            {" · "}
+            <span className="font-bold text-streak">
+              {streak}d <span aria-label="streak">🔥</span>
+            </span>
+          </>
+        )}
+      </span>
+    </p>
+  );
+}
+
+/** Views, and delete for the author. Sits over the player, or at the end of a text post's header. */
+function PostMenu({ views, onDelete, overlay }: { views: number; onDelete?: () => void; overlay: boolean }) {
+  const pop = usePopover<"menu">();
+  return (
+    <div ref={pop.box} className="relative shrink-0">
+      <button
+        onClick={() => pop.toggle("menu")}
+        aria-expanded={pop.open === "menu"}
+        aria-haspopup="menu"
+        aria-label="Post options"
+        className={
+          overlay
+            ? "session-glass grid size-[30px] place-items-center"
+            : "grid size-9 place-items-center rounded-full text-muted hover:bg-inset hover:text-foreground"
+        }
+      >
+        <Icon name="more" size={18} />
+      </button>
+      {pop.open && (
+        <div role="menu" data-menu className="app-pop absolute top-[calc(100%+6px)] right-0">
+          <p className="app-menu-row text-muted" role="none">
+            <Icon name="views" size={18} /> <span className="tabular">{formatCount(views)}</span> {views === 1 ? "view" : "views"}
+          </p>
+          {onDelete && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                pop.setOpen(null);
+                onDelete();
+              }}
+              className="app-menu-row text-danger"
+            >
+              <Icon name="delete" size={18} /> Delete post
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The like, shown as a 🔥 reaction. A tap toggles it; hovering or a long press shows who reacted,
+ * fetched only then.
+ */
+function ReactButton({
+  postId,
+  liked,
+  count,
+  disabled,
+  onToggle,
+}: {
+  postId: string;
+  liked: boolean;
+  count: number;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  const pop = usePopover<"who">();
+  const [who, setWho] = useState<{ people: Reactor[]; more: number } | null>(null);
+  const [popping, setPopping] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pressed = useRef(false);
+  const loaded = useRef<number | null>(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  function showWho() {
+    pop.setOpen("who");
+    if (loaded.current === count) return;
+    loaded.current = count;
+    setWho(null);
+    getReactors(postId).then(setWho, () => setWho({ people: [], more: 0 }));
+  }
+
+  return (
+    <div
+      ref={pop.box}
+      className="relative"
+      onPointerEnter={(e) => {
+        if (e.pointerType !== "mouse" || count === 0) return;
+        timer.current = setTimeout(showWho, HOVER_MS);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType !== "mouse") return;
+        clearTimeout(timer.current);
+        pop.setOpen(null);
+      }}
+    >
+      <button
+        onClick={() => {
+          if (pressed.current) {
+            pressed.current = false;
+            return;
+          }
+          setPopping(!liked);
+          onToggle();
+        }}
+        onPointerDown={(e) => {
+          if (e.pointerType === "mouse") return;
+          pressed.current = false;
+          timer.current = setTimeout(() => {
+            pressed.current = true;
+            showWho();
+          }, LONG_PRESS_MS);
+        }}
+        onPointerUp={(e) => e.pointerType !== "mouse" && clearTimeout(timer.current)}
+        onContextMenu={(e) => pop.open && e.preventDefault()}
+        disabled={disabled}
+        aria-pressed={liked}
+        aria-label={`React ${REACTION}, ${count} so far`}
+        className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold select-none hover:bg-inset ${liked ? "bg-streak-bg text-streak" : "text-muted hover:text-foreground"}`}
+      >
+        <span
+          aria-hidden
+          className={`text-[16px] leading-none ${liked ? "" : "opacity-60 grayscale"} ${popping ? "animate-like-pop" : ""}`}
+          onAnimationEnd={() => setPopping(false)}
+        >
+          {REACTION}
+        </span>
+        <span className="tabular">{count}</span>
+      </button>
+      {pop.open && (
+        <div role="dialog" aria-label="Reacted" className="app-pop react-pop absolute right-0 bottom-[calc(100%+6px)] w-56 p-2">
+          {!who ? (
+            <p className="px-2 py-1.5 text-[13px] text-muted">Loading…</p>
+          ) : who.people.length === 0 ? (
+            <p className="px-2 py-1.5 text-[13px] text-muted">No reactions yet.</p>
+          ) : (
+            <ul className="max-h-60 overflow-y-auto">
+              {who.people.map((p) => (
+                <li key={p.username}>
+                  <Link href={`/dashboard/u/${p.username}`} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-inset">
+                    <Avatar name={p.name} src={p.avatar} size={24} />
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{p.name}</span>
+                    <span aria-hidden>{REACTION}</span>
+                  </Link>
+                </li>
+              ))}
+              {who.more > 0 && <li className="px-2 py-1 text-[12px] text-muted">and {who.more} more</li>}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
