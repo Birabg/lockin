@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
+import { AccentPicker } from "@/components/accent-picker";
 import { Avatar, PageHeader, btnGhost } from "@/components/ui";
 import { AvatarForm } from "./avatar-form";
 import { DeleteAccount } from "./delete-account";
@@ -21,6 +22,13 @@ export default async function SettingsPage() {
         </span>
       </Link>
       <AvatarForm name={user.name} avatar={user.avatar} />
+      <section className="panel mb-4 p-4" aria-labelledby="accent-title">
+        <h2 id="accent-title" className="font-bold">
+          Accent colour
+        </h2>
+        <p className="mb-3.5 text-sm text-muted">Pick the colour for buttons, highlights and progress. Saved on this device.</p>
+        <AccentPicker />
+      </section>
       <ProfileForm
         user={{ name: user.name, bio: user.bio ?? "", dailyGoalMin: user.dailyGoalMin, timeZone: user.timeZone }}
         timeZones={[...new Set([user.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])].sort()}

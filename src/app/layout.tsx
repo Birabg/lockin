@@ -6,6 +6,7 @@ import { Toaster } from "@/components/toaster";
 import { brand } from "@/lib/brand";
 import { siteUrl } from "@/lib/site";
 import { splashScript, splashStyle } from "@/lib/splash";
+import { accentScript } from "@/lib/accents";
 
 const font = DM_Sans({ subsets: ["latin"], variable: "--font-app" });
 
@@ -42,6 +43,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <style dangerouslySetInnerHTML={{ __html: splashStyle }} />
         <script dangerouslySetInnerHTML={{ __html: splashScript }} />
+        {/* the saved accent colour, before anything paints */}
+        <script dangerouslySetInnerHTML={{ __html: accentScript }} />
       </head>
       <body className="min-h-dvh font-sans">
         <SplashScreen />

@@ -59,45 +59,6 @@
     white-space: nowrap;
   }
 
-  /* the feed tabs, as one segmented pill that scrolls if it doesn't fit */
-  .app-tabs {
-    display: flex;
-    max-width: 100%;
-    gap: 2px;
-    overflow-x: auto;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--inset) 60%, transparent);
-    padding: 4px;
-    scrollbar-width: none;
-  }
-  .app-tabs::-webkit-scrollbar {
-    display: none;
-  }
-  .app-tab {
-    display: flex;
-    height: 32px;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 6px;
-    border-radius: 999px;
-    padding-inline: 14px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--muted-foreground);
-    white-space: nowrap;
-    transition:
-      background 150ms ease,
-      color 150ms ease;
-  }
-  .app-tab:hover {
-    color: var(--foreground);
-  }
-  .app-tab[aria-current="page"] {
-    background: var(--background);
-    font-weight: 800;
-    color: var(--foreground);
-  }
-
   .app-icon-btn {
     position: relative;
     display: grid;

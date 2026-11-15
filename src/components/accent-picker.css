@@ -1,0 +1,319 @@
+/* The accent picker: a playful palette of round swatches. */
+
+@layer components {
+  .accent-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* the current pick, with a sample button in that colour */
+  .accent-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 18px;
+    background: var(--primary-light);
+    padding: 10px 12px;
+    transition: background 300ms ease;
+  }
+  .accent-blob {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%;
+    background: var(--primary);
+    box-shadow:
+      0 3px 0 var(--primary-shadow),
+      inset 0 -6px 10px rgb(0 0 0 / 0.12),
+      inset 0 5px 8px rgb(255 255 255 / 0.3);
+    animation: accent-wobble 6s ease-in-out infinite;
+    transition: background 300ms ease;
+  }
+  @keyframes accent-wobble {
+    50% {
+      border-radius: 55% 45% 42% 58% / 52% 58% 42% 48%;
+      transform: rotate(8deg);
+    }
+  }
+  .accent-sample {
+    display: inline-flex;
+    height: 32px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    background: var(--primary);
+    padding-inline: 12px 14px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--primary-foreground);
+    box-shadow: 0 3px 0 var(--primary-shadow);
+    transition: background 300ms ease;
+  }
+
+  .accent-group + .accent-group {
+    margin-top: 12px;
+  }
+  .accent-group-name {
+    margin-bottom: 8px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--subtle-foreground);
+  }
+  .accent-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+    gap: 10px;
+  }
+
+  .accent-swatch {
+    position: relative;
+    display: grid;
+    aspect-ratio: 1;
+    max-width: 44px;
+    place-items: center;
+    border-radius: 50%;
+    box-shadow:
+      inset 0 -4px 6px rgb(0 0 0 / 0.15),
+      inset 0 3px 5px rgb(255 255 255 / 0.25);
+    transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .accent-swatch:hover {
+    transform: scale(1.12) rotate(-6deg);
+  }
+  .accent-swatch:focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+  .accent-swatch[aria-checked="true"] {
+    box-shadow:
+      0 0 0 3px var(--card),
+      0 0 0 5px currentColor,
+      inset 0 -4px 6px rgb(0 0 0 / 0.15);
+    color: var(--foreground);
+  }
+  .accent-swatch[data-bounce] {
+    animation: accent-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes accent-pop {
+    40% {
+      transform: scale(1.25);
+    }
+  }
+  .accent-check {
+    border-radius: 50%;
+    background: rgb(17 17 19 / 0.55);
+    padding: 2px;
+    color: #fff;
+  }
+
+  .accent-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .accent-custom {
+    display: inline-flex;
+    height: 36px;
+    cursor: pointer;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    background: var(--inset);
+    padding-inline: 5px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .accent-custom:hover,
+  .accent-custom[data-on] {
+    box-shadow: inset 0 0 0 1.5px var(--primary);
+  }
+  .accent-custom:focus-within {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+  .accent-rainbow {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border-radius: 50%;
+    background: conic-gradient(#ff5c7a, #ffd23f, #a3e635, #22d3ee, #7c7cff, #e879f9, #ff5c7a);
+  }
+  .accent-rainbow-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+  }
+  .accent-reset {
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+  .accent-reset:hover {
+    background: var(--inset);
+    color: var(--foreground);
+  }
+
+  /* smaller, for the account menu */
+  .accent-compact {
+    gap: 10px;
+  }
+  .accent-compact .accent-row {
+    grid-template-columns: repeat(8, 1fr);
+    gap: 7px;
+  }
+  .accent-compact .accent-group + .accent-group {
+    margin-top: 8px;
+  }
+  .accent-compact .accent-group-name {
+    margin-bottom: 5px;
+    font-size: 10.5px;
+  }
+  .accent-compact .accent-blob {
+    width: 32px;
+    height: 32px;
+  }
+
+  .accent-dot {
+    width: 16px;
+    height: 16px;
+    margin-inline: 1px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow:
+      0 0 0 2px var(--card),
+      0 0 0 3px var(--border);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .accent-blob,
+    .accent-swatch,
+    .accent-swatch[data-bounce] {
+      animation: none;
+      transition: none;
+    }
+    .accent-swatch:hover {
+      transform: none;
+    }
+  }
+
+  /* ---- "Choose accent" in the top bar on Home ---- */
+  .accent-quick {
+    position: relative;
+    display: flex;
+    height: 40px;
+    align-items: center;
+    gap: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--inset) 60%, transparent);
+    padding-inline: 14px 5px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 28%, transparent);
+    transition: box-shadow 300ms ease;
+  }
+  .accent-quick-label {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    /* the name picks up the colour you chose */
+    background: linear-gradient(90deg, var(--foreground), var(--primary-text));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  @media (width < 40rem) {
+    .accent-quick {
+      gap: 6px;
+      padding-inline: 6px 4px;
+    }
+    .accent-quick-label {
+      display: none;
+    }
+  }
+  /* little paint drops that hop when you pick one */
+  .accent-drop {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50% 50% 50% 50% / 58% 58% 42% 42%;
+    box-shadow:
+      inset 0 -3px 4px rgb(0 0 0 / 0.18),
+      inset 0 2px 3px rgb(255 255 255 / 0.35);
+    transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .accent-drop:hover {
+    transform: translateY(-2px) scale(1.12);
+  }
+  .accent-drop:focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+  .accent-drop[aria-checked="true"] {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--foreground),
+      inset 0 -3px 4px rgb(0 0 0 / 0.18);
+  }
+  .accent-drop[data-bounce] {
+    animation: accent-hop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes accent-hop {
+    35% {
+      transform: translateY(-6px) scale(1.15);
+    }
+    65% {
+      transform: translateY(0) scale(0.92, 1.08);
+    }
+  }
+  .accent-quick-more {
+    position: relative;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 50%;
+    transition: transform 200ms ease;
+  }
+  .accent-quick-more:hover,
+  .accent-quick-more[aria-expanded="true"] {
+    transform: rotate(45deg);
+  }
+  .accent-quick-more[data-on] .accent-rainbow,
+  .accent-quick-more[aria-expanded="true"] .accent-rainbow {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--foreground);
+  }
+  .accent-quick-more:focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+  .accent-quick-pop {
+    position: fixed;
+    top: calc(var(--topbar-h) + 8px);
+    left: 50%;
+    width: min(340px, calc(100vw - 24px));
+    padding: 12px;
+    translate: -50% 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .accent-drop,
+    .accent-drop[data-bounce],
+    .accent-quick-more {
+      animation: none;
+      transition: none;
+      transform: none;
+    }
+  }
+}
