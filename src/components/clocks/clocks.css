@@ -151,9 +151,10 @@
   align-self: center;
   font-size: 0.8em;
 }
+/* the halves are solid: a see-through flap would show the digit it's hiding */
 .flip-card {
-  --flip-top: rgb(255 255 255 / 0.07);
-  --flip-bottom: rgb(255 255 255 / 0.045);
+  --flip-top: #2a2a2f;
+  --flip-bottom: #232327;
   position: relative;
   display: block;
   flex: none;
@@ -161,8 +162,7 @@
   height: 1.8em;
   border-radius: 0.14em;
   color: var(--stage-numeral);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 0.06em 0.2em rgb(0 0 0 / 0.45);
 }
 .flip-card[data-small] {
   font-size: 0.56em;

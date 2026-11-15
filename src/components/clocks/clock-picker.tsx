@@ -15,6 +15,15 @@ const PREVIEW_SIZES: Record<ClockStyle, CSSProperties> = {
   flip: { "--clock-size": "20px" } as CSSProperties,
   reel: { "--clock-size": "19px", "--reel-size": "10px" } as CSSProperties,
   minimal: { "--clock-size": "27px" } as CSSProperties,
+  digital: { "--clock-size": "26px" } as CSSProperties,
+  pie: { "--clock-size": "22px" } as CSSProperties,
+  hourglass: { "--clock-size": "26px" } as CSSProperties,
+  bar: { "--clock-size": "24px" } as CSSProperties,
+  dots: { "--clock-size": "22px" } as CSSProperties,
+  words: { "--clock-size": "12px" } as CSSProperties,
+  neon: { "--clock-size": "26px" } as CSSProperties,
+  terminal: { "--clock-size": "22px" } as CSSProperties,
+  bold: { "--clock-size": "26px" } as CSSProperties,
 };
 
 type Props = { current: ClockStyle; accent: string; onPick: (style: ClockStyle) => void };
@@ -29,14 +38,14 @@ export function ClockPicker({ current, accent, onPick }: Props) {
   }, []);
 
   return (
-    <div role="group" aria-label="Clock style" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+    <div role="group" aria-label="Clock style" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {CLOCK_STYLES.map(({ id, name }) => (
         <button
           key={id}
           onClick={() => onPick(id)}
           aria-pressed={id === current}
           data-selected={id === current || undefined}
-          className={`min-w-[96px] flex-1 overflow-hidden rounded-2xl bg-black/30 text-left ring-1 transition-shadow ${
+          className={`overflow-hidden rounded-2xl bg-black/30 text-left ring-1 transition-shadow ${
             id === current ? "ring-2 ring-[var(--stage-text)]" : "ring-[var(--stage-line)] hover:ring-[var(--stage-muted)]"
           }`}
         >
