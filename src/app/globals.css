@@ -31,10 +31,10 @@
   /* ---- App chrome: the top bar, the floating dock and the mobile nav share these ---- */
   --topbar-h: 56px;
   --content-width: 640px;
-  --chrome-bar: rgb(20 20 22 / 0.82);
-  --chrome-surface: rgb(27 27 30 / 0.94);
+  --chrome-bar: rgb(20 20 22 / 0.96);
+  --chrome-surface: rgb(27 27 30);
   --chrome-shadow: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 0 var(--border-shadow);
-  --chrome-blur: 14px;
+  --chrome-blur: 20px;
   --dock-h: 68px;
   --dock-item: 46px;
   --dock-gap: 16px;
