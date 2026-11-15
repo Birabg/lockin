@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clockParts, clockText, reelNumber, reelPlacement, resolveClockStyle } from "./clock-styles";
+import { clockParts, clockText, clockWords, numberWords, reelNumber, reelPlacement, resolveClockStyle, shareLeft } from "./clock-styles";
 
 describe("clockText", () => {
   it("shows MM:SS under an hour and H:MM:SS over", () => {
@@ -41,5 +41,39 @@ describe("reel", () => {
     expect(reelNumber(-61)).toBe("01");
     expect(reelNumber(0)).toBe("00");
     expect(reelNumber(75)).toBe("15");
+  });
+});
+
+describe("numberWords", () => {
+  it("spells out numbers", () => {
+    expect(numberWords(0)).toBe("zero");
+    expect(numberWords(13)).toBe("thirteen");
+    expect(numberWords(20)).toBe("twenty");
+    expect(numberWords(24)).toBe("twenty-four");
+    expect(numberWords(59)).toBe("fifty-nine");
+  });
+});
+
+describe("clockWords", () => {
+  it("says what's left, in the biggest units that matter", () => {
+    expect(clockWords(24 * 60 + 30, false)).toBe("twenty-four minutes left");
+    expect(clockWords(3600 + 5 * 60, false)).toBe("one hour, five minutes left");
+    expect(clockWords(7200, false)).toBe("two hours left");
+    expect(clockWords(60, false)).toBe("one minute left");
+    expect(clockWords(40, false)).toBe("forty seconds left");
+    expect(clockWords(0, false)).toBe("time's up");
+  });
+
+  it("counts up past the goal", () => {
+    expect(clockWords(-180, true)).toBe("three minutes over");
+  });
+});
+
+describe("shareLeft", () => {
+  it("stays between empty and full", () => {
+    expect(shareLeft(750, 1500)).toBe(0.5);
+    expect(shareLeft(-30, 1500)).toBe(0);
+    expect(shareLeft(2000, 1500)).toBe(1);
+    expect(shareLeft(10, 0)).toBe(0);
   });
 });

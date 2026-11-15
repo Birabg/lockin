@@ -1,0 +1,337 @@
+/* The extra clock faces. Each scales from --clock-size, like the others in clocks.css.
+   --face is the colour a face glows in: the scene's accent, and amber through overtime. */
+
+.clock {
+  --face: var(--clock-accent, var(--primary));
+}
+.clock[data-overtime] {
+  --face: var(--streak);
+}
+.clock[data-overtime] :is(.pie-time, .glass-time, .bar-time, .dots-time, .words-line, .clock-bold) {
+  color: var(--streak);
+}
+
+/* ---- Digital ---- */
+.clock-digital {
+  display: flex;
+  align-items: center;
+  gap: 0.09em;
+  height: 1em;
+  font-size: var(--clock-size, clamp(64px, min(11vw, 20vh), 320px));
+  transform: skewX(-6deg);
+}
+/* the glow sits on the whole digit: a filter on each segment stops Chrome painting them */
+.seg-digit {
+  width: 0.56em;
+  height: 1em;
+  overflow: visible;
+  filter: drop-shadow(0 0 0.05em var(--face));
+}
+.seg-on {
+  fill: var(--face);
+}
+.seg-off {
+  fill: rgb(255 255 255 / 0.05);
+}
+.seg-colon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.22em;
+  height: 1em;
+  padding-inline: 0.03em;
+}
+.seg-colon i {
+  width: 0.09em;
+  height: 0.09em;
+  border-radius: 0.02em;
+  background: var(--face);
+  box-shadow: 0 0 0.06em var(--face);
+}
+.seg-sign {
+  font-size: 0.6em;
+  color: var(--face);
+}
+
+/* ---- Timer (pie) ---- */
+.clock-pie {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12em;
+  /* sized so the dial matches the Ring clock's circle */
+  font-size: var(--clock-size, calc(var(--ring, 300px) / 2.6));
+}
+.pie-dial {
+  width: 2.6em;
+  height: 2.6em;
+}
+.pie-face {
+  fill: rgb(255 255 255 / 0.05);
+  stroke: rgb(255 255 255 / 0.12);
+  stroke-width: 1.5;
+}
+.pie-tick {
+  stroke: rgb(255 255 255 / 0.4);
+  stroke-linecap: round;
+}
+.pie-wedge {
+  fill: var(--face);
+  opacity: 0.9;
+  transition: d 600ms ease;
+}
+.pie-knob {
+  fill: var(--stage-numeral, #fff);
+  stroke: rgb(0 0 0 / 0.3);
+  stroke-width: 2;
+}
+.pie-time {
+  font-size: 0.32em;
+  font-weight: 300;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---- Hourglass ---- */
+.clock-hourglass {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+  font-size: var(--clock-size, clamp(60px, min(9vw, 15vh), 200px));
+}
+.glass-svg {
+  width: 1.4em;
+  height: 2em;
+  overflow: visible;
+}
+.glass-outline {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.55);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.glass-cap {
+  fill: rgb(255 255 255 / 0.18);
+}
+.glass-sand {
+  fill: var(--face);
+  transition:
+    y 900ms linear,
+    height 900ms linear;
+}
+.glass-stream {
+  stroke: var(--face);
+  stroke-width: 2;
+  stroke-dasharray: 3 5;
+  animation: glass-pour 500ms linear infinite;
+}
+@keyframes glass-pour {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+.glass-time {
+  font-size: 0.75em;
+  font-weight: 200;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---- Bar ---- */
+.clock-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.14em;
+  font-size: var(--clock-size, clamp(68px, min(12vw, 21vh), 340px));
+}
+.bar-time {
+  font-weight: 200;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+.bar-track {
+  position: relative;
+  height: max(4px, 0.05em);
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+}
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--face);
+  box-shadow: 0 0 0.12em var(--face);
+  transition: width 900ms linear;
+}
+
+/* ---- Dots ---- */
+.clock-dots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.16em;
+  font-size: var(--clock-size, clamp(60px, min(10vw, 18vh), 280px));
+}
+.dots-time {
+  font-weight: 200;
+  line-height: 1;
+  white-space: nowrap;
+}
+.dots-grid {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 0.07em;
+}
+.dots-grid i {
+  width: 0.09em;
+  height: 0.09em;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.12);
+  transition:
+    background 400ms ease,
+    box-shadow 400ms ease;
+}
+.dots-grid i[data-on] {
+  background: var(--face);
+  box-shadow: 0 0 0.05em var(--face);
+}
+
+/* ---- Words ---- */
+.clock-words {
+  max-width: 11em;
+  font-size: var(--clock-size, clamp(30px, min(5vw, 9vh), 110px));
+  text-align: center;
+}
+.words-line {
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.words-small {
+  margin-top: 0.3em;
+  font-size: 0.4em;
+  font-weight: 300;
+  color: var(--stage-muted, rgb(255 255 255 / 0.7));
+}
+
+/* ---- Neon ---- */
+.clock-neon {
+  font-size: var(--clock-size, clamp(68px, min(13vw, 22vh), 380px));
+  font-weight: 300;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow:
+    0 0 0.03em #fff,
+    0 0 0.08em var(--face),
+    0 0 0.2em var(--face),
+    0 0 0.4em var(--face);
+  animation: neon-flicker 7s steps(1) infinite;
+}
+.clock-neon > span {
+  width: 0.58em;
+}
+/* a tube that catches once in a while */
+@keyframes neon-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  91% {
+    opacity: 0.82;
+  }
+  92% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 0.88;
+  }
+  95% {
+    opacity: 1;
+  }
+}
+
+/* ---- Terminal ---- */
+.clock-terminal {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  font-size: var(--clock-size, clamp(56px, min(10vw, 18vh), 280px));
+}
+.term-prompt {
+  font-size: 0.2em;
+  line-height: 1.4;
+  color: var(--stage-muted, rgb(255 255 255 / 0.7));
+}
+.term-prompt span {
+  color: var(--face);
+}
+.term-time {
+  display: flex;
+  align-items: center;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  color: var(--face);
+}
+.term-cursor {
+  width: 0.5em;
+  height: 0.85em;
+  margin-left: 0.08em;
+  background: var(--face);
+  animation: term-blink 1.1s steps(1) infinite;
+}
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---- Bold ---- */
+.clock-bold {
+  display: flex;
+  align-items: center;
+  font-size: var(--clock-size, clamp(68px, min(13vw, 22vh), 380px));
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+.bold-digit {
+  display: inline-block;
+  width: 0.62em;
+  text-align: center;
+}
+.bold-colon {
+  margin-inline: 0.04em;
+  color: var(--face);
+  animation: bold-pulse 1s ease-out;
+}
+@keyframes bold-pulse {
+  from {
+    opacity: 0.25;
+  }
+}
+
+/* small print has no room on a picker card */
+.clock-preview .words-small,
+.clock-preview .term-prompt {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clock-neon,
+  .term-cursor,
+  .bold-colon,
+  .glass-stream {
+    animation: none;
+  }
+  .glass-sand,
+  .bar-fill,
+  .pie-wedge {
+    transition: none;
+  }
+}

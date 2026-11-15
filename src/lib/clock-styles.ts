@@ -6,6 +6,15 @@ export const CLOCK_STYLES = [
   { id: "flip", name: "Flip" },
   { id: "reel", name: "Reel" },
   { id: "minimal", name: "Minimal" },
+  { id: "digital", name: "Digital" },
+  { id: "pie", name: "Timer" },
+  { id: "hourglass", name: "Hourglass" },
+  { id: "bar", name: "Bar" },
+  { id: "dots", name: "Dots" },
+  { id: "words", name: "Words" },
+  { id: "neon", name: "Neon" },
+  { id: "terminal", name: "Terminal" },
+  { id: "bold", name: "Bold" },
 ] as const;
 
 export type ClockStyle = (typeof CLOCK_STYLES)[number]["id"];
@@ -43,3 +52,52 @@ export function reelPlacement(offset: number, reach: number) {
 
 /** The reel counts through one line of seconds: down to the goal at zero, then up through overtime. */
 export const reelNumber = (place: number) => twoDigits(Math.abs(place) % 60);
+
+/** How much of the session is left, 0 to 1. Empty through overtime. */
+export const shareLeft = (remainingSec: number, totalSec: number) => (totalSec > 0 ? Math.min(Math.max(remainingSec / totalSec, 0), 1) : 0);
+
+const ONES = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+];
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+/** 0 to 99 in words: 24 -> "twenty-four". */
+export function numberWords(n: number): string {
+  const v = Math.max(0, Math.min(99, Math.floor(n)));
+  if (v < 20) return ONES[v];
+  return TENS[Math.floor(v / 10)] + (v % 10 ? `-${ONES[v % 10]}` : "");
+}
+
+const unit = (n: number, word: string) => `${numberWords(n)} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * The time as a sentence: "twenty-four minutes left", "one hour, five minutes left",
+ * "forty seconds left" in the last minute, and "three minutes over" past the goal.
+ */
+export function clockWords(remainingSec: number, overtime: boolean): string {
+  const { hours, minutes, seconds } = clockParts(remainingSec, overtime);
+  const tail = overtime ? "over" : "left";
+  if (hours > 0) return `${unit(hours, "hour")}${minutes ? `, ${unit(minutes, "minute")}` : ""} ${tail}`;
+  if (minutes > 0) return `${unit(minutes, "minute")} ${tail}`;
+  if (seconds > 0) return `${unit(seconds, "second")} ${tail}`;
+  return overtime ? "right on time" : "time's up";
+}
