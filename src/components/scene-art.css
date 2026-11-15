@@ -1,0 +1,42 @@
+/* Rain over any background: two layers of streaks falling at different speeds, and drops on glass. */
+
+@layer components {
+  .scene-rain {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    /* a rainy day is a little greyer and bluer */
+    background: linear-gradient(rgb(40 55 75 / 0.22), rgb(20 30 45 / 0.28));
+  }
+  /* taller than the scene by one tile, sliding down one tile per loop, so it never jumps */
+  .scene-rain-layer {
+    position: absolute;
+    top: calc(var(--tile) * -1);
+    right: -10%;
+    bottom: 0;
+    left: -10%;
+    background-repeat: repeat;
+    animation: scene-rain-fall linear infinite;
+    will-change: transform;
+  }
+  @keyframes scene-rain-fall {
+    to {
+      transform: translateY(var(--tile));
+    }
+  }
+  .scene-rain-glass {
+    position: absolute;
+    inset: 0;
+    background-repeat: repeat;
+  }
+  .scene-rain[data-still] .scene-rain-layer {
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scene-rain-layer {
+      animation: none;
+    }
+  }
+}
