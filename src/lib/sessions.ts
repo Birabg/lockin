@@ -1,14 +1,15 @@
 import "server-only";
+import { applyQuestProgress } from "./community";
 import { db } from "./db";
 import { activeSeconds, isExpired, pausedSeconds, STALE_MS } from "./session-math";
 import { dayKey } from "./time";
 
-type Closable = { id: string; userId: string; startedAt: Date; pausedSec: number; pausedAt: Date | null };
+type Closable = { id: string; userId: string; startedAt: Date; pausedSec: number; pausedAt: Date | null; label?: string | null };
 
 /** End a session at `end` and add it to the owner's day. Safe to call twice: only the first call counts. */
 export async function finishSession(s: Closable, end: Date, timeZone: string) {
   const durationSec = activeSeconds(s, end);
-  return db.$transaction(async (tx) => {
+  const { seconds, counted } = await db.$transaction(async (tx) => {
     const { count } = await tx.focusSession.updateMany({
       where: { id: s.id, status: "ACTIVE" },
       data: {
@@ -23,7 +24,7 @@ export async function finishSession(s: Closable, end: Date, timeZone: string) {
     });
     if (count === 0) {
       const row = await tx.focusSession.findUnique({ where: { id: s.id }, select: { durationSec: true } });
-      return row?.durationSec ?? 0;
+      return { seconds: row?.durationSec ?? 0, counted: false };
     }
     if (durationSec > 0) {
       const day = dayKey(s.startedAt, timeZone);
@@ -33,8 +34,16 @@ export async function finishSession(s: Closable, end: Date, timeZone: string) {
         update: { seconds: { increment: durationSec } },
       });
     }
-    return durationSec;
+    return { seconds: durationSec, counted: true };
   });
+  // Quests this session counts towards. Only the call that closed the session gets here, so it counts once.
+  // It runs after the transaction (several queries would make it slow), and a failure never undoes the session.
+  if (counted && seconds > 0) {
+    await applyQuestProgress({ userId: s.userId, endedAt: end, durationSec: seconds, label: s.label ?? null }).catch((e) =>
+      console.error("quest progress failed", e),
+    );
+  }
+  return seconds;
 }
 
 /** Close sessions whose tab was closed without pressing stop. */

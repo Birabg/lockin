@@ -41,6 +41,8 @@ const TITLES: [prefix: string, title: string][] = [
   ["/dashboard/notifications", "Notifications"],
   ["/dashboard/focusing", "Focusing now"],
   ["/dashboard/settings", "Settings"],
+  ["/dashboard/quests", "Quests"],
+  ["/dashboard/wall", "The wall"],
   ["/dashboard/u/", "Profile"],
 ];
 const titleFor = (path: string) => TITLES.find(([prefix]) => path.startsWith(prefix))?.[1] ?? "";
@@ -153,6 +155,8 @@ function TopBar({ data, path }: { data: ChromeData; path: string }) {
           </button>
           {menu.open === "more" && (
             <div className="app-pop absolute top-full right-0 mt-2" data-menu>
+              <MenuLink href="/dashboard/wall" icon="comment" label="Wall" path={path} />
+              <MenuLink href="/dashboard/quests" icon="target" label="Quests" path={path} />
               <MenuLink href="/dashboard/people" icon="search" label="Find people" path={path} />
               <MenuLink href="/dashboard/focusing" icon="focusingNow" label="Focusing now" path={path} />
               <MenuLink href="/dashboard/buddies" icon="buddies" label="Buddies" path={path} badge={data.activity.buddies} />

@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import sharp from "sharp";
 import { brand } from "../src/lib/brand";
 import { rebuildStats } from "./rebuild-stats";
+import { seedCommunity } from "./seed-community";
 
 const db = new PrismaClient();
 const DAY = 86_400_000;
@@ -232,6 +233,7 @@ async function main() {
   });
   await showcasePost({ userId: users[4].id, note: "No label, no photo", label: null, goalMin: 50, focusMin: 30, endedMinAgo: 45 });
   await rebuildStats(db);
+  await seedCommunity(db);
   console.log(`Seeded ${users.length} users. Log in as abel / password123`);
 }
 

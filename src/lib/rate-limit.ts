@@ -19,6 +19,13 @@ export const limits = {
   scene: { max: 60, windowSec: 60 },
   resetIp: { max: 20, windowSec: 60 * 60 },
   resetEmail: { max: 3, windowSec: 60 * 60 },
+  quest: { max: 3, windowSec: 24 * 60 * 60 },
+  take: { max: 10, windowSec: 24 * 60 * 60 },
+  join: { max: 30, windowSec: 60 },
+  vote: { max: 30, windowSec: 60 },
+  react: { max: 60, windowSec: 60 },
+  report: { max: 20, windowSec: 60 * 60 },
+  question: { max: 10, windowSec: 60 * 60 },
 } as const;
 
 type Limit = { max: number; windowSec: number };

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:community": "tsx prisma/seed-community.ts",
     "db:reset": "prisma migrate reset --force --skip-seed && tsx prisma/seed.ts",
     "postinstall": "prisma generate",
     "format": "prettier --write .",
