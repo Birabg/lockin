@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import "./session-card.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { DrawnBackdrop } from "./focus-scene";
+import { SceneBackdrop } from "./scene-art";
 import { Icon } from "./icon";
 import { Avatar } from "./ui";
 import { CHAPTER_NAMES, chapterAt, chapterRange, estimateTimelapseSec, sessionChapters, type ChapterKind } from "@/lib/chapters";
@@ -250,10 +249,8 @@ function Cover({ scene, photo, hidden }: { scene: Scene; photo: string | null; h
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element -- remote hosts vary by deployment, and these are already resized
         <img src={photo} alt="" loading="lazy" className="size-full object-cover" />
-      ) : scene.kind === "image" ? (
-        <Image src={scene.image} alt="" fill sizes="(min-width: 700px) 640px, 100vw" className="object-cover" />
       ) : (
-        <DrawnBackdrop scene={scene} />
+        <SceneBackdrop scene={scene} sizes="(min-width: 700px) 640px, 100vw" />
       )}
     </div>
   );
@@ -269,6 +266,7 @@ function sliceStyle(scene: Scene, photo: string | null, i: number): CSSPropertie
       backgroundPosition: `${(i / (FRAMES - 1)) * 100}% 50%`,
     };
   }
+  if (scene.kind === "art") return { background: `linear-gradient(to bottom, ${scene.sky[0]}, ${scene.sky[1]})` };
   const s = scene.kind === "drawn" ? scene : null;
   return s
     ? { background: `linear-gradient(to bottom, ${s.sky[0]}, ${s.sky[1]} 55%, ${s.ridges[0]} 55%, ${s.ridges[1]} 75%, ${s.ridges[2]})` }

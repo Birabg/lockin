@@ -11,9 +11,8 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { DrawnBackdrop } from "./focus-scene";
+import { SceneBackdrop } from "./scene-art";
 import { Icon, type IconName } from "./icon";
 import { loadSoundMuted, setSoundMuted, wakeSound } from "@/lib/dial-sound";
 import { prefersReducedMotion } from "@/lib/motion";
@@ -26,11 +25,7 @@ export const stageStyle = (scene: Scene) => ({ "--stage-accent": scene.accent })
 export function StageBackdrop({ scene, innerRef }: { scene: Scene; innerRef?: RefObject<HTMLDivElement | null> }) {
   return (
     <div ref={innerRef} className="stage-backdrop" aria-hidden>
-      {scene.kind === "image" ? (
-        <Image key={scene.id} src={scene.image} alt="" fill priority sizes="100vw" className="object-cover" />
-      ) : (
-        <DrawnBackdrop scene={scene} />
-      )}
+      <SceneBackdrop scene={scene} priority />
       <div className="stage-veil" />
     </div>
   );
