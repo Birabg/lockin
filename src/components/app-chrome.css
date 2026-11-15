@@ -8,7 +8,6 @@
     top: 0;
     z-index: 40;
     height: var(--topbar-h);
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
     background: var(--background);
     transition: background 200ms ease;
   }
@@ -401,6 +400,6 @@
     width: 100%;
     max-width: 960px;
     margin-inline: auto;
-    padding: 16px 16px calc(var(--dock-clearance) + env(safe-area-inset-bottom));
+    padding: 24px 16px calc(var(--dock-clearance) + env(safe-area-inset-bottom));
   }
 }
