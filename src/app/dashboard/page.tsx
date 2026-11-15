@@ -46,7 +46,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
           }
           action={
             <Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>
-              Start focus
+              Lock in
             </Link>
           }
         />

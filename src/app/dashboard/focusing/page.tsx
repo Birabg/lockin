@@ -22,7 +22,7 @@ export default async function FocusingPage() {
           body="Nobody is focusing at the moment. Start a session and others will see you here."
           action={
             <Link href="/dashboard/timer" className={`${btnPrimary} h-10 text-sm`}>
-              Start focus
+              Lock in
             </Link>
           }
         />

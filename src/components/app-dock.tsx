@@ -20,7 +20,7 @@ const HOVER_OPEN_MS = 120;
 const HOVER_CLOSE_MS = 220;
 const EDGE = 8;
 
-/** The floating dock: your streak, the main pages, Start focus, and who's live. 768px and up. */
+/** The floating dock: your streak, the main pages, Lock in, and who's live. 768px and up. */
 export function AppDock({ data, path }: { data: ChromeData; path: string }) {
   const { user, live, myRank } = data;
   const pop = usePopover<Pop>();
@@ -119,7 +119,7 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
         <DockLink href="/dashboard/people" icon="people" label="People" path={path} />
 
         <Link href="/dashboard/timer" data-dock-item className="app-dock-primary">
-          <Icon name="startFocus" size={21} solid /> Start focus
+          <Icon name="startFocus" size={21} solid /> Lock in
         </Link>
 
         <DockLink href="/dashboard/buddies" icon="buddies" label="Buddies" path={path} badge={data.activity.buddies} />
