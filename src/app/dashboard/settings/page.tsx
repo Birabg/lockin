@@ -11,8 +11,8 @@ export const metadata = { title: "Profile" };
 export default async function SettingsPage() {
   const user = await requireUser("/dashboard/settings");
   return (
-    <div className="mx-auto max-w-[560px] lg:pt-6">
-      <PageHeader title="Profile" />
+    <div className="mx-auto max-w-[560px]">
+      <PageHeader title="Settings" />
       <Link href={`/dashboard/u/${user.username}`} className="panel mb-4 flex items-center gap-3 p-4 hover:border-primary/40">
         <Avatar name={user.name} src={user.avatar} size={48} />
         <span>

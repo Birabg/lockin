@@ -12,7 +12,7 @@ export default async function BuddiesPage() {
   const { buddies, incoming, outgoing } = await getBuddies(user.id);
 
   return (
-    <div className="mx-auto max-w-[680px] lg:pt-6">
+    <div className="mx-auto max-w-[680px]">
       <PageHeader title="Focus buddies" subtitle="Keep each other honest. See their streak and live status, and nudge them to lock in." />
 
       {incoming.length > 0 && (

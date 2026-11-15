@@ -38,7 +38,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   ];
 
   return (
-    <div className="mx-auto max-w-[680px] lg:pt-6">
+    <div className="mx-auto max-w-[680px]">
       <section className="panel p-5">
         <div className="flex items-start gap-4">
           <Avatar name={profile.name} src={profile.avatar} size={72} />

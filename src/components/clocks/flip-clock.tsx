@@ -1,5 +1,5 @@
 import type { ClockProps } from "./clock";
-import { boldDigits } from "./fonts";
+import { thinDigits } from "./fonts";
 import { useChange } from "./use-change";
 import { clockParts, twoDigits } from "@/lib/clock-styles";
 
@@ -35,7 +35,7 @@ function FlipCard({ value, label, small = false }: { value: number; label: strin
 export function FlipClock({ remainingSec, overtime }: ClockProps) {
   const { hours, minutes, seconds } = clockParts(remainingSec, overtime);
   return (
-    <div className={`clock-flip ${boldDigits.className}`}>
+    <div className={`clock-flip ${thinDigits.className}`}>
       {overtime && <span className="clock-sign">+</span>}
       {hours > 0 && <FlipCard value={hours} label="HR" />}
       <FlipCard value={minutes} label="MIN" />

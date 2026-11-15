@@ -161,7 +161,7 @@ function ItemsRow({ session }: { session: Session }) {
       {items.map((item) => (
         <li key={item.name} title={item.name} className="flex items-center gap-1.5 text-xs font-bold tabular">
           <span
-            className="grid size-5 place-items-center rounded-md text-[11px] font-extrabold text-[#0a0f1a]"
+            className="grid size-5 place-items-center rounded-md text-[11px] font-extrabold text-[#141416]"
             style={{ background: colorFor(item.name) }}
             aria-hidden
           >

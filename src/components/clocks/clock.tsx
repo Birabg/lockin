@@ -15,8 +15,6 @@ export type ClockProps = {
   paused: boolean;
   overtime: boolean;
   accent: string;
-  /** The line inside the ring. The other styles leave it to the page around them. */
-  status?: string;
 };
 
 const FACES = { ring: RingClock, rolling: RollingClock, flip: FlipClock, reel: ReelClock, minimal: MinimalClock };
@@ -36,8 +34,6 @@ export function Clock({ clockStyle, ...props }: ClockProps & { clockStyle: Clock
       <div className="clock-face" aria-hidden>
         <Face {...props} />
       </div>
-      {/* the ring already says so on its own status line */}
-      {props.paused && clockStyle !== "ring" && <p className="clock-paused">Paused</p>}
     </div>
   );
 }

@@ -53,7 +53,7 @@ export function Avatar({ name, src, size = 36, cssSize, live = false }: AvatarPr
         <img src={src} alt="" width={size} height={size} className="size-full rounded-full object-cover" />
       ) : (
         <span
-          className="grid size-full place-items-center rounded-full font-bold text-[#0a0f1a]"
+          className="grid size-full place-items-center rounded-full font-bold text-[#141416]"
           style={{ background: colorFor(name), fontSize: cssSize ? `calc(${cssSize} * 0.38)` : size * 0.38 }}
           aria-hidden
         >
@@ -138,10 +138,12 @@ export function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="px-1 pt-5 pb-2.5 text-[10.5px] leading-[15.75px] font-bold tracking-[0.16em] text-muted uppercase">{children}</h2>;
 }
 
-export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+/** The top bar already names the page, so the title is for screen readers unless showTitle asks for it (a room name, say). */
+export function PageHeader({ title, subtitle, showTitle = false }: { title: string; subtitle?: string; showTitle?: boolean }) {
+  if (!subtitle && !showTitle) return <h1 className="sr-only">{title}</h1>;
   return (
     <header className="mb-5">
-      <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+      <h1 className={showTitle ? "text-2xl font-extrabold tracking-tight" : "sr-only"}>{title}</h1>
       {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
     </header>
   );

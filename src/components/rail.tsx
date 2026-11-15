@@ -7,9 +7,17 @@ import { brand } from "@/lib/brand";
 
 const railTitle = "text-[14.5px] leading-[21.75px] font-semibold tracking-[-0.025em]";
 
-export function StreakCard({ streak, todaySec, goalMin, week }: { streak: number; todaySec: number; goalMin: number; week: WeekDay[] }) {
+type StreakProps = {
+  streak: number;
+  todaySec: number;
+  goalMin: number;
+  week: WeekDay[];
+  /** Without its own card, inside a popover or sheet. */ bare?: boolean;
+};
+
+export function StreakCard({ streak, todaySec, goalMin, week, bare = false }: StreakProps) {
   return (
-    <section className="panel p-3.5">
+    <section className={bare ? "p-3.5" : "panel p-3.5"}>
       <div className="flex items-center gap-2.5">
         <span className={`grid size-10 place-items-center rounded-xl ${streak > 0 ? "bg-streak-bg text-streak" : "bg-inset text-subtle"}`}>
           <Icon name="streak" size={22} solid={streak > 0} className={streak > 0 ? "streak-glow" : ""} />
@@ -85,9 +93,9 @@ export function RankIcon({ rank }: { rank: number }) {
 
 type Row = { rank: number; sec: number; user: { id: string; username: string; name: string; avatar: string | null } };
 
-export function LeaderboardCard({ rows }: { rows: Row[] }) {
+export function LeaderboardCard({ rows, bare = false }: { rows: Row[]; bare?: boolean }) {
   return (
-    <section className="panel p-3.5">
+    <section className={bare ? "p-3.5" : "panel p-3.5"}>
       <Link href="/dashboard/leaderboard" className="flex items-center gap-2.5 border-b border-border/50 pb-2.5">
         <span className="grid size-8 place-items-center rounded-xl bg-inset text-gold">
           <Icon name="crown" size={18} />

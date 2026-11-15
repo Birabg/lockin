@@ -5,15 +5,12 @@ import { useRouter } from "next/navigation";
 import { discardFocus, pauseFocus, resumeFocus, startFocus, stopFocus, type ActiveSession } from "@/app/actions/focus";
 import { attachPhoto, attachTimelapse } from "@/app/actions/media";
 import { saveClockStyle, saveScene } from "@/app/actions/scene";
-import { prefersReducedMotion } from "@/components/focus-dial";
-import { FocusScene } from "@/components/focus-scene";
 import { FocusSetup } from "@/components/focus-setup";
-import { ImmersiveTimer } from "@/components/immersive-timer";
+import { StageBackdrop, StagePill, captureHandoff, stageStyle } from "@/components/focus-stage";
+import { ImmersiveTimer, SessionStage } from "@/components/immersive-timer";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
-import { ScenePicker } from "@/components/scene-picker";
 import { toast } from "@/components/toaster";
 import { Icon } from "@/components/icon";
-import { ClockDigits, GoalRing, btnGhost, btnPrimary, inputCls } from "@/components/ui";
 import { DEFAULT_CLOCK_STYLE, clockText, isClockStyle, resolveClockStyle, type ClockStyle } from "@/lib/clock-styles";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
@@ -21,6 +18,7 @@ import { GOAL_PROMPT_SEC, activeSeconds, goalEndsAt, remainingSeconds, sessionTi
 import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
 import { uploadBlob } from "@/lib/upload";
 import { useWakeLock } from "@/lib/use-wake-lock";
+import { prefersReducedMotion } from "@/lib/motion";
 import { formatClock, formatDuration } from "@/lib/time";
 import { brand } from "@/lib/brand";
 
@@ -64,19 +62,16 @@ type Props = {
   todaySec: number;
   dailyGoalMin: number;
   liveCount: number;
-  liveUsers: { id: string; name: string; avatar: string | null }[];
   labels: string[];
   serverNow: number;
   savedSceneId: string | null;
   savedClockStyle: string;
   streak: number;
-  user: { name: string; username: string; avatar: string | null };
   timeZone: string;
 };
 
 export function TimerClient(props: Props) {
-  const { active, todaySec, dailyGoalMin, liveCount, liveUsers, labels, serverNow, savedSceneId, savedClockStyle, streak, user, timeZone } =
-    props;
+  const { active, todaySec, dailyGoalMin, liveCount, labels, serverNow, savedSceneId, savedClockStyle, streak, timeZone } = props;
   const router = useRouter();
   const [session, setSession] = useState<ActiveSession | null>(active);
   const [goal, setGoal] = useState(snapMinutes(active?.goalMin ?? 25)); // the dial has no 37 or 8h, and a running session keeps its own
@@ -109,19 +104,20 @@ export function TimerClient(props: Props) {
   const reached = !!session && remaining <= 0;
   const overtime = reached && (keptGoing === session.id || over >= GOAL_PROMPT_SEC);
   const asking = reached && !overtime && !finishing;
-  const pct = overtime ? 1 : Math.max(0, remaining) / goalSec;
   const clock = clockText(remaining, overtime);
   const shownRemaining = overtime ? remaining : Math.max(0, remaining);
   const running = !!session && !paused && (!reached || overtime);
   const endsAt = session ? formatClock(goalEndsAt(sessionTiming(session)), timeZone) : "";
-  const status = paused ? "paused" : overtime ? "overtime" : reached ? "goal reached" : `focusing · ends at ${endsAt}`;
+  const phase = paused ? "Paused" : overtime ? "Overtime" : reached ? "Goal reached" : "Focusing";
   const immersive = !!session && !minimized;
   const showOverlay = useStaysFor(immersive, FADE_MS);
   // todaySec already holds this session up to when the page was rendered, so only add what's come since
   const todayNow = todaySec + (session ? Math.max(0, elapsed - elapsedSeconds(session, serverNow)) : 0);
+  const today = `Today ${formatDuration(todayNow)} of ${formatDuration(dailyGoalMin * 60)} goal`;
+  const caption = paused || reached ? today : `Ends at ${endsAt} · ${today}`;
 
   // what the overlay keeps showing while it fades out after the session has gone
-  const view = { remainingSec: shownRemaining, totalSec: goalSec, running, status, overtime, paused, todayNow };
+  const view = { remainingSec: shownRemaining, totalSec: goalSec, running, phase, caption, overtime, paused };
   const lastView = useRef({ ...view, label: session?.label ?? null });
   if (session) lastView.current = { ...view, label: session.label };
 
@@ -281,6 +277,7 @@ export function TimerClient(props: Props) {
         const lockPlayed = new Promise((done) => setTimeout(done, prefersReducedMotion() ? 0 : LOCK_MS));
         const [s] = await Promise.all([startFocus(goal, label), lockPlayed]);
         setNow(Date.now());
+        captureHandoff(); // where the time sits now, so the session view can open from it
         setSession(s);
         setDone(null);
         notifyFocusChange();
@@ -367,32 +364,41 @@ export function TimerClient(props: Props) {
         placeholder={session?.label ?? "How did it go?"}
         rows={2}
         maxLength={280}
-        className={`${inputCls} resize-none`}
+        className="stage-field"
       />
-      <label className="flex items-center gap-2 text-sm font-semibold text-muted">
-        <input type="checkbox" checked={share} onChange={(e) => setShare(e.target.checked)} className="size-4 accent-[var(--primary)]" />
-        Share to the feed {elapsed < 60 && <span className="text-subtle">(sessions under 1 min aren’t posted)</span>}
+      <label className="flex items-center gap-2 text-sm font-semibold text-[var(--stage-muted)]">
+        <input
+          type="checkbox"
+          checked={share}
+          onChange={(e) => setShare(e.target.checked)}
+          className="size-4 accent-[var(--stage-accent)]"
+        />
+        Share to the feed {elapsed < 60 && <span className="text-[var(--stage-faint)]">(sessions under 1 min aren’t posted)</span>}
       </label>
       {/* a post has one piece of media, and a recording already fills that */}
       {share && elapsed >= 60 && !recording && (
-        <div className="flex items-center gap-2 text-sm font-semibold text-muted">
-          <label className="flex min-w-0 cursor-pointer items-center gap-2 hover:text-foreground">
+        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--stage-muted)]">
+          <label className="flex min-w-0 cursor-pointer items-center gap-2 hover:text-[var(--stage-text)]">
             <Icon name="image" size={18} />
             <span className="truncate">{photo ? photo.name : "Add a photo"}</span>
             <input type="file" accept={PHOTO_TYPES.join(",")} onChange={onPickPhoto} className="sr-only" />
           </label>
           {photo && (
-            <button onClick={() => setPhoto(null)} aria-label="Remove photo" className="rounded-full p-1 hover:bg-inset">
+            <button
+              onClick={() => setPhoto(null)}
+              aria-label="Remove photo"
+              className="rounded-full p-1 hover:bg-[var(--stage-fill-hover)]"
+            >
               <Icon name="close" size={18} />
             </button>
           )}
         </div>
       )}
       <div className="flex gap-2">
-        <button onClick={reached ? keepGoing : () => setFinishing(false)} className={`${btnGhost} h-11 flex-1 text-sm`}>
+        <button onClick={reached ? keepGoing : () => setFinishing(false)} className="stage-btn">
           Keep going
         </button>
-        <button onClick={onConfirmFinish} disabled={pending} className={`${btnPrimary} h-11 flex-1 text-sm`}>
+        <button onClick={onConfirmFinish} disabled={pending} className="stage-btn" data-tone="accent">
           Save session
         </button>
       </div>
@@ -403,98 +409,72 @@ export function TimerClient(props: Props) {
     <>
       <div>
         <p className="font-bold">Goal reached 🎯</p>
-        <p className="text-sm">You focused for {formatDuration(elapsed)}.</p>
+        <p className="text-sm text-[var(--stage-muted)]">You focused for {formatDuration(elapsed)}.</p>
       </div>
       <div className="flex gap-2">
-        <button onClick={keepGoing} className={`${btnGhost} h-11 flex-1 text-sm`}>
+        <button onClick={keepGoing} className="stage-btn">
           Keep going
         </button>
-        <button onClick={() => setFinishing(true)} className={`${btnPrimary} h-11 flex-1 text-sm`}>
+        <button onClick={() => setFinishing(true)} className="stage-btn" data-tone="accent">
           Finish & save
         </button>
       </div>
     </>
   );
 
+  const shared = {
+    scene,
+    clockStyle,
+    ...lastView.current,
+    recording,
+    streak,
+    liveCount,
+    finishing,
+    wrapUp,
+    goalPrompt: asking ? goalPrompt : null,
+    error,
+    pending,
+    onTogglePause,
+    onFinish: () => setFinishing(true),
+    onDiscard,
+    onPickScene,
+    onPickClock,
+  };
+
   return (
-    <div className="flex flex-col items-center">
+    <>
       {showOverlay &&
         (mounted ? (
           <ImmersiveTimer
-            scene={scene}
-            clockStyle={clockStyle}
-            {...lastView.current}
-            recording={recording}
-            streak={streak}
-            todaySec={lastView.current.todayNow}
-            user={user}
+            {...shared}
             timeZone={timeZone}
             now={now}
             leaving={!immersive}
             fadeIn={fadeIn}
-            finishing={finishing}
-            wrapUp={wrapUp}
-            goalPrompt={asking ? goalPrompt : null}
-            error={error}
-            pending={pending}
-            onTogglePause={onTogglePause}
-            onFinish={() => setFinishing(true)}
             onCancelFinish={() => setFinishing(false)}
-            onDiscard={onDiscard}
             onMinimize={() => {
               setMinimized(true);
               setFinishing(false);
             }}
-            onPickScene={onPickScene}
-            onPickClock={onPickClock}
           />
         ) : (
           // holds the screen until the portal can render, so the page never flashes first
           <div className="fixed inset-0 z-50 bg-black" />
         ))}
 
-      <div className="mb-2 flex w-full justify-end">
-        <ScenePicker current={scene} onPick={onPickScene} />
-      </div>
-
-      {done !== null && !session && (
-        <div className="mb-4 flex items-center gap-2 rounded-full bg-primary-light px-4 py-2 text-sm font-bold text-primary-text">
-          <Icon name="check" size={18} /> Logged {formatDuration(done)} · today {formatDuration(todaySec)}
+      {session && !immersive ? (
+        <SessionStage
+          {...shared}
+          onExpand={() => {
+            setFadeIn(true);
+            setMinimized(false);
+          }}
+        />
+      ) : session ? (
+        // under the full screen view: the same backdrop, so it can open out from here without a seam
+        <div aria-hidden style={stageStyle(scene)} className="focus-stage min-h-dvh">
+          <StageBackdrop scene={scene} />
         </div>
-      )}
-
-      {session ? (
-        <FocusScene scene={scene}>
-          <div className="flex flex-col items-center px-4 py-5">
-            <p className="flex items-center gap-2 text-sm font-semibold">
-              <Icon name="focusingNow" size={18} className="animate-live" style={{ color: scene.accent }} /> {liveCount} focusing right now
-            </p>
-
-            <div className="mt-4">
-              <GoalRing
-                pct={pct}
-                size={280}
-                stroke={14}
-                color={overtime ? "var(--streak)" : scene.accent}
-                track="rgb(255 255 255 / 0.2)"
-                drain
-                glow={overtime}
-              >
-                <div className="text-center">
-                  <p className={`text-[44px] leading-none font-extrabold tabular ${overtime ? "text-streak" : ""}`}>
-                    <ClockDigits value={clock} />
-                  </p>
-                  <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold">
-                    <span className="size-2 rounded-full" style={{ background: scene.accent }} aria-hidden />
-                    {status}
-                  </p>
-                  {session.label && <p className="mt-1 text-xs font-bold">{session.label}</p>}
-                  {recording && <p className="mt-1 text-xs font-bold">● Recording screen</p>}
-                </div>
-              </GoalRing>
-            </div>
-          </div>
-        </FocusScene>
       ) : (
         <FocusSetup
           scene={scene}
@@ -504,7 +484,6 @@ export function TimerClient(props: Props) {
           onLabel={setLabel}
           labels={labels}
           liveCount={liveCount}
-          liveUsers={liveUsers}
           todaySec={todaySec}
           dailyGoalMin={dailyGoalMin}
           serverNow={serverNow}
@@ -513,60 +492,33 @@ export function TimerClient(props: Props) {
           onStart={onStart}
           clockStyle={clockStyle}
           onClockStyle={onPickClock}
-          footer={
-            recordable && (
-              <label className="flex items-center gap-2 text-sm font-semibold text-muted">
+          onPickScene={onPickScene}
+          error={error}
+          notice={
+            done !== null && (
+              <StagePill strong>
+                <Icon name="check" size={16} /> Logged {formatDuration(done)}
+              </StagePill>
+            )
+          }
+          settings={
+            recordable ? (
+              <label className="flex items-center gap-2 font-semibold text-[var(--stage-text)]">
                 <input
                   type="checkbox"
                   checked={record}
                   onChange={(e) => setRecord(e.target.checked)}
-                  className="size-4 accent-[var(--primary)]"
+                  className="size-4 accent-[var(--stage-accent)]"
                 />
                 Record a timelapse of my screen
               </label>
+            ) : (
+              <p className="text-[var(--stage-faint)]">This browser can’t record a timelapse of your screen.</p>
             )
           }
         />
       )}
-
-      {session && !finishing && (
-        <div className="mt-10 flex w-full gap-3">
-          <button onClick={onDiscard} disabled={pending} className={`${btnGhost} h-14 px-5`} aria-label="Discard session">
-            <Icon name="delete" className="text-muted" />
-          </button>
-          <button
-            onClick={onTogglePause}
-            disabled={pending}
-            className={`${btnGhost} h-14 px-5`}
-            aria-label={paused ? "Resume session" : "Pause session"}
-          >
-            <Icon name={paused ? "startFocus" : "pause"} />
-          </button>
-          <button
-            onClick={() => {
-              setFadeIn(true);
-              setMinimized(false);
-            }}
-            className={`${btnGhost} h-14 px-5`}
-            aria-label="Back to the full screen view"
-          >
-            <Icon name="fullscreen" />
-          </button>
-          <button onClick={() => setFinishing(true)} disabled={pending} className={`${btnPrimary} h-14 flex-1 text-base`}>
-            <Icon name="stop" size={18} /> Finish session
-          </button>
-        </div>
-      )}
-
-      {session && finishing && !immersive && <div className="panel mt-8 w-full space-y-3 p-4">{wrapUp}</div>}
-      {asking && !immersive && (
-        <div role="alertdialog" aria-label="Goal reached" className="panel mt-8 w-full space-y-3 p-4">
-          {goalPrompt}
-        </div>
-      )}
-
-      {error && <p className="mt-4 text-center text-sm text-danger">{error}</p>}
-    </div>
+    </>
   );
 }
 

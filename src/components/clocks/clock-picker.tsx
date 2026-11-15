@@ -36,16 +36,16 @@ export function ClockPicker({ current, accent, onPick }: Props) {
           onClick={() => onPick(id)}
           aria-pressed={id === current}
           data-selected={id === current || undefined}
-          className={`min-w-[96px] flex-1 overflow-hidden rounded-2xl border-2 bg-[#070b13] text-left transition-colors ${
-            id === current ? "border-primary" : "border-border hover:border-muted"
+          className={`min-w-[96px] flex-1 overflow-hidden rounded-2xl bg-black/30 text-left ring-1 transition-shadow ${
+            id === current ? "ring-2 ring-[var(--stage-text)]" : "ring-[var(--stage-line)] hover:ring-[var(--stage-muted)]"
           }`}
         >
           <span aria-hidden className="clock-preview relative grid h-[70px] place-items-center overflow-hidden" style={PREVIEW_SIZES[id]}>
             <Clock clockStyle={id} remainingSec={remaining} totalSec={1500} running paused={false} overtime={false} accent={accent} />
           </span>
-          <span className="flex items-center justify-between px-2 pb-1.5 text-xs font-bold text-foreground">
+          <span className="flex items-center justify-between px-2 pb-1.5 text-xs font-semibold text-[var(--stage-text)]">
             {name}
-            {id === current && <Icon name="check" size={13} className="text-primary" />}
+            {id === current && <Icon name="check" size={13} />}
           </span>
         </button>
       ))}

@@ -29,7 +29,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   const myRow = user ? rows.find((x) => x.user.id === user.id) : undefined;
 
   return (
-    <div className="mx-auto max-w-[720px] lg:pt-6">
+    <div className="mx-auto max-w-[720px]">
       <PageHeader title="Leaderboard" subtitle="Ranked by total focused time." />
       <div className="mb-4 flex rounded-full border border-border bg-card p-1">
         {RANGES.map((x) => (

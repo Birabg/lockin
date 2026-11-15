@@ -28,7 +28,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const hasUnread = items.some((n) => !n.readAt);
 
   return (
-    <div className="mx-auto max-w-[680px] lg:pt-6">
+    <div className="mx-auto max-w-[680px]">
       <PageHeader title="Notifications" />
       {hasUnread && <MarkRead />}
       {items.length === 0 ? (

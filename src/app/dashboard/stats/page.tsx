@@ -32,7 +32,7 @@ export default async function StatsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-[880px] lg:pt-6">
+    <div className="mx-auto max-w-[880px]">
       <PageHeader title="Stats" subtitle={`Daily goal ${formatDuration(goalSec)} · hit on ${daysHit} of the last 30 days`} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

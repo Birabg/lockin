@@ -31,8 +31,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ usernam
         width: "100%",
         height: "100%",
         padding: 72,
-        background: "#0a0f1a",
-        color: "#e8edf5",
+        background: "#141416",
+        color: "#ededef",
       }}
     >
       <div style={{ display: "flex", fontSize: 40, fontWeight: 800, color: "#4f8ff7" }}>{brand.name.toLowerCase()}</div>
@@ -42,7 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ usernam
       </div>
       <div style={{ display: "flex" }}>
         {stat(`${streak.current}d`, "Current streak", "#f5b366")}
-        {stat(`${streak.best}d`, "Best streak", "#e8edf5")}
+        {stat(`${streak.best}d`, "Best streak", "#ededef")}
         {stat(formatDuration(total._sum.seconds ?? 0), "Focused", "#4f8ff7")}
       </div>
     </div>,

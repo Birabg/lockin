@@ -16,8 +16,8 @@ export default async function RoomPage({ params }: { params: Promise<{ code: str
   const focusing = room.members.filter((m) => m.session).length;
 
   return (
-    <div className="mx-auto max-w-[880px] lg:pt-6">
-      <PageHeader title={room.name} subtitle={`${focusing} of ${room.members.length} focusing · Room code ${room.code}`} />
+    <div className="mx-auto max-w-[880px]">
+      <PageHeader showTitle title={room.name} subtitle={`${focusing} of ${room.members.length} focusing · Room code ${room.code}`} />
       {room.isMember ? (
         <RoomGrid members={room.members} serverNow={Date.now()} />
       ) : (
