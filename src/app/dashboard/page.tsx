@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { siteOpenGraph } from "@/lib/seo";
 import { getCurrentUser } from "@/lib/auth";
 import { getFeed, type FeedTab } from "@/lib/queries";
 import { brand } from "@/lib/brand";
@@ -12,6 +14,16 @@ import { QuestBoard, QuestStrip } from "@/components/community/quests";
 import { QuestionCard, TheWall } from "@/components/community/wall";
 
 const TABS = ["global", "following", "timelapses"] as const;
+
+// "/" redirects here, so a link to the bare domain gets this page's card; point it back at "/".
+// Setting openGraph here drops the inherited image, so it's listed again (app/opengraph-image.tsx).
+export const metadata: Metadata = {
+  openGraph: {
+    ...siteOpenGraph,
+    url: "/",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, type: "image/png", alt: `${brand.name}: ${brand.tagline}` }],
+  },
+};
 
 /**
  * The feed, with the quest board on the left and the wall on the right on wide screens. Narrower, the
