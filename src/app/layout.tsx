@@ -4,6 +4,7 @@ import "./globals.css";
 import { SplashScreen } from "@/components/splash-screen";
 import { Toaster } from "@/components/toaster";
 import { brand } from "@/lib/brand";
+import { siteOpenGraph } from "@/lib/seo";
 import { siteUrl } from "@/lib/site";
 import { splashScript, splashStyle } from "@/lib/splash";
 import { accentScript } from "@/lib/accents";
@@ -12,11 +13,13 @@ const font = DM_Sans({ subsets: ["latin"], variable: "--font-app" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: brand.name, template: `%s · ${brand.name}` },
+  title: { default: `${brand.name} — ${brand.tagline.replace(/\.$/, "")}`, template: `%s · ${brand.name}` },
   description: brand.description,
   applicationName: brand.name,
-  // no title or description here, so each page shares its own
-  openGraph: { type: "website", siteName: brand.name },
+  // Title, description and url are left out of these on purpose: Next fills og:title, og:description
+  // and the twitter ones from each page's own title and description, which a value here would override.
+  // The home page sets its url (see siteOpenGraph).
+  openGraph: siteOpenGraph,
   twitter: { card: "summary_large_image" },
   appleWebApp: { capable: true, title: brand.name, statusBarStyle: "black-translucent" },
   // setting icons here turns off the automatic tag for app/icon.svg, so every icon has to be listed

@@ -133,6 +133,29 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
   const pageSize = opts.pageSize ?? 50;
   const offset = (page - 1) * pageSize;
 
+  const ranked = await rankedTotals(range, timeZone, (running) => offset + pageSize + 1 + running);
+  const slice = ranked.slice(offset, offset + pageSize);
+  const users = await db.user.findMany({
+    where: { id: { in: slice.map(([id]) => id) } },
+    select: { id: true, username: true, name: true, avatar: true },
+  });
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const rows = slice.flatMap(([id, sec], i) => {
+    const user = byId.get(id);
+    return user ? [{ rank: offset + i + 1, user, sec }] : [];
+  });
+  return { rows, hasNext: ranked.length > offset + pageSize };
+}
+
+/** Where one person stands on the board for the period, or null if they haven't focused in it. */
+export async function getRank(range: Range, timeZone: string, userId: string) {
+  const ranked = await rankedTotals(range, timeZone);
+  const i = ranked.findIndex(([id]) => id === userId);
+  return i === -1 ? null : i + 1;
+}
+
+/** Everyone's total for the period, highest first. `take` limits the finished rows read, given the running count. */
+async function rankedTotals(range: Range, timeZone: string, take?: (running: number) => number) {
   const today = dayKey(new Date(), timeZone);
   const from = range === "today" ? today : range === "week" ? weekStartKey(today) : null;
   const inRange = (day: string) => !from || (day >= from && day <= today);
@@ -149,22 +172,11 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
     where: from ? { day: { gte: from, lte: today } } : {},
     _sum: { seconds: true },
     orderBy: { _sum: { seconds: "desc" } },
-    take: offset + pageSize + 1 + running.length,
+    take: take?.(running.length),
   });
 
   const totals = finished.map((row) => ({ userId: row.userId, seconds: row._sum.seconds ?? 0 }));
-  const ranked = rankTotals(totals, running, inRange, new Date());
-  const slice = ranked.slice(offset, offset + pageSize);
-  const users = await db.user.findMany({
-    where: { id: { in: slice.map(([id]) => id) } },
-    select: { id: true, username: true, name: true, avatar: true },
-  });
-  const byId = new Map(users.map((u) => [u.id, u]));
-  const rows = slice.flatMap(([id, sec], i) => {
-    const user = byId.get(id);
-    return user ? [{ rank: offset + i + 1, user, sec }] : [];
-  });
-  return { rows, hasNext: ranked.length > offset + pageSize };
+  return rankTotals(totals, running, inRange, new Date());
 }
 
 export type FeedTab = "global" | "following" | "timelapses";

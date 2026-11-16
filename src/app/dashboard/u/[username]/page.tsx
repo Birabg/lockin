@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { siteOpenGraph } from "@/lib/seo";
 import { Icon } from "@/components/icon";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -11,9 +13,19 @@ import { BuddyRequestButton } from "@/components/buddy-actions";
 import { FeedList } from "@/components/feed-list";
 import { getBuddyState } from "@/lib/social-features";
 
-export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
+// The preview image is ./opengraph-image.tsx. Public fields only: there are no private profiles.
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
   const { username } = await params;
-  return { title: `@${username}`, openGraph: { type: "website", siteName: brand.name, images: [`/card/${username}`] } };
+  const user = await db.user.findUnique({ where: { username }, select: { name: true, username: true } });
+  if (!user) return { title: "Profile not found" };
+  const title = `${user.name} on ${brand.name}`;
+  const description = `Follow @${user.username}'s focus sessions, streaks and progress on ${brand.name}.`;
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: { ...siteOpenGraph, type: "profile", username: user.username, url: `/dashboard/u/${user.username}`, title, description },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
