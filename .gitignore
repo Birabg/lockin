@@ -16,3 +16,5 @@ next-env.d.ts
 
 # full-size scene images, kept out of git
 scene-originals/
+.vercel
+.env*
