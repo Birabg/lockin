@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { resizePhoto } from "@/lib/photo";
 import { allow, limits } from "@/lib/rate-limit";
-import { UPLOADS, isSafeKey, storage, type UploadTicket } from "@/lib/storage";
+import { UPLOADS, UPLOADS_OFF, isSafeKey, storage, uploadsEnabled, type UploadTicket } from "@/lib/storage";
 
 async function me() {
   const user = await getCurrentUser();
@@ -27,6 +27,7 @@ export async function requestUpload(
   size: number,
 ): Promise<UploadTicket | { error: string }> {
   const user = await me();
+  if (!uploadsEnabled()) return { error: UPLOADS_OFF };
   const input = requestSchema.parse({ kind, contentType, size });
   const rules = UPLOADS[input.kind];
   const ext = (rules.types as Record<string, string>)[input.contentType.split(";")[0]];
