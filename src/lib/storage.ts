@@ -115,9 +115,39 @@ function s3(): StorageAdapter {
   };
 }
 
+const S3_VARS = ["S3_BUCKET", "S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_PUBLIC_URL"] as const;
+const s3Configured = () => S3_VARS.every((name) => process.env[name]);
+
+/** Shown to someone who tries to upload where no storage is set up (e.g. a preview deployment). */
+export const UPLOADS_OFF = "Uploads are turned off here because file storage isn't set up yet.";
+
+/**
+ * False on Vercel without a complete set of S3_* variables: serverless disks don't persist, so uploads
+ * are refused rather than lost. Everything else in the app keeps working.
+ */
+export const uploadsEnabled = () => s3Configured() || !process.env.VERCEL;
+
+/** Stands in when uploads are off: refuses new files, and has nothing to read or delete. */
+const disabled: StorageAdapter = {
+  async createUpload() {
+    throw new Error(UPLOADS_OFF);
+  },
+  publicUrl() {
+    throw new Error(UPLOADS_OFF);
+  },
+  async remove(url) {
+    console.warn("Storage isn't set up, so this file wasn't deleted:", url);
+  },
+  read: async () => null,
+  async write() {
+    throw new Error(UPLOADS_OFF);
+  },
+};
+
 export function storage(): StorageAdapter {
-  if (process.env.S3_BUCKET) return s3();
-  // serverless disks don't persist, so failing loudly beats losing uploads
-  if (process.env.VERCEL) throw new Error("Set the S3_* variables: local uploads don't persist on Vercel");
-  return local;
+  if (s3Configured()) return s3();
+  if (!process.env.VERCEL) return local;
+  const missing = S3_VARS.filter((name) => !process.env[name]);
+  console.warn(`Uploads are off: set ${missing.join(", ")} (see README: Media storage)`);
+  return disabled;
 }
