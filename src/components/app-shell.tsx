@@ -77,13 +77,14 @@ export function usePopover<T extends string>() {
 }
 
 /** The top bar, the dock and the mobile nav round every dashboard page. The focus page owns the whole screen. */
-export function AppShell({ data, children }: { data: ChromeData; children: ReactNode }) {
+export function AppShell({ data, banner, children }: { data: ChromeData; banner?: ReactNode; children: ReactNode }) {
   const path = usePathname();
   if (path.startsWith("/dashboard/timer")) return <main id="main">{children}</main>;
   return (
     <>
       <TopBar data={data} path={path} />
       <main id="main" className="app-main">
+        {banner}
         {children}
       </main>
       <AppDock data={data} path={path} />

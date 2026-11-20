@@ -32,7 +32,8 @@ npm run dev                   # http://localhost:3000
 | `APP_URL`                                                                               | No        | Public address for social preview images. Vercel supplies its own.                                |
 | `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | On Vercel | Bucket for avatars, photos and timelapses.                                                        |
 | `S3_REGION`                                                                             | No        | Defaults to `auto`, which suits R2.                                                               |
-| `RESEND_API_KEY`, `EMAIL_FROM`                                                          | No        | Password reset emails. Without them the reset link is hidden in production.                       |
+| `RESEND_API_KEY`, `EMAIL_FROM`                                                          | No        | Verification and password reset emails. Without them the reset link and resend button are hidden. |
+| `EMAIL_VERIFICATION_ENFORCED`                                                           | No        | `true` restricts unverified accounts (see Email verification). Off by default.                    |
 | `UPLOAD_DIR`                                                                            | No        | Folder for local uploads. Defaults to `.uploads`.                                                 |
 
 ## Tests
@@ -64,9 +65,19 @@ The e2e test needs a migrated database in `DATABASE_URL` and writes to it, so us
 | `/card/[username]`                    | Shareable streak card image (1200×630), also the profile's social preview                                                                    |
 | `/login`, `/signup`                   | Email or username + password                                                                                                                 |
 | `/forgot-password`, `/reset-password` | One-time emailed reset link, which signs out every device                                                                                    |
+| `/verify-email`                       | Where the verification email links to                                                                                                        |
 | `/privacy`                            | Privacy page                                                                                                                                 |
 
 Guests can browse the dashboard (public preview); focusing, posting, liking, commenting and following require an account.
+
+## Email verification
+
+- Signing up sends a link that lasts 24 hours and works once. Only its hash is stored, and sending a new one cancels the old one. "Resend email" in the dashboard banner is limited to 3 an hour.
+- Resetting a password by email also verifies the address, since the link proves they own it.
+- With `EMAIL_VERIFICATION_ENFORCED` unset, nobody is restricted. Unverified people just see the banner.
+- With it set to `true`, unverified accounts can sign in and focus, but can't post or share sessions, comment, create quests, post takes, or appear on the leaderboard.
+- Accounts made before verification existed (`legacyUnverified`) keep everything for 14 days, counted from their first visit after enforcement is turned on (`verifyGraceEndsAt`). New signups get no grace period.
+- The rules are in `src/lib/verification.ts` and the emails in `src/lib/email-templates.ts`.
 
 ## How the live parts work
 
@@ -126,7 +137,7 @@ To add a photo, put a `.webp` (up to 2560px wide) in `public/scenes` and a 240px
    ```
 
 3. **Project:** import the repo on [Vercel](https://vercel.com/new). It finds Next.js by itself.
-4. **Variables:** add `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` and the `S3_*` variables for Production. Add `RESEND_API_KEY` and `EMAIL_FROM` if you want password resets.
+4. **Variables:** add `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET` and the `S3_*` variables for Production. Add `RESEND_API_KEY` and `EMAIL_FROM` if you want verification and password reset emails.
 5. **Deploy.** Vercel runs `vercel-build`, which applies pending migrations and then builds.
 
 After the first deploy, check that you can sign up, finish a session, upload an avatar, and open `/card/<username>`. Add a custom domain? Set `APP_URL` to it so reset links and preview images use it.

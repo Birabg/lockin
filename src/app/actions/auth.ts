@@ -2,11 +2,13 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/auth";
 import { brand } from "@/lib/brand";
+import { sendVerificationEmail } from "@/lib/email-verify";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
 import { safeNext } from "@/lib/safe-next";
 import { isValidTimeZone } from "@/lib/time";
@@ -47,6 +49,8 @@ export async function signup(_prev: FormState, form: FormData): Promise<FormStat
       data: { name, username, email, timeZone, passwordHash: await bcrypt.hash(password, 10), dailyGoalMin: brand.defaultDailyGoalMin },
     });
     await createSession(user.id);
+    // sent after the response, so a slow email provider doesn't hold up signup
+    after(() => sendVerificationEmail(user).catch((e) => console.error("Verification email failed", e)));
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "That email or username is taken" };
     throw e;

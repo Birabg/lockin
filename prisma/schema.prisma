@@ -22,6 +22,12 @@ model User {
   dailyGoalMin      Int       @default(60)
   /// IANA zone from the browser at signup. "Today", streaks and day totals use it.
   timeZone          String    @default("UTC")
+  /// Set when the person clicks the link in their verification email, or resets their password by email.
+  emailVerifiedAt   DateTime?
+  /// True for accounts made before email verification existed. They get a grace period once it's enforced.
+  legacyUnverified  Boolean   @default(false)
+  /// When a legacy account's grace period ends. Starts the first time they're seen after enforcement is turned on.
+  verifyGraceEndsAt DateTime?
   createdAt         DateTime  @default(now())
 
   dailyStats     DailyStat[]
@@ -29,15 +35,16 @@ model User {
   posts          Post[]
   likes          Like[]
   comments       Comment[]
-  following      Follow[]           @relation("follower")
-  followers      Follow[]           @relation("following")
-  notifications  Notification[]     @relation("recipient")
-  actions        Notification[]     @relation("actor")
-  buddyRequests  Buddy[]            @relation("requester")
-  buddyInvites   Buddy[]            @relation("addressee")
+  following      Follow[]            @relation("follower")
+  followers      Follow[]            @relation("following")
+  notifications  Notification[]      @relation("recipient")
+  actions        Notification[]      @relation("actor")
+  buddyRequests  Buddy[]             @relation("requester")
+  buddyInvites   Buddy[]             @relation("addressee")
   roomsOwned     Room[]
   roomMembers    RoomMember[]
   passwordResets PasswordReset[]
+  verifications  EmailVerification[]
   postViews      PostView[]
   quests         Quest[]
   questsJoined   QuestParticipant[]
@@ -146,6 +153,21 @@ model RoomMember {
 model PasswordReset {
   id        String   @id @default(cuid())
   userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// One-time email verification links. Only a hash of the token is kept.
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  /// The address the link was sent to. Verifying only counts while it's still the account's address.
+  email     String
   tokenHash String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())

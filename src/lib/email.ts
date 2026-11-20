@@ -2,12 +2,18 @@ import "server-only";
 
 const configured = () => !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM;
 
-/** In development a missing key is fine: the message is printed to the terminal instead. */
-export const canSendEmail = () => configured() || process.env.NODE_ENV !== "production";
+/**
+ * Without a Resend key, emails are printed to the terminal instead: always in development,
+ * and in a production build only when EMAIL_LOG_ONLY=1 (the Playwright tests set it).
+ */
+const logOnly = () => process.env.NODE_ENV !== "production" || process.env.EMAIL_LOG_ONLY === "1";
+
+export const canSendEmail = () => configured() || logOnly();
 
 /** One POST to Resend, so this doesn't need their SDK. */
-export async function sendEmail(message: { to: string; subject: string; text: string }) {
+export async function sendEmail(message: { to: string; subject: string; text: string; html?: string }) {
   if (!configured()) {
+    if (!logOnly()) throw new Error("Email isn't set up (RESEND_API_KEY and EMAIL_FROM)");
     console.log(`[email to ${message.to}] ${message.subject}\n${message.text}`);
     return;
   }

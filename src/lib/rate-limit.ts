@@ -19,6 +19,7 @@ export const limits = {
   scene: { max: 60, windowSec: 60 },
   resetIp: { max: 20, windowSec: 60 * 60 },
   resetEmail: { max: 3, windowSec: 60 * 60 },
+  verifyResend: { max: 3, windowSec: 60 * 60 },
   quest: { max: 3, windowSec: 24 * 60 * 60 },
   take: { max: 10, windowSec: 24 * 60 * 60 },
   join: { max: 30, windowSec: 60 },

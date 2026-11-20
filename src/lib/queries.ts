@@ -4,6 +4,7 @@ import { rankTotals } from "./leaderboard";
 import { LIVE_MS, remainingSeconds, runningSeconds } from "./session-math";
 import { computeStreak } from "./streak";
 import { dayKey, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
+import { leaderboardUserFilter, verificationEnforced } from "./verification";
 
 type Person = { id: string; timeZone: string };
 type DayTotals = Map<string, number>;
@@ -159,9 +160,11 @@ async function rankedTotals(range: Range, timeZone: string, take?: (running: num
   const today = dayKey(new Date(), timeZone);
   const from = range === "today" ? today : range === "week" ? weekStartKey(today) : null;
   const inRange = (day: string) => !from || (day >= from && day <= today);
+  // once verification is enforced, unverified accounts (outside their grace period) don't rank
+  const eligible = leaderboardUserFilter(new Date(), verificationEnforced());
 
   const sessions = await db.focusSession.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...(eligible && { user: eligible }) },
     select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, user: { select: { timeZone: true } } },
   });
   const running = sessions.map(({ user, ...s }) => ({ ...s, timeZone: user.timeZone }));
@@ -169,7 +172,7 @@ async function rankedTotals(range: Range, timeZone: string, take?: (running: num
   // Running sessions can only lift people up, so this many finished rows always covers the page.
   const finished = await db.dailyStat.groupBy({
     by: ["userId"],
-    where: from ? { day: { gte: from, lte: today } } : {},
+    where: { ...(from && { day: { gte: from, lte: today } }), ...(eligible && { user: eligible }) },
     _sum: { seconds: true },
     orderBy: { _sum: { seconds: "desc" } },
     take: take?.(running.length),

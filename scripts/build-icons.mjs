@@ -56,6 +56,7 @@ const ICONS = {
   time: { line: "clock-circle-linear" },
   clockStyle: { line: "clock-square-linear" },
   target: { line: "target-linear" },
+  letter: { line: "letter-linear" },
 };
 
 function body(id) {

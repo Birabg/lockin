@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { verifyGate } from "@/lib/email-verify";
 import { notify, unnotify } from "@/lib/notifications";
 import { getFeed, type FeedTab } from "@/lib/queries";
 import { allow, limits } from "@/lib/rate-limit";
@@ -53,6 +54,8 @@ export async function addComment(postId: string, body: string): Promise<Result &
   const id = idSchema.parse(postId);
   const text = bodySchema.safeParse(body);
   if (!text.success) return { error: text.error.issues[0].message };
+  const gate = verifyGate(user);
+  if (gate) return { error: gate };
   if (!(await allow(`comment:${user.id}`, limits.comment))) return { error: SLOW_DOWN };
   const post = await db.post.findUnique({ where: { id }, select: { userId: true } });
   if (!post) return { error: "That post is gone" };
@@ -69,6 +72,8 @@ export async function createPost(body: string): Promise<Result> {
   const user = await me();
   const text = bodySchema.safeParse(body);
   if (!text.success) return { error: text.error.issues[0].message };
+  const gate = verifyGate(user);
+  if (gate) return { error: gate };
   if (!(await allow(`post:${user.id}`, limits.post))) return { error: SLOW_DOWN };
   await db.post.create({ data: { userId: user.id, body: text.data } });
   revalidatePath("/dashboard");

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { verifyGate } from "@/lib/email-verify";
 import { notifySessionStart } from "@/lib/notifications";
 import { finishSession, reapStaleSessions } from "@/lib/sessions";
 import { isExpired } from "@/lib/session-math";
@@ -135,13 +136,15 @@ export async function stopFocus(sessionId: string, opts: { share: boolean; note:
     s.status === "ACTIVE" ? await finishSession(s, isExpired(s) ? s.lastBeatAt : new Date(), user.timeZone) : s.durationSec;
 
   let postId: string | null = null;
-  if (share && durationSec >= 60) {
+  // the session still counts; it just isn't posted until they verify
+  const shareBlocked = share && durationSec >= 60 && !!verifyGate(user);
+  if (share && durationSec >= 60 && !shareBlocked) {
     const body = note || s.label || "Session done";
     const post = await db.post.upsert({ where: { sessionId: s.id }, create: { userId: user.id, sessionId: s.id, body }, update: {} });
     postId = post.id;
   }
   revalidatePath("/dashboard", "layout");
-  return { ok: true as const, durationSec, postId };
+  return { ok: true as const, durationSec, postId, shareBlocked };
 }
 
 export async function discardFocus(sessionId: string) {

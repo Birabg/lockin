@@ -7,8 +7,9 @@ import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { destroySession, getCurrentUser } from "@/lib/auth";
-import { brand } from "@/lib/brand";
 import { canSendEmail, sendEmail } from "@/lib/email";
+import { passwordResetEmail } from "@/lib/email-templates";
+import { sendVerificationEmail } from "@/lib/email-verify";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
 import { siteUrl } from "@/lib/site";
 import { storage } from "@/lib/storage";
@@ -29,11 +30,8 @@ async function emailResetLink(email: string) {
     db.passwordReset.deleteMany({ where: { userId: user.id } }),
     db.passwordReset.create({ data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + RESET_MS) } }),
   ]);
-  await sendEmail({
-    to: email,
-    subject: `Reset your ${brand.name} password`,
-    text: `Use this link to choose a new password. It works once and expires in 1 hour.\n\n${siteUrl()}/reset-password?token=${token}\n\nIf you didn't ask for this, you can ignore this email.`,
-  });
+  const site = siteUrl();
+  await sendEmail({ to: email, ...passwordResetEmail({ url: `${site}/reset-password?token=${token}`, siteUrl: site }) });
 }
 
 /** Answers the same way whether or not the account exists, and sends after responding so timing doesn't tell either. */
@@ -66,12 +64,32 @@ export async function resetPassword(_prev: FormState, form: FormData): Promise<F
     const { count } = await tx.passwordReset.deleteMany({ where: { id: row.id } });
     if (count === 0) return false;
     await tx.user.update({ where: { id: row.userId }, data: { passwordHash, passwordChangedAt: new Date() } });
+    // the link went to this address, so using it proves they own it
+    await tx.user.updateMany({ where: { id: row.userId, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
+    await tx.emailVerification.deleteMany({ where: { userId: row.userId } });
     return true;
   });
   if (!used) return { error: "That link has expired. Ask for a new one." };
 
   await destroySession();
   redirect("/login?reset=1");
+}
+
+/** The banner's "Resend email" button. */
+export async function resendVerification(): Promise<{ error?: string; sent?: boolean; verified?: boolean }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first" };
+  if (user.emailVerifiedAt) return { verified: true };
+  if (!canSendEmail()) return { error: "Email isn't available right now. Try again later." };
+  if (!(await allow(`verify-resend:${user.id}`, limits.verifyResend)))
+    return { error: "You've asked for a few already. Check your spam folder, or try again in an hour." };
+  try {
+    await sendVerificationEmail(user);
+  } catch (e) {
+    console.error("Verification email failed", e);
+    return { error: "Couldn't send the email. Try again in a minute." };
+  }
+  return { sent: true };
 }
 
 export async function deleteAccount(_prev: FormState, form: FormData): Promise<FormState> {

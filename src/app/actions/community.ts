@@ -15,6 +15,7 @@ import {
   type WallSort,
 } from "@/lib/community";
 import { db } from "@/lib/db";
+import { verifyGate } from "@/lib/email-verify";
 import { HIDE_AFTER_REPORTS, hasBlockedWords, isAdmin } from "@/lib/moderation";
 import { QUEST_COLORS, QUEST_DESCRIPTION_MAX, QUEST_LENGTHS, QUEST_TITLE_MAX, questEnd } from "@/lib/quests";
 import { allow, limits } from "@/lib/rate-limit";
@@ -91,6 +92,8 @@ export async function createQuest(input: NewQuest): Promise<Result & { id?: stri
   const parsed = questSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
   const q = parsed.data;
+  const gate = verifyGate(user);
+  if (gate) return { error: gate };
   if (hasBlockedWords(`${q.title} ${q.description} ${q.tag ?? ""}`)) return { error: RUDE };
 
   const now = new Date();
@@ -189,6 +192,8 @@ export async function postTake(body: string): Promise<Result & { id?: string }> 
   if (!user) return { error: SIGN_IN };
   const text = z.string().trim().min(3, "Say a little more").max(TAKE_MAX, `Keep it under ${TAKE_MAX} characters`).safeParse(body);
   if (!text.success) return { error: text.error.issues[0]?.message };
+  const gate = verifyGate(user);
+  if (gate) return { error: gate };
   if (hasBlockedWords(text.data)) return { error: RUDE };
   if (!(await allow(`take:${user.id}`, limits.take))) return { error: "That's 10 takes today. The wall needs a break from you 😄" };
   const take = await db.take.create({ data: { authorId: user.id, body: text.data } });

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { cache } from "react";
 import { db } from "./db";
+import { graceEndFrom, shouldStartGrace, verificationEnforced } from "./verification";
 
 const COOKIE = "lk_session";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -60,6 +61,9 @@ export type CurrentUser = {
   sceneId: string | null;
   clockStyle: string;
   timeZone: string;
+  emailVerifiedAt: Date | null;
+  legacyUnverified: boolean;
+  verifyGraceEndsAt: Date | null;
 };
 
 /** The signed-in user, or null for guests. Cached per request. */
@@ -80,12 +84,20 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       sceneId: true,
       clockStyle: true,
       passwordChangedAt: true,
+      emailVerifiedAt: true,
+      legacyUnverified: true,
+      verifyGraceEndsAt: true,
     },
   });
   if (!row) return null;
   const { passwordChangedAt, ...user } = row;
   // sessions are stateless, so this is what signs out every device after a password reset
   if (passwordChangedAt && session.issuedAt < Math.floor(passwordChangedAt.getTime() / 1000)) return null;
+  // an older account's grace period starts the first time they're seen after verification is enforced
+  if (shouldStartGrace(user, verificationEnforced())) {
+    user.verifyGraceEndsAt = graceEndFrom(new Date());
+    await db.user.updateMany({ where: { id: user.id, verifyGraceEndsAt: null }, data: { verifyGraceEndsAt: user.verifyGraceEndsAt } });
+  }
   return user;
 });
 
