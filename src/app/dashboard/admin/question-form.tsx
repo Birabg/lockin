@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { scheduleQuestion } from "@/app/actions/community";
+import { useRouter } from "next/navigation";
+import { scheduleQuestion } from "@/app/actions/admin";
 import { btnPrimary, inputCls } from "@/components/ui";
 import { toast } from "@/components/toaster";
 
-/** Admins only: put a question on the wall for a given day. Days without one use the built-in bank. */
-export function AdminQuestion({ today }: { today: string }) {
+/** Put a question on the wall for a given day. Days without one use the built-in bank. */
+export function QuestionForm({ today }: { today: string }) {
+  const router = useRouter();
   const [day, setDay] = useState(today);
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
@@ -20,14 +22,13 @@ export function AdminQuestion({ today }: { today: string }) {
       toast(`Scheduled for ${day}`);
       setQuestion("");
       setOptions(["", "", "", ""]);
+      router.refresh();
     });
   };
 
   return (
-    <form onSubmit={submit} className="panel mx-auto mt-10 flex max-w-(--content-width) flex-col gap-3 p-5">
-      <h2 className="font-extrabold">
-        Schedule a question <span className="text-sm font-semibold text-muted">· admin</span>
-      </h2>
+    <form onSubmit={submit} className="panel flex flex-col gap-3 p-5">
+      <h2 className="font-extrabold">Schedule a question</h2>
       <input type="date" min={today} value={day} onChange={(e) => setDay(e.target.value)} className={inputCls} aria-label="Day" required />
       <input
         value={question}

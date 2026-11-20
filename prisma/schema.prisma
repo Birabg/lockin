@@ -29,6 +29,8 @@ model User {
   legacyUnverified  Boolean   @default(false)
   /// When a legacy account's grace period ends. Starts the first time they're seen after enforcement is turned on.
   verifyGraceEndsAt DateTime?
+  /// Set by an admin. A banned account can't sign in, and what it posted is hidden from everyone.
+  bannedAt          DateTime?
   createdAt         DateTime  @default(now())
 
   dailyStats     DailyStat[]
@@ -59,6 +61,29 @@ model User {
   blockedBy      Block[]             @relation("blocked")
   muting         Mute[]              @relation("muter")
   mutedBy        Mute[]              @relation("muted")
+  adminActions   AdminAction[]
+}
+
+/**
+ * What an admin did and to what, newest first on the admin page.
+ */
+model AdminAction {
+  id            String   @id @default(cuid())
+  /// Null once the admin's account is deleted; adminUsername keeps who it was.
+  adminId       String?
+  adminUsername String
+  /// "dismiss" | "hide" | "delete" | "restore" | "ban" | "unban" | "question"
+  action        String
+  /// "post" | "comment" | "quest" | "take" | "user" | "question"
+  targetType    String
+  targetId      String
+  /// A short human summary, e.g. the start of a post or a username, since the target may be gone.
+  detail        String?
+  createdAt     DateTime @default(now())
+
+  admin User? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
 
 /// Either side of a block hides the two people from each other and stops them interacting.
@@ -416,14 +441,16 @@ model TakeReaction {
 
 /// Someone flagging content or a person. Enough reports hide content (people are left to admins).
 model Report {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   reporterId String
   /// "post" | "comment" | "quest" | "take" | "user"
   targetType String
   targetId   String
   /// "spam" | "harassment" | "inappropriate" | "other". Null on reports made before reasons existed.
   reason     String?
-  createdAt  DateTime @default(now())
+  /// Set when an admin deals with it. Only open reports count towards hiding something.
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
 
   reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 

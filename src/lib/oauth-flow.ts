@@ -44,7 +44,8 @@ export type OAuthDecision =
   | { kind: "signup" }
   | { kind: "error"; code: OAuthErrorCode };
 
-export type OAuthErrorCode = "no-email" | "linked-elsewhere" | "has-other" | "not-signed-in" | "failed" | "cancelled" | "disabled";
+export type OAuthErrorCode =
+  "no-email" | "linked-elsewhere" | "has-other" | "not-signed-in" | "failed" | "cancelled" | "disabled" | "banned";
 
 export function decideOAuth(f: OAuthFacts): OAuthDecision {
   if (f.intent === "link") {
@@ -68,6 +69,8 @@ export function decideOAuth(f: OAuthFacts): OAuthDecision {
   return { kind: "signup" };
 }
 
+export const BANNED_MESSAGE = "This account has been suspended.";
+
 export function oauthErrorMessage(code: string | undefined, provider?: Provider): string | null {
   const name = provider ? providerName(provider) : "That provider";
   switch (code) {
@@ -87,6 +90,8 @@ export function oauthErrorMessage(code: string | undefined, provider?: Provider)
       return `${name} sign-in isn't available right now.`;
     case "failed":
       return `${name} sign-in didn't work. Try again.`;
+    case "banned":
+      return BANNED_MESSAGE;
     default:
       return null;
   }

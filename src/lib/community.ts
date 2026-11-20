@@ -60,6 +60,7 @@ async function questFilter(viewerId: string | null): Promise<Prisma.QuestWhereIn
   const [reported, { blocked }] = await Promise.all([reportedBy(viewerId, "quest"), hiddenPeople(viewerId)]);
   return {
     hidden: false,
+    creator: { bannedAt: null },
     ...(reported.length ? { id: { notIn: reported } } : {}),
     ...(blocked.length ? { creatorId: { notIn: blocked } } : {}),
   };
@@ -229,7 +230,7 @@ export async function getTakes(viewerId: string | null, sort: WallSort, offset: 
   let rows: Prisma.TakeGetPayload<{ select: typeof takeSelect }>[];
   let hasMore: boolean;
   const [skip, { blocked }] = await Promise.all([reportedBy(viewerId, "take"), hiddenPeople(viewerId)]);
-  const notBlocked = blocked.length ? { authorId: { notIn: blocked } } : {};
+  const notBlocked: Prisma.TakeWhereInput = { author: { bannedAt: null }, ...(blocked.length ? { authorId: { notIn: blocked } } : {}) };
   if (sort === "new") {
     rows = await db.take.findMany({
       where: { hidden: false, id: { notIn: skip }, ...notBlocked },
