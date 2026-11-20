@@ -6,7 +6,8 @@ import "./community.css";
 import type { WallTake } from "@/lib/community";
 import { TAKE_MAX, votePercents } from "@/lib/wall";
 import { Icon } from "@/components/icon";
-import { useWall } from "./community-provider";
+import { ReportDialog } from "@/components/report-dialog";
+import { askToSignIn, useWall } from "./community-provider";
 
 /* ---------------- Question of the day ---------------- */
 
@@ -106,6 +107,7 @@ function TakeBubble({ take: t, fresh }: { take: WallTake; fresh: boolean }) {
   const own = viewer?.username === t.author.username;
   const canDelete = own || !!viewer?.admin;
   const [menu, setMenu] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
   const box = useRef<HTMLElement>(null);
 
@@ -172,7 +174,8 @@ function TakeBubble({ take: t, fresh }: { take: WallTake; fresh: boolean }) {
                 role="menuitem"
                 onClick={() => {
                   setMenu(false);
-                  void report(t.id);
+                  if (!viewer) askToSignIn("report takes");
+                  else setReporting(true);
                 }}
               >
                 Report
@@ -203,6 +206,7 @@ function TakeBubble({ take: t, fresh }: { take: WallTake; fresh: boolean }) {
           Nah <b>{t.disagree}</b>
         </button>
       </div>
+      {reporting && <ReportDialog type="take" id={t.id} onClose={() => setReporting(false)} send={(reason) => report(t.id, reason)} />}
     </article>
   );
 }

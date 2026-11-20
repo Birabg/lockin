@@ -67,5 +67,5 @@ export function isAdmin(username: string | null | undefined): boolean {
     .includes(username.toLowerCase());
 }
 
-/** Reports from this many different people hide a quest or a take until an admin looks. */
-export const HIDE_AFTER_REPORTS = 3;
+// the reporting rules (including how many reports hide something) live in safety.ts
+export { HIDE_AFTER_REPORTS } from "./safety";

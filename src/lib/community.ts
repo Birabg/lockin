@@ -1,5 +1,6 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
+import { hiddenPeople, reportedBy } from "./blocks";
 import { brand } from "./brand";
 import { db } from "./db";
 import { questMet, sessionCounts } from "./quests";
@@ -51,11 +52,17 @@ export async function applyQuestProgress(s: { userId: string; endedAt: Date; dur
 
 /* ---------------- The quest board ---------------- */
 
-/** What this person reported stays out of their view, even before enough reports hide it for everyone. */
-async function reportedBy(viewerId: string | null, targetType: "quest" | "take") {
-  if (!viewerId) return [];
-  const rows = await db.report.findMany({ where: { reporterId: viewerId, targetType }, select: { targetId: true } });
-  return rows.map((r) => r.targetId);
+/**
+ * What a viewer shouldn't see: what they reported (gone for them straight away, before enough reports hide
+ * it for everyone) and anything by someone in a block with them.
+ */
+async function questFilter(viewerId: string | null): Promise<Prisma.QuestWhereInput> {
+  const [reported, { blocked }] = await Promise.all([reportedBy(viewerId, "quest"), hiddenPeople(viewerId)]);
+  return {
+    hidden: false,
+    ...(reported.length ? { id: { notIn: reported } } : {}),
+    ...(blocked.length ? { creatorId: { notIn: blocked } } : {}),
+  };
 }
 
 const questSelect = {
@@ -135,7 +142,7 @@ function rank(a: BoardQuest, b: BoardQuest) {
 
 export async function getQuestBoard(viewerId: string | null, limit = 5) {
   const rows = await db.quest.findMany({
-    where: { hidden: false, endsAt: { gt: new Date() }, id: { notIn: await reportedBy(viewerId, "quest") } },
+    where: { ...(await questFilter(viewerId)), endsAt: { gt: new Date() } },
     orderBy: { endsAt: "asc" },
     take: 60,
     select: questSelect,
@@ -155,7 +162,7 @@ export async function listQuests(viewerId: string | null, tab: QuestTab) {
         ? { hidden: false, participants: { some: { userId: viewerId ?? "__guest__" } } }
         : { hidden: false, endsAt: { gt: now } };
   const rows = await db.quest.findMany({
-    where: { ...where, id: { notIn: await reportedBy(viewerId, "quest") } },
+    where: { ...where, ...(await questFilter(viewerId)) },
     orderBy: tab === "ended" ? { endsAt: "desc" } : { endsAt: "asc" },
     take: 60,
     select: questSelect,
@@ -166,11 +173,13 @@ export async function listQuests(viewerId: string | null, tab: QuestTab) {
 
 /** The detail popover: rules, the top people and your progress. */
 export async function getQuestDetail(id: string, viewerId: string | null) {
-  const row = await db.quest.findFirst({ where: { id, hidden: false }, select: questSelect });
+  const filter = await questFilter(viewerId);
+  const row = await db.quest.findFirst({ where: { ...filter, AND: [{ id }] }, select: questSelect });
   if (!row) return null;
   const [quest] = await decorate([row], viewerId);
+  const { blocked } = await hiddenPeople(viewerId);
   const top = await db.questParticipant.findMany({
-    where: { questId: id },
+    where: { questId: id, ...(blocked.length ? { userId: { notIn: blocked } } : {}) },
     orderBy: [{ progressSec: "desc" }, { joinedAt: "asc" }],
     take: 5,
     select: {
@@ -219,10 +228,11 @@ const takeSelect = {
 export async function getTakes(viewerId: string | null, sort: WallSort, offset: number, limit = TAKES_PAGE) {
   let rows: Prisma.TakeGetPayload<{ select: typeof takeSelect }>[];
   let hasMore: boolean;
-  const skip = await reportedBy(viewerId, "take");
+  const [skip, { blocked }] = await Promise.all([reportedBy(viewerId, "take"), hiddenPeople(viewerId)]);
+  const notBlocked = blocked.length ? { authorId: { notIn: blocked } } : {};
   if (sort === "new") {
     rows = await db.take.findMany({
-      where: { hidden: false, id: { notIn: skip } },
+      where: { hidden: false, id: { notIn: skip }, ...notBlocked },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: offset,
       take: limit + 1,
@@ -233,7 +243,7 @@ export async function getTakes(viewerId: string | null, sort: WallSort, offset: 
   } else {
     // hot: the last week's takes, ranked by reactions cooled by age
     const recent = await db.take.findMany({
-      where: { hidden: false, id: { notIn: skip }, createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
+      where: { hidden: false, id: { notIn: skip }, ...notBlocked, createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
       orderBy: { createdAt: "desc" },
       take: 300,
       select: { ...takeSelect, _count: { select: { reactions: true } } },

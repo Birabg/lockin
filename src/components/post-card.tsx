@@ -6,14 +6,20 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "rea
 import { usePopover } from "./app-shell";
 import { Icon } from "./icon";
 import { SessionPlayer } from "./session-card";
+import { ReportDialog } from "./report-dialog";
 import { toast } from "./toaster";
 import { Avatar } from "./ui";
+import { blockUser, muteUser } from "@/app/actions/safety";
 import { addComment, deleteComment, deletePost, getReactors, toggleLike, type NewComment, type Reactor } from "@/app/actions/social";
 import { formatCount, formatDuration, timeAgo } from "@/lib/time";
 import { trackView } from "@/lib/view-tracker";
 import type { FeedPost } from "@/lib/queries";
 
 export type Viewer = { username: string; name: string; avatar: string | null };
+
+/** Sent with a user id when the viewer mutes or blocks them, so every list drops their posts at once. */
+export const HIDE_AUTHOR_EVENT = "lockin:hide-author";
+const hideAuthor = (userId: string) => window.dispatchEvent(new CustomEvent(HIDE_AUTHOR_EVENT, { detail: userId }));
 
 /** A like shows as this. Other reactions would need the database to store which one. */
 const REACTION = "🔥";
@@ -29,6 +35,7 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   const [pending, start] = useTransition();
   const [like, setLike] = useState({ liked: post.liked, count: post.likeCount });
   const [added, setAdded] = useState<NewComment[]>([]);
+  const [reporting, setReporting] = useState<{ type: "post" | "comment"; id: string } | null>(null);
 
   // Pages loaded by scrolling never get new props, so this state is what keeps their likes correct.
   useEffect(() => setLike({ liked: post.liked, count: post.likeCount }), [post.liked, post.likeCount]);
@@ -110,6 +117,33 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
     });
   }
 
+  function onMute() {
+    const who = post.user;
+    start(async () => {
+      const res = await muteUser(who.id).catch(() => ({ error: "Couldn't reach the server. Try again." }));
+      if (res.error) return toast(res.error, "error");
+      hideAuthor(who.id);
+      toast(`Muted @${who.username}. Their posts won't show in your feed.`);
+    });
+  }
+
+  function onBlock() {
+    const who = post.user;
+    if (
+      !window.confirm(
+        `Block @${who.username}? You won't see each other's posts, and they can't follow, comment, react or message you. Unblock any time in Settings.`,
+      )
+    )
+      return;
+    start(async () => {
+      const res = await blockUser(who.id).catch(() => ({ error: "Couldn't reach the server. Try again." }));
+      if (res.error) return toast(res.error, "error");
+      hideAuthor(who.id);
+      toast(`Blocked @${who.username}`);
+      router.refresh();
+    });
+  }
+
   async function onShare() {
     const url = `${window.location.origin}/dashboard/u/${post.user.username}`;
     if (navigator.share) await navigator.share({ title: post.body, url }).catch(() => {});
@@ -121,7 +155,18 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
 
   if (removed) return null;
 
-  const menu = <PostMenu views={post.views} onDelete={mine ? onDelete : undefined} overlay={!!s} />;
+  const others = signedIn && !mine;
+  const menu = (
+    <PostMenu
+      views={post.views}
+      overlay={!!s}
+      username={post.user.username}
+      onDelete={mine ? onDelete : undefined}
+      onReport={others ? () => setReporting({ type: "post", id: post.id }) : undefined}
+      onMute={others ? onMute : undefined}
+      onBlock={others ? onBlock : undefined}
+    />
+  );
 
   return (
     <article ref={card} className="panel overflow-hidden">
@@ -165,11 +210,20 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
                   </Link>{" "}
                   <span className="text-foreground/90">{c.body}</span>
                 </p>
+                {signedIn && c.user.username !== viewer?.username && !c.id.startsWith("temp-") && (
+                  <button
+                    onClick={() => setReporting({ type: "comment", id: c.id })}
+                    aria-label={`Report comment by ${c.user.name}`}
+                    className="ml-auto grid size-6 shrink-0 place-items-center rounded-full text-subtle hover:text-danger"
+                  >
+                    <Icon name="report" size={14} />
+                  </button>
+                )}
                 {(mine || c.user.username === viewer?.username) && !c.id.startsWith("temp-") && (
                   <button
                     onClick={() => onDeleteComment(c.id)}
                     aria-label="Delete comment"
-                    className="ml-auto grid size-6 shrink-0 place-items-center rounded-full text-subtle hover:text-danger"
+                    className={`${signedIn && c.user.username !== viewer?.username ? "" : "ml-auto"} grid size-6 shrink-0 place-items-center rounded-full text-subtle hover:text-danger`}
                   >
                     <Icon name="delete" size={15} />
                   </button>
@@ -202,6 +256,17 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
             </Link>
           )}
         </div>
+      )}
+      {reporting && (
+        <ReportDialog
+          type={reporting.type}
+          id={reporting.id}
+          onClose={() => setReporting(null)}
+          onReported={() => (reporting.type === "post" ? setRemoved(true) : setGoneComments((list) => [...list, reporting.id]))}
+          onFailed={() =>
+            reporting.type === "post" ? setRemoved(false) : setGoneComments((list) => list.filter((c) => c !== reporting.id))
+          }
+        />
       )}
     </article>
   );
@@ -284,9 +349,37 @@ function SessionStats({ session, streak }: { session: NonNullable<FeedPost["sess
   );
 }
 
-/** Views, and delete for the author. Sits over the player, or at the end of a text post's header. */
-function PostMenu({ views, onDelete, overlay }: { views: number; onDelete?: () => void; overlay: boolean }) {
+/** Views, delete for the author, and report, mute and block for everyone else. Sits over the player, or at the end of a text post's header. */
+function PostMenu({
+  views,
+  overlay,
+  username,
+  onDelete,
+  onReport,
+  onMute,
+  onBlock,
+}: {
+  views: number;
+  overlay: boolean;
+  username: string;
+  onDelete?: () => void;
+  onReport?: () => void;
+  onMute?: () => void;
+  onBlock?: () => void;
+}) {
   const pop = usePopover<"menu">();
+  const item = (label: React.ReactNode, icon: "report" | "hide" | "block", run: () => void, danger = false) => (
+    <button
+      role="menuitem"
+      onClick={() => {
+        pop.setOpen(null);
+        run();
+      }}
+      className={`app-menu-row ${danger ? "text-danger" : ""}`}
+    >
+      <Icon name={icon} size={18} /> {label}
+    </button>
+  );
   return (
     <div ref={pop.box} className="relative shrink-0">
       <button
@@ -319,6 +412,9 @@ function PostMenu({ views, onDelete, overlay }: { views: number; onDelete?: () =
               <Icon name="delete" size={18} /> Delete post
             </button>
           )}
+          {onReport && item("Report post", "report", onReport)}
+          {onMute && item(`Mute @${username}`, "hide", onMute)}
+          {onBlock && item(`Block @${username}`, "block", onBlock, true)}
         </div>
       )}
     </div>

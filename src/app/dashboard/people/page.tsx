@@ -13,7 +13,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const q = [params.q ?? ""].flat()[0];
   const page = parsePage(params.page);
   const viewer = await getCurrentUser();
-  const { people, hasNext } = await searchPeople(q, page);
+  const { people, hasNext } = await searchPeople(q, page, viewer?.id ?? null);
   const following = viewer
     ? new Set((await db.follow.findMany({ where: { followerId: viewer.id }, select: { followingId: true } })).map((f) => f.followingId))
     : new Set<string>();
