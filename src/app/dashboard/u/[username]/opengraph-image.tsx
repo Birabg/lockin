@@ -62,7 +62,6 @@ export default async function ProfileImage({ params }: { params: Promise<{ usern
       <OgLogo size={56} />
       <div style={{ display: "flex", alignItems: "center" }}>
         {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element -- rendered to a PNG, not a page
           <img src={avatar} alt="" width={AVATAR} height={AVATAR} style={{ borderRadius: AVATAR, objectFit: "cover" }} />
         ) : (
           <div

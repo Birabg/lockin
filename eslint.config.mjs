@@ -15,6 +15,13 @@ const config = [
       "react-hooks/refs": "off",
     },
   },
+  {
+    // Social cards render to a PNG, not a page, so <img> is right there. The rule skips these files itself on
+    // Linux but not on Windows (it only swaps the first path separator), so an inline disable is "unused" on one
+    // and needed on the other. Turning it off here behaves the same everywhere.
+    files: ["src/app/**/opengraph-image.tsx", "src/app/**/twitter-image.tsx"],
+    rules: { "@next/next/no-img-element": "off" },
+  },
 ];
 
 export default config;
