@@ -176,4 +176,7 @@ export const ICONS = {
   target: {
     line: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z"/><path d="M2 12L5 12"/><path d="M19 12L22 12"/><path d="M12 22L12 19"/><path d="M12 5L12 2"/><path stroke-linejoin="round" d="M10 12H12H14"/><path stroke-linejoin="round" d="M12 14L12 12L12 10"/></g>',
   },
+  letter: {
+    line: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><path d="M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12C22 15.7712 22 17.6569 20.8284 18.8284C19.6569 20 17.7712 20 14 20H10C6.22876 20 4.34315 20 3.17157 18.8284C2 17.6569 2 15.7712 2 12Z"/><path d="M6 8L8.1589 9.79908C9.99553 11.3296 10.9139 12.0949 12 12.0949C13.0861 12.0949 14.0045 11.3296 15.8411 9.79908L18 8"/></g>',
+  },
 } satisfies Record<string, Looks>;

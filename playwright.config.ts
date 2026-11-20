@@ -7,6 +7,8 @@ export default defineConfig({
   timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
+  // a remote dev database (e.g. Neon from far away) makes each server action take a second or more
+  expect: { timeout: 15_000 },
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: `http://localhost:${port}`,
@@ -21,5 +23,7 @@ export default defineConfig({
     port,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    // print emails to the log instead of needing a Resend key, so the verification banner and resend work
+    env: { EMAIL_LOG_ONLY: "1" },
   },
 });

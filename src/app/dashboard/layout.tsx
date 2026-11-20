@@ -3,11 +3,29 @@ import { AppShell } from "@/components/app-shell";
 import { FocusHeartbeat } from "@/components/focus-heartbeat";
 import { GoalAlert } from "@/components/goal-alert";
 import { LiveRefresh } from "@/components/live-refresh";
-import { getCurrentUser } from "@/lib/auth";
+import { VerifyBanner, type BannerData } from "@/components/verify-banner";
+import { getCurrentUser, type CurrentUser } from "@/lib/auth";
 import { brand } from "@/lib/brand";
+import { canSendEmail } from "@/lib/email";
+import { verificationEnforced, verifyState } from "@/lib/verification";
 import { getUnreadCount } from "@/lib/notifications";
 import { getFocusingNow, getLeaderboard, getNavActivity, getStreak, getTodaySeconds, getWeekStrip } from "@/lib/queries";
 import { reapStaleSessions } from "@/lib/sessions";
+
+/** What the verification banner says, or null when there's nothing to show. */
+function verifyBanner(user: CurrentUser): BannerData | null {
+  const state = verifyState(user, new Date(), verificationEnforced());
+  if (state.kind === "verified") return null;
+  const canResend = canSendEmail();
+  // with nothing enforced and no way to send, there's nothing for them to do
+  if (state.kind === "unverified" && !canResend) return null;
+  return {
+    kind: state.kind,
+    email: user.email,
+    graceEndsAt: state.kind === "grace" && state.endsAt ? state.endsAt.toISOString() : null,
+    canResend,
+  };
+}
 
 /** How far down today's board to look for your own rank. */
 const RANK_DEPTH = 50;
@@ -27,6 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     getFocusingNow(DOCK_ROWS),
     getLeaderboard("today", timeZone, { pageSize: RANK_DEPTH }),
   ]);
+  const banner = user ? verifyBanner(user) : null;
 
   return (
     <div data-app-chrome className="min-h-dvh">
@@ -37,6 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <FocusHeartbeat sessionId={active?.id ?? null} paused={!!active?.pausedAt} />
       <GoalAlert session={active} />
       <AppShell
+        banner={banner && <VerifyBanner data={banner} />}
         data={{
           user: user ? { id: user.id, name: user.name, username: user.username, avatar: user.avatar } : null,
           unread,
