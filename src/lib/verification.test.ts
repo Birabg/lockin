@@ -69,12 +69,13 @@ describe("grace clock", () => {
 });
 
 describe("leaderboardUserFilter", () => {
-  it("filters nobody while enforcement is off", () => {
-    expect(leaderboardUserFilter(now, false)).toBeUndefined();
+  it("filters only suspended accounts while enforcement is off", () => {
+    expect(leaderboardUserFilter(now, false)).toEqual({ bannedAt: null });
   });
 
   it("keeps verified and in-grace accounts", () => {
     expect(leaderboardUserFilter(now, true)).toEqual({
+      bannedAt: null,
       OR: [
         { emailVerifiedAt: { not: null } },
         { legacyUnverified: true, verifyGraceEndsAt: null },

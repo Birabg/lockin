@@ -10,7 +10,6 @@ import {
   getTakes,
   listQuests,
   TAKES_PAGE,
-  wallDay,
   type QuestTab,
   type WallSort,
 } from "@/lib/community";
@@ -219,29 +218,4 @@ export async function report(targetType: "quest" | "take", targetId: string, rea
   if (!isReportReason(reason)) return { error: "Pick a reason" };
   if (!(await allow(`report:${user.id}`, limits.report))) return { error: SLOW_DOWN };
   return fileReport(user.id, z.enum(["quest", "take"]).parse(targetType), id.parse(targetId), reason);
-}
-
-/** Admins only: set the question for a day, today or later. */
-export async function scheduleQuestion(input: { day: string; question: string; options: string[] }): Promise<Result> {
-  const user = await getCurrentUser();
-  if (!user || !isAdmin(user.username)) return { error: "Only admins can schedule questions" };
-  if (!(await allow(`question:${user.id}`, limits.question))) return { error: SLOW_DOWN };
-  const parsed = z
-    .object({
-      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      question: z.string().trim().min(5).max(120),
-      options: z.array(z.string().trim().min(1).max(40)).min(2).max(4),
-    })
-    .safeParse({ ...input, options: input.options.filter((o) => o.trim()) });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
-  const { day, question, options } = parsed.data;
-  if (day < wallDay()) return { error: "Pick today or a later day" };
-  const existing = await db.dailyQuestion.findUnique({ where: { day }, include: { _count: { select: { votes: true } } } });
-  if (existing && existing._count.votes > 0) return { error: "People already voted on that day's question" };
-  await db.dailyQuestion.upsert({
-    where: { day },
-    create: { day, question, options, createdById: user.id },
-    update: { question, options, createdById: user.id },
-  });
-  return {};
 }

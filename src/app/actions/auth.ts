@@ -10,7 +10,7 @@ import { createSession, destroySession, getCurrentUser } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { checkNewEmail } from "@/lib/email-domain";
 import { sendVerificationEmail } from "@/lib/email-verify";
-import { providerName } from "@/lib/oauth-flow";
+import { BANNED_MESSAGE, providerName } from "@/lib/oauth-flow";
 import { clearPending, finishPendingLink, readPending } from "@/lib/oauth-session";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
 import { safeNext } from "@/lib/safe-next";
@@ -81,13 +81,21 @@ export async function login(_prev: FormState, form: FormData): Promise<FormState
 
   const user = await db.user.findFirst({
     where: { OR: [{ email: identifier }, { username: identifier }] },
-    select: { id: true, email: true, passwordHash: true, oauthAccounts: { select: { provider: true }, orderBy: { createdAt: "asc" } } },
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      bannedAt: true,
+      oauthAccounts: { select: { provider: true }, orderBy: { createdAt: "asc" } },
+    },
   });
   if (user && !user.passwordHash) {
     const names = user.oauthAccounts.map((a) => providerName(a.provider === "github" ? "github" : "google"));
     return { error: `This account uses ${names.join(" or ") || "Google"} sign-in. Use the button above.` };
   }
   if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return { error: "Wrong email/username or password" };
+  // only said after the right password, so it doesn't tell strangers which accounts are suspended
+  if (user.bannedAt) return { error: BANNED_MESSAGE };
 
   await createSession(user.id);
   // they may have come from "sign in with your password to connect Google"
