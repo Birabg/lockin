@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { verifyGate } from "@/lib/email-verify";
+import { hasBlockedWords } from "@/lib/moderation";
 import { notifySessionStart } from "@/lib/notifications";
 import { finishSession, reapStaleSessions } from "@/lib/sessions";
 import { isExpired } from "@/lib/session-math";
@@ -136,9 +137,16 @@ export async function stopFocus(sessionId: string, opts: { share: boolean; note:
     s.status === "ACTIVE" ? await finishSession(s, isExpired(s) ? s.lastBeatAt : new Date(), user.timeZone) : s.durationSec;
 
   let postId: string | null = null;
-  // the session still counts; it just isn't posted until they verify
-  const shareBlocked = share && durationSec >= 60 && !!verifyGate(user);
-  if (share && durationSec >= 60 && !shareBlocked) {
+  const wantsPost = share && durationSec >= 60;
+  // the session counts either way; only the post is held back, with the reason for the toast
+  const shareBlocked: string | null = !wantsPost
+    ? null
+    : verifyGate(user)
+      ? "Session saved. Verify your email to share sessions to the feed."
+      : hasBlockedWords(note)
+        ? "Session saved, but not shared. Let's keep the feed friendly: try different words next time."
+        : null;
+  if (wantsPost && !shareBlocked) {
     const body = note || s.label || "Session done";
     const post = await db.post.upsert({ where: { sessionId: s.id }, create: { userId: user.id, sessionId: s.id, body }, update: {} });
     postId = post.id;

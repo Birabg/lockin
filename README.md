@@ -61,7 +61,7 @@ The e2e test needs a migrated database in `DATABASE_URL` and writes to it, so us
 | `/dashboard/leaderboard`                  | Today / week / all-time rankings with follow buttons                                                                                         |
 | `/dashboard/people`                       | Search users and follow                                                                                                                      |
 | `/dashboard/u/[username]`                 | Public profile: streak, total time, followers, posts                                                                                         |
-| `/dashboard/settings`                     | Avatar, name, bio, daily goal, time zone, log out                                                                                            |
+| `/dashboard/settings`                     | Avatar, name, bio, daily goal, time zone, connected accounts, blocked and muted users, log out                                               |
 | `/dashboard/notifications`                | Likes, comments, follows, session starts, nudges and buddy requests                                                                          |
 | `/dashboard/buddies`                      | Focus buddies: requests, streaks, live status, nudges                                                                                        |
 | `/dashboard/rooms`                        | Create a live room or join one with its 6-character code                                                                                     |
@@ -103,6 +103,13 @@ Existing accounts aren't re-checked. Use the same function if changing your emai
 - If the provider's verified email matches a **verified** account, it's linked and signed in. If it matches an **unverified** account, they're asked to sign in with that account's password once, and then it's linked (and the address verified). GitHub only counts the primary, verified email.
 - Settings → Connected accounts connects and disconnects them, but never the last way to sign in. Accounts with no password delete themselves by typing their username.
 - Callback URL: `<site>/api/auth/google/callback` and `<site>/api/auth/github/callback`. The rules are in `src/lib/oauth-flow.ts`.
+
+## Blocking, muting and reporting
+
+- **Block** from a post's "…" menu or a profile's. Either side of a block hides the two people from each other: posts, comments, quests, takes, profiles, people search and Focusing now. Neither can follow, comment, react, nudge or send a buddy request. Blocking removes follows both ways, any buddy pairing or request, and notifications between them. Unblock in Settings → Blocked users.
+- **Mute** hides someone's posts from your feeds only. They aren't told and nothing else changes. Their profile still shows their posts, since you went there on purpose. Unmute from their profile or Settings.
+- **Report** posts, comments, quests, takes and people, with a reason (spam, harassment, inappropriate, something else). What you report disappears for you straight away. Reports from 3 different people hide a piece of content for everyone until an admin looks. People are never hidden automatically; their reports wait for an admin.
+- Posts, comments, shared session notes, quests and takes go through the word filter in `src/lib/moderation.ts`. The rules are in `src/lib/safety.ts`.
 
 ## How the live parts work
 

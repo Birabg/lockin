@@ -1,5 +1,8 @@
 import "server-only";
+import type { Prisma } from "@prisma/client";
+import { hiddenPeople, reportedBy } from "./blocks";
 import { db } from "./db";
+import { hiddenAuthors } from "./safety";
 import { rankTotals } from "./leaderboard";
 import { LIVE_MS, remainingSeconds, runningSeconds } from "./session-math";
 import { computeStreak } from "./streak";
@@ -93,9 +96,15 @@ export async function getNavActivity(userId: string) {
   return { buddies: !!buddy, rooms: !!roommate };
 }
 
-export async function getFocusingNow(limit = 12) {
+export async function getFocusingNow(limit = 12, viewerId: string | null = null) {
+  const { blocked } = await hiddenPeople(viewerId);
   const live = await db.focusSession.findMany({
-    where: { status: "ACTIVE", pausedAt: null, lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) } },
+    where: {
+      status: "ACTIVE",
+      pausedAt: null,
+      lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) },
+      ...(blocked.length ? { userId: { notIn: blocked } } : {}),
+    },
     orderBy: { startedAt: "asc" },
     select: {
       startedAt: true,
@@ -188,16 +197,32 @@ const FEED_PAGE = 20;
 
 export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { take?: number; authorId?: string; cursor?: string } = {}) {
   const take = opts.take ?? FEED_PAGE;
-  let where: { userId?: string | { in: string[] }; mediaType?: string } = {};
+  const [people, reportedPosts, reportedComments] = await Promise.all([
+    hiddenPeople(viewerId),
+    reportedBy(viewerId, "post"),
+    reportedBy(viewerId, "comment"),
+  ]);
+  // a profile's own list leaves muted posts in: you went there on purpose. Blocks always apply.
+  const hideAuthors = hiddenAuthors(people, opts.authorId ? "elsewhere" : "feed");
+  let where: Prisma.PostWhereInput = {};
   if (opts.authorId) {
+    if (hideAuthors.includes(opts.authorId)) return { posts: [], hasMore: false };
     where = { userId: opts.authorId };
   } else if (tab === "following") {
     if (!viewerId) return { posts: [], hasMore: false };
     const follows = await db.follow.findMany({ where: { followerId: viewerId }, select: { followingId: true } });
-    where = { userId: { in: [viewerId, ...follows.map((f) => f.followingId)] } };
-  } else if (tab === "timelapses") {
-    where = { mediaType: "timelapse" };
+    where = { userId: { in: [viewerId, ...follows.map((f) => f.followingId)].filter((id) => !hideAuthors.includes(id)) } };
+  } else {
+    if (tab === "timelapses") where = { mediaType: "timelapse" };
+    if (hideAuthors.length) where.userId = { notIn: hideAuthors };
   }
+  where.hidden = false;
+  if (reportedPosts.length) where.id = { notIn: reportedPosts };
+  const commentWhere: Prisma.CommentWhereInput = {
+    hidden: false,
+    ...(people.blocked.length ? { userId: { notIn: people.blocked } } : {}),
+    ...(reportedComments.length ? { id: { notIn: reportedComments } } : {}),
+  };
   const rows = await db.post.findMany({
     where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -206,9 +231,10 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
     include: {
       user: { select: { id: true, username: true, name: true, avatar: true, timeZone: true, sceneId: true } },
       session: { select: { goalMin: true, startedAt: true, endedAt: true, durationSec: true, pausedSec: true, label: true } },
-      _count: { select: { likes: true, comments: true } },
+      _count: { select: { likes: true, comments: { where: commentWhere } } },
       likes: { where: { userId: viewerId ?? "__guest__" }, select: { userId: true } },
       comments: {
+        where: commentWhere,
         orderBy: { createdAt: "desc" },
         take: 20,
         select: { id: true, body: true, createdAt: true, user: { select: { username: true, name: true, avatar: true } } },
@@ -325,18 +351,34 @@ export async function getProfile(username: string, viewerId: string | null) {
     },
   });
   if (!user) return null;
-  const isFollowing = viewerId
-    ? !!(await db.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: user.id } } }))
-    : false;
-  return { ...user, isFollowing };
+  // blocked either way: the profile simply doesn't exist for them
+  if (viewerId && (await hiddenPeople(viewerId)).blocked.includes(user.id)) return null;
+  const [isFollowing, muting] = viewerId
+    ? await Promise.all([
+        db.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: user.id } } }).then(Boolean),
+        db.mute.findUnique({ where: { muterId_mutedId: { muterId: viewerId, mutedId: user.id } } }).then(Boolean),
+      ])
+    : [false, false];
+  return { ...user, isFollowing, muting };
 }
 
 const PEOPLE_PAGE = 30;
 
-export async function searchPeople(q: string, page: number) {
+export async function searchPeople(q: string, page: number, viewerId: string | null = null) {
   const term = q.trim();
+  const { blocked } = await hiddenPeople(viewerId);
   const rows = await db.user.findMany({
-    where: term ? { OR: [{ username: { contains: term, mode: "insensitive" } }, { name: { contains: term, mode: "insensitive" } }] } : {},
+    where: {
+      ...(term
+        ? {
+            OR: [
+              { username: { contains: term, mode: "insensitive" as const } },
+              { name: { contains: term, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+      ...(blocked.length ? { id: { notIn: blocked } } : {}),
+    },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     skip: (page - 1) * PEOPLE_PAGE,
     take: PEOPLE_PAGE + 1,

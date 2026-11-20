@@ -55,6 +55,35 @@ model User {
   takes          Take[]
   takeReactions  TakeReaction[]
   reports        Report[]
+  blocking       Block[]             @relation("blocker")
+  blockedBy      Block[]             @relation("blocked")
+  muting         Mute[]              @relation("muter")
+  mutedBy        Mute[]              @relation("muted")
+}
+
+/// Either side of a block hides the two people from each other and stops them interacting.
+model Block {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+/// Hides someone's posts from the muter's feed. The muted person isn't told and can still interact.
+model Mute {
+  muterId   String
+  mutedId   String
+  createdAt DateTime @default(now())
+
+  muter User @relation("muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
 }
 
 /// One timer run. status: ACTIVE | DONE | ABANDONED
@@ -215,6 +244,8 @@ model Post {
   mediaType String?
   views     Int      @default(0)
   body      String
+  /// Set when enough people report it.
+  hidden    Boolean  @default(false)
   createdAt DateTime @default(now())
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -258,6 +289,8 @@ model Comment {
   userId    String
   postId    String
   body      String
+  /// Set when enough people report it.
+  hidden    Boolean  @default(false)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -381,13 +414,15 @@ model TakeReaction {
   @@index([takeId, value])
 }
 
-/// Someone flagging a quest or a take. Enough reports hide it.
+/// Someone flagging content or a person. Enough reports hide content (people are left to admins).
 model Report {
   id         String   @id @default(cuid())
   reporterId String
-  /// "quest" | "take"
+  /// "post" | "comment" | "quest" | "take" | "user"
   targetType String
   targetId   String
+  /// "spam" | "harassment" | "inappropriate" | "other". Null on reports made before reasons existed.
+  reason     String?
   createdAt  DateTime @default(now())
 
   reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
