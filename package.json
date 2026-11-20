@@ -21,10 +21,12 @@
     "db:import": "tsx prisma/import-sqlite.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "icons": "node scripts/build-icons.mjs"
+    "icons": "node scripts/build-icons.mjs",
+    "email:domains": "node scripts/update-disposable-domains.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "arctic": "3.7.0",
     "bcryptjs": "^3.0.2",
     "jose": "^6.0.10",
     "next": "^16.4.5",

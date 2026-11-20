@@ -34,7 +34,11 @@ npm run dev                   # http://localhost:3000
 | `S3_REGION`                                                                             | No        | Defaults to `auto`, which suits R2.                                                               |
 | `RESEND_API_KEY`, `EMAIL_FROM`                                                          | No        | Verification and password reset emails. Without them the reset link and resend button are hidden. |
 | `EMAIL_VERIFICATION_ENFORCED`                                                           | No        | `true` restricts unverified accounts (see Email verification). Off by default.                    |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                              | No        | "Continue with Google". Without both, the button is hidden.                                       |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`                                              | No        | "Continue with GitHub". Without both, the button is hidden.                                       |
 | `UPLOAD_DIR`                                                                            | No        | Folder for local uploads. Defaults to `.uploads`.                                                 |
+
+The Playwright config also sets three test-only variables on its own server: `EMAIL_LOG_ONLY=1` (print emails), `EMAIL_TEST_DOMAINS=example.com` (skip the DNS check for test addresses) and `OAUTH_TEST_MODE=1` (a fake Google/GitHub, refused on Vercel). Never set them in a deployment.
 
 ## Tests
 
@@ -48,25 +52,27 @@ The e2e test needs a migrated database in `DATABASE_URL` and writes to it, so us
 
 ## What's in it
 
-| Route                                 | What it does                                                                                                                                 |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dashboard`                          | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
-| `/dashboard/timer`                    | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard                                 |
-| `/dashboard/focusing`                 | Everyone with a live session                                                                                                                 |
-| `/dashboard/stats`                    | Today / week / streak / all-time tiles, weekly recap, 30-day bars against your goal, time by label                                           |
-| `/dashboard/leaderboard`              | Today / week / all-time rankings with follow buttons                                                                                         |
-| `/dashboard/people`                   | Search users and follow                                                                                                                      |
-| `/dashboard/u/[username]`             | Public profile: streak, total time, followers, posts                                                                                         |
-| `/dashboard/settings`                 | Avatar, name, bio, daily goal, time zone, log out                                                                                            |
-| `/dashboard/notifications`            | Likes, comments, follows, session starts, nudges and buddy requests                                                                          |
-| `/dashboard/buddies`                  | Focus buddies: requests, streaks, live status, nudges                                                                                        |
-| `/dashboard/rooms`                    | Create a live room or join one with its 6-character code                                                                                     |
-| `/dashboard/rooms/[code]`             | Everyone's timers in the room, ticking together                                                                                              |
-| `/card/[username]`                    | Shareable streak card image (1200×630), also the profile's social preview                                                                    |
-| `/login`, `/signup`                   | Email or username + password                                                                                                                 |
-| `/forgot-password`, `/reset-password` | One-time emailed reset link, which signs out every device                                                                                    |
-| `/verify-email`                       | Where the verification email links to                                                                                                        |
-| `/privacy`                            | Privacy page                                                                                                                                 |
+| Route                                     | What it does                                                                                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dashboard`                              | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
+| `/dashboard/timer`                        | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard                                 |
+| `/dashboard/focusing`                     | Everyone with a live session                                                                                                                 |
+| `/dashboard/stats`                        | Today / week / streak / all-time tiles, weekly recap, 30-day bars against your goal, time by label                                           |
+| `/dashboard/leaderboard`                  | Today / week / all-time rankings with follow buttons                                                                                         |
+| `/dashboard/people`                       | Search users and follow                                                                                                                      |
+| `/dashboard/u/[username]`                 | Public profile: streak, total time, followers, posts                                                                                         |
+| `/dashboard/settings`                     | Avatar, name, bio, daily goal, time zone, log out                                                                                            |
+| `/dashboard/notifications`                | Likes, comments, follows, session starts, nudges and buddy requests                                                                          |
+| `/dashboard/buddies`                      | Focus buddies: requests, streaks, live status, nudges                                                                                        |
+| `/dashboard/rooms`                        | Create a live room or join one with its 6-character code                                                                                     |
+| `/dashboard/rooms/[code]`                 | Everyone's timers in the room, ticking together                                                                                              |
+| `/card/[username]`                        | Shareable streak card image (1200×630), also the profile's social preview                                                                    |
+| `/login`, `/signup`                       | Continue with Google / GitHub, or email or username + password                                                                               |
+| `/welcome`                                | First Google/GitHub sign-in: pick a username                                                                                                 |
+| `/api/auth/[provider]/start`, `/callback` | Google/GitHub sign-in handoff and return                                                                                                     |
+| `/forgot-password`, `/reset-password`     | One-time emailed reset link, which signs out every device                                                                                    |
+| `/verify-email`                           | Where the verification email links to                                                                                                        |
+| `/privacy`                                | Privacy page                                                                                                                                 |
 
 Guests can browse the dashboard (public preview); focusing, posting, liking, commenting and following require an account.
 
@@ -78,6 +84,25 @@ Guests can browse the dashboard (public preview); focusing, posting, liking, com
 - With it set to `true`, unverified accounts can sign in and focus, but can't post or share sessions, comment, create quests, post takes, or appear on the leaderboard.
 - Accounts made before verification existed (`legacyUnverified`) keep everything for 14 days, counted from their first visit after enforcement is turned on (`verifyGraceEndsAt`). New signups get no grace period.
 - The rules are in `src/lib/verification.ts` and the emails in `src/lib/email-templates.ts`.
+
+## Email checks at signup
+
+New addresses (`checkNewEmail` in `src/lib/email-domain.ts`) are trimmed, lowercased and checked:
+
+1. **Format**, with zod.
+2. **Throwaway domains** are refused ("Please use a permanent email address."). The list is vendored from [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains) (CC0) in `src/lib/data/disposable-domains.json`. Refresh it with `npm run email:domains`.
+3. **The domain must be able to receive mail**: an MX record, or with none, an A/AAAA record. A "null MX" or a domain that doesn't exist is refused ("This email domain can't receive mail. Check for typos."). The lookup gives up after 2.5 s, and if DNS itself fails the signup goes through, so a flaky resolver never blocks real people.
+4. **Typos** of popular providers (`gmial.com`, `gmail.co`, `yaho.com`, `hotnail.com`…) get a "Did you mean name@gmail.com?" link that fixes the field. It never blocks.
+
+Existing accounts aren't re-checked. Use the same function if changing your email is ever added.
+
+## Sign in with Google and GitHub
+
+- [arctic](https://arcticjs.dev) builds the provider URLs and swaps the code for tokens; sessions are still Lockin's own `lk_session` cookie. Google uses PKCE. Both use a signed one-time `state` cookie.
+- A new Google/GitHub user picks a username on `/welcome` (checked as they type) and is verified straight away. Their `passwordHash` is null, and password sign-in tells them to use the button.
+- If the provider's verified email matches a **verified** account, it's linked and signed in. If it matches an **unverified** account, they're asked to sign in with that account's password once, and then it's linked (and the address verified). GitHub only counts the primary, verified email.
+- Settings → Connected accounts connects and disconnects them, but never the last way to sign in. Accounts with no password delete themselves by typing their username.
+- Callback URL: `<site>/api/auth/google/callback` and `<site>/api/auth/github/callback`. The rules are in `src/lib/oauth-flow.ts`.
 
 ## How the live parts work
 

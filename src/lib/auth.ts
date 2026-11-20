@@ -39,11 +39,36 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
+/**
+ * Short-lived signed values (OAuth state, a pending signup). The audience names the purpose, and none carry a
+ * `sub`, so one can never be read as a login session or as each other.
+ */
+export async function seal(payload: Record<string, unknown>, purpose: string, ttlSec: number): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setAudience(purpose)
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSec}s`)
+    .sign(secret());
+}
+
+export async function unseal(token: string | undefined, purpose: string): Promise<Record<string, unknown> | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secret(), { audience: purpose });
+    return payload.sub === undefined ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
 async function readSession(): Promise<{ id: string; issuedAt: number } | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
+    // sealed values carry an audience; a session never does
+    if (payload.aud !== undefined) return null;
     return typeof payload.sub === "string" ? { id: payload.sub, issuedAt: payload.iat ?? 0 } : null;
   } catch {
     return null;
