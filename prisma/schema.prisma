@@ -13,7 +13,8 @@ model User {
   username          String    @unique
   name              String
   email             String    @unique
-  passwordHash      String
+  /// Null for people who only sign in with Google or GitHub.
+  passwordHash      String?
   bio               String?
   avatar            String?
   sceneId           String?
@@ -45,6 +46,7 @@ model User {
   roomMembers    RoomMember[]
   passwordResets PasswordReset[]
   verifications  EmailVerification[]
+  oauthAccounts  OAuthAccount[]
   postViews      PostView[]
   quests         Quest[]
   questsJoined   QuestParticipant[]
@@ -160,6 +162,24 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// A Google or GitHub login connected to an account. provider: "google" | "github"
+model OAuthAccount {
+  id             String   @id @default(cuid())
+  userId         String
+  provider       String
+  /// The provider's own id for the person (Google "sub", GitHub user id). Emails can change; this can't.
+  providerUserId String
+  /// The verified email the provider gave when it was connected, shown in settings.
+  email          String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  /// one Google and one GitHub per account
+  @@unique([userId, provider])
 }
 
 /// One-time email verification links. Only a hash of the token is kept.

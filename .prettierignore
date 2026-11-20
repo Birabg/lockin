@@ -5,3 +5,6 @@ prisma/*.db
 
 test-results
 playwright-report
+
+# vendored data, refreshed by npm run email:domains
+src/lib/data/

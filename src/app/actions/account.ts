@@ -2,6 +2,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
@@ -10,6 +11,7 @@ import { destroySession, getCurrentUser } from "@/lib/auth";
 import { canSendEmail, sendEmail } from "@/lib/email";
 import { passwordResetEmail } from "@/lib/email-templates";
 import { sendVerificationEmail } from "@/lib/email-verify";
+import { isProvider, loginMethods, providerName } from "@/lib/oauth-flow";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
 import { siteUrl } from "@/lib/site";
 import { storage } from "@/lib/storage";
@@ -92,14 +94,44 @@ export async function resendVerification(): Promise<{ error?: string; sent?: boo
   return { sent: true };
 }
 
+/** Settings → Connected accounts. Refuses to remove the last way to sign in. */
+export async function unlinkProvider(provider: string): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first" };
+  if (!isProvider(provider)) return { error: "Unknown provider" };
+  if (!(await allow(`unlink:${user.id}`, limits.loginAccount))) return { error: TOO_MANY };
+
+  const removed = await db.$transaction(async (tx) => {
+    const row = await tx.user.findUnique({
+      where: { id: user.id },
+      select: { passwordHash: true, oauthAccounts: { select: { provider: true } } },
+    });
+    if (!row || !row.oauthAccounts.some((a) => a.provider === provider)) return "missing";
+    if (loginMethods({ hasPassword: !!row.passwordHash, providers: row.oauthAccounts.length }) <= 1) return "last";
+    await tx.oAuthAccount.deleteMany({ where: { userId: user.id, provider } });
+    return "ok";
+  });
+  if (removed === "last")
+    return { error: `${providerName(provider)} is your only way to sign in. Set a password or connect another account first.` };
+  revalidatePath("/dashboard/settings");
+  return {};
+}
+
 export async function deleteAccount(_prev: FormState, form: FormData): Promise<FormState> {
   const user = await getCurrentUser();
   if (!user) return { error: "Sign in first" };
   if (!(await allow(`delete:${user.id}`, limits.loginAccount))) return { error: TOO_MANY };
 
-  const password = z.string().min(1).max(200).safeParse(form.get("password"));
   const row = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
-  if (!password.success || !row || !(await bcrypt.compare(password.data, row.passwordHash))) return { error: "That password isn't right" };
+  if (!row) return { error: "Sign in first" };
+  if (row.passwordHash) {
+    const password = z.string().min(1).max(200).safeParse(form.get("password"));
+    if (!password.success || !(await bcrypt.compare(password.data, row.passwordHash))) return { error: "That password isn't right" };
+  } else {
+    // Google/GitHub-only accounts have no password, so typing the username is the confirmation
+    const typed = z.string().trim().toLowerCase().max(40).safeParse(form.get("confirmUsername"));
+    if (!typed.success || typed.data !== user.username) return { error: "Type your username exactly to confirm" };
+  }
 
   const posts = await db.post.findMany({ where: { userId: user.id, mediaUrl: { not: null } }, select: { mediaUrl: true } });
   const files = [user.avatar, ...posts.map((p) => p.mediaUrl)].filter((url): url is string => !!url);

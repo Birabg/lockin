@@ -4,6 +4,7 @@ const port = Number(process.env.E2E_PORT ?? 3100);
 
 export default defineConfig({
   testDir: "e2e",
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
   workers: 1,
@@ -23,7 +24,13 @@ export default defineConfig({
     port,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
-    // print emails to the log instead of needing a Resend key, so the verification banner and resend work
-    env: { EMAIL_LOG_ONLY: "1" },
+    env: {
+      // print emails to the log instead of needing a Resend key, so the verification banner and resend work
+      EMAIL_LOG_ONLY: "1",
+      // example.com has a "null MX" (it takes no mail), so the tests' throwaway accounts skip the DNS check
+      EMAIL_TEST_DOMAINS: "example.com",
+      // Google/GitHub sign-in with a fake provider; refused anywhere on Vercel
+      OAUTH_TEST_MODE: "1",
+    },
   },
 });

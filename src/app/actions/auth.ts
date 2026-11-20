@@ -6,40 +6,47 @@ import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { createSession, destroySession } from "@/lib/auth";
+import { createSession, destroySession, getCurrentUser } from "@/lib/auth";
 import { brand } from "@/lib/brand";
+import { checkNewEmail } from "@/lib/email-domain";
 import { sendVerificationEmail } from "@/lib/email-verify";
+import { providerName } from "@/lib/oauth-flow";
+import { clearPending, finishPendingLink, readPending } from "@/lib/oauth-session";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
 import { safeNext } from "@/lib/safe-next";
 import { isValidTimeZone } from "@/lib/time";
+import { usernameSchema } from "@/lib/username";
 
-export type FormState = { error?: string } | undefined;
+export type FormState = { error?: string; suggestion?: string } | undefined;
 
 const TOO_MANY = "Too many attempts. Try again in a few minutes.";
 
+const timeZoneSchema = z
+  .string()
+  .max(64)
+  .optional()
+  .transform((tz) => (tz && isValidTimeZone(tz) ? tz : brand.timeZone));
+
 const signupSchema = z.object({
   name: z.string().trim().min(1, "Enter your name").max(40),
-  username: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .regex(/^[a-z0-9_]{3,20}$/, "Username: 3–20 letters, numbers or _"),
-  email: z.string().trim().toLowerCase().email("Enter a valid email").max(254),
+  username: usernameSchema,
+  email: z.string().max(254),
   // bcrypt only reads the first 72 bytes
   password: z.string().min(8, "Password must be at least 8 characters").max(72, "Password must be 72 characters or fewer"),
-  timeZone: z
-    .string()
-    .max(64)
-    .optional()
-    .transform((tz) => (tz && isValidTimeZone(tz) ? tz : brand.timeZone)),
+  timeZone: timeZoneSchema,
 });
 
 export async function signup(_prev: FormState, form: FormData): Promise<FormState> {
   const parsed = signupSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const { name, username, email, password, timeZone } = parsed.data;
+  const { name, username, password, timeZone } = parsed.data;
 
   if (!(await allow(`signup:${await clientIp()}`, limits.signup))) return { error: TOO_MANY };
+
+  // format, throwaway domains, and whether the domain can receive mail at all
+  const checked = await checkNewEmail(parsed.data.email);
+  if (!checked.ok) return { error: checked.error, suggestion: checked.suggestion };
+  const { email } = checked;
 
   const taken = await db.user.findFirst({ where: { OR: [{ email }, { username }] }, select: { email: true } });
   if (taken) return { error: taken.email === email ? "That email already has an account" : "That username is taken" };
@@ -72,14 +79,75 @@ export async function login(_prev: FormState, form: FormData): Promise<FormState
     (await allow(`login-ip:${await clientIp()}`, limits.loginIp)) && (await allow(`login:${identifier}`, limits.loginAccount));
   if (!allowed) return { error: TOO_MANY };
 
-  const user = await db.user.findFirst({ where: { OR: [{ email: identifier }, { username: identifier }] } });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) return { error: "Wrong email/username or password" };
+  const user = await db.user.findFirst({
+    where: { OR: [{ email: identifier }, { username: identifier }] },
+    select: { id: true, email: true, passwordHash: true, oauthAccounts: { select: { provider: true }, orderBy: { createdAt: "asc" } } },
+  });
+  if (user && !user.passwordHash) {
+    const names = user.oauthAccounts.map((a) => providerName(a.provider === "github" ? "github" : "google"));
+    return { error: `This account uses ${names.join(" or ") || "Google"} sign-in. Use the button above.` };
+  }
+  if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return { error: "Wrong email/username or password" };
 
   await createSession(user.id);
-  redirect(safeNext(form.get("next")));
+  // they may have come from "sign in with your password to connect Google"
+  const linked = await finishPendingLink(user);
+  redirect(linked ? `/dashboard/settings?connected=${linked}` : safeNext(form.get("next")));
 }
 
 export async function logout() {
   await destroySession();
   redirect("/dashboard");
+}
+
+/** For the username picker's live check. */
+export async function checkUsername(raw: string): Promise<{ ok: boolean; message: string }> {
+  const parsed = usernameSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+  if (!(await allow(`username-check:${await clientIp()}`, limits.usernameCheck))) return { ok: false, message: "Slow down a little" };
+  const taken = await db.user.findUnique({ where: { username: parsed.data }, select: { id: true } });
+  return taken ? { ok: false, message: "That username is taken" } : { ok: true, message: `@${parsed.data} is free` };
+}
+
+const welcomeSchema = z.object({
+  name: z.string().trim().min(1, "Enter your name").max(40),
+  username: usernameSchema,
+  timeZone: timeZoneSchema,
+});
+
+/** The last step of a first Google/GitHub sign-in: pick a username, and the account is made. */
+export async function completeOAuthSignup(_prev: FormState, form: FormData): Promise<FormState> {
+  const pending = await readPending("signup");
+  if (!pending) return { error: "That sign-in took too long. Start again from the sign-up page." };
+  if (await getCurrentUser()) return { error: "You're already signed in." };
+  const parsed = welcomeSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { name, username, timeZone } = parsed.data;
+  if (!(await allow(`signup:${await clientIp()}`, limits.signup))) return { error: TOO_MANY };
+
+  try {
+    const user = await db.user.create({
+      data: {
+        name,
+        username,
+        email: pending.email,
+        timeZone,
+        passwordHash: null,
+        dailyGoalMin: brand.defaultDailyGoalMin,
+        // the provider verified this address
+        emailVerifiedAt: new Date(),
+        oauthAccounts: { create: { provider: pending.provider, providerUserId: pending.providerUserId, email: pending.email } },
+      },
+    });
+    await createSession(user.id);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = String(e.meta?.target ?? "");
+      if (target.includes("username")) return { error: "That username was just taken. Try another." };
+      return { error: "An account with this email or login already exists. Sign in instead." };
+    }
+    throw e;
+  }
+  await clearPending();
+  redirect(safeNext(pending.next));
 }
