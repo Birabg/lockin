@@ -3,7 +3,7 @@
 /* ---- Design tokens: a neutral charcoal dark theme (no blue cast in the greys) ----
    Rebrand by changing the --primary* values. */
 :root {
-  --background: #141416;
+  --background: #0a0a0b;
   --foreground: #ededef;
   --card: #1b1b1e;
   --inset: #242428;
@@ -15,7 +15,7 @@
   --primary: #4f8ff7;
   --primary-foreground: #111113;
   --primary-shadow: #2563c9;
-  --primary-light: #172338;
+  --primary-light: #151f31;
   --primary-text: #a9cbff;
 
   --streak: #f5b366;

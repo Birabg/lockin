@@ -138,8 +138,8 @@ function tokensFor(hex: string): Record<string, string> {
     "--primary-foreground": (lum + 0.05) / 0.05 > 1.05 / (lum + 0.05) ? "#111113" : "#ffffff",
     // the button's 3D edge
     "--primary-shadow": toHex(mix(c, [0, 0, 0], 0.32)),
-    // a soft tint over --background (#141416)
-    "--primary-light": toHex(mix([20, 20, 22], c, 0.16)),
+    // a soft tint over --background (#0a0a0b)
+    "--primary-light": toHex(mix([10, 10, 11], c, 0.16)),
     // text on the dark background, lifted toward white so deep accents stay readable
     "--primary-text": toHex(mix(c, [255, 255, 255], lum < 0.25 ? 0.55 : 0.4)),
   };

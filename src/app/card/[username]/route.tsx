@@ -31,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ usernam
         width: "100%",
         height: "100%",
         padding: 72,
-        background: "#141416",
+        background: "#0a0a0b",
         color: "#ededef",
       }}
     >
