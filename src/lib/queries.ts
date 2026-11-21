@@ -422,27 +422,117 @@ export async function getProfile(username: string, viewerId: string | null) {
 }
 
 const PEOPLE_PAGE = 30;
+/** how far back "active lately" looks, for ordering and for the time shown on each row */
+const ACTIVE_DAYS = 7;
 
-export async function searchPeople(q: string, page: number, viewerId: string | null = null) {
+export type PeopleTab = "discover" | "following" | "followers";
+
+export type PersonRow = {
+  id: string;
+  name: string;
+  username: string;
+  bio: string | null;
+  avatar: string | null;
+  /** seconds focused over the last week */
+  weekSec: number;
+  streak: number;
+  /** what they're focusing on right now, or null when they aren't */
+  live: { label: string | null } | null;
+  followsYou: boolean;
+  following: boolean;
+};
+
+/**
+ * People for the People page: everyone, the people you follow, or your followers, optionally matching a
+ * search. Whoever focused most over the last week comes first, then everyone else, newest first, so the
+ * list leads with people worth following rather than whoever signed up last.
+ */
+export async function listPeople({ q, tab, page, viewerId }: { q: string; tab: PeopleTab; page: number; viewerId: string | null }) {
   const term = q.trim();
   const { blocked } = await hiddenPeople(viewerId);
-  const rows = await db.user.findMany({
-    where: {
-      ...(term
-        ? {
-            OR: [
-              { username: { contains: term, mode: "insensitive" as const } },
-              { name: { contains: term, mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
-      ...(blocked.length ? { id: { notIn: blocked } } : {}),
-      bannedAt: null,
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    skip: (page - 1) * PEOPLE_PAGE,
-    take: PEOPLE_PAGE + 1,
-    select: { id: true, name: true, username: true, bio: true, avatar: true },
+  const hidden = viewerId && tab === "discover" ? [...blocked, viewerId] : blocked;
+  const where: Prisma.UserWhereInput = {
+    bannedAt: null,
+    ...(hidden.length ? { id: { notIn: hidden } } : {}),
+    ...(term
+      ? {
+          OR: [{ username: { contains: term.replace(/^@/, ""), mode: "insensitive" } }, { name: { contains: term, mode: "insensitive" } }],
+        }
+      : {}),
+    ...(viewerId && tab === "following" ? { followers: { some: { followerId: viewerId } } } : {}),
+    ...(viewerId && tab === "followers" ? { following: { some: { followingId: viewerId } } } : {}),
+  };
+
+  const since = dayKey(new Date(Date.now() - ACTIVE_DAYS * 86_400_000), "UTC");
+  const active = await db.dailyStat.groupBy({
+    by: ["userId"],
+    where: { day: { gte: since }, seconds: { gt: 0 }, user: where },
+    _sum: { seconds: true },
+    orderBy: { _sum: { seconds: "desc" } },
+    take: 500,
   });
-  return { people: rows.slice(0, PEOPLE_PAGE), hasNext: rows.length > PEOPLE_PAGE };
+  const weekSec = new Map(active.map((r) => [r.userId, r._sum.seconds ?? 0]));
+  const activeIds = active.map((r) => r.userId);
+
+  // one page out of [active people..., everyone else...], with one extra to know if there's a next page
+  const offset = (page - 1) * PEOPLE_PAGE;
+  const fromActive = activeIds.slice(offset, offset + PEOPLE_PAGE + 1);
+  const need = PEOPLE_PAGE + 1 - fromActive.length;
+  const select = { id: true, name: true, username: true, bio: true, avatar: true, timeZone: true } as const;
+  const [activeRows, restRows] = await Promise.all([
+    fromActive.length ? db.user.findMany({ where: { id: { in: fromActive } }, select }) : [],
+    need > 0
+      ? db.user.findMany({
+          where: activeIds.length ? { AND: [where, { id: { notIn: activeIds } }] } : where,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip: Math.max(0, offset - activeIds.length),
+          take: need,
+          select,
+        })
+      : [],
+  ]);
+  const byId = new Map(activeRows.map((r) => [r.id, r]));
+  const rows = [...fromActive.flatMap((id) => byId.get(id) ?? []), ...restRows];
+  const people = rows.slice(0, PEOPLE_PAGE);
+  const ids = people.map((p) => p.id);
+
+  const [streaks, live, theyFollow, iFollow] = await Promise.all([
+    ids.length ? getStreaks(people) : new Map<string, number>(),
+    db.focusSession.findMany({
+      where: { userId: { in: ids }, status: "ACTIVE", pausedAt: null, lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) } },
+      select: { userId: true, label: true },
+    }),
+    viewerId ? db.follow.findMany({ where: { followingId: viewerId, followerId: { in: ids } }, select: { followerId: true } }) : [],
+    viewerId ? db.follow.findMany({ where: { followerId: viewerId, followingId: { in: ids } }, select: { followingId: true } }) : [],
+  ]);
+  const liveBy = new Map(live.map((s) => [s.userId, s.label]));
+  const followsYou = new Set(theyFollow.map((f) => f.followerId));
+  const following = new Set(iFollow.map((f) => f.followingId));
+
+  return {
+    hasNext: rows.length > PEOPLE_PAGE,
+    people: people.map((p): PersonRow => ({
+      id: p.id,
+      name: p.name,
+      username: p.username,
+      bio: p.bio,
+      avatar: p.avatar,
+      weekSec: weekSec.get(p.id) ?? 0,
+      streak: streaks.get(p.id) ?? 0,
+      live: liveBy.has(p.id) ? { label: liveBy.get(p.id) ?? null } : null,
+      followsYou: followsYou.has(p.id),
+      following: following.has(p.id),
+    })),
+  };
+}
+
+/** How many people you follow and how many follow you, leaving out banned and blocked accounts. */
+export async function getFollowCounts(viewerId: string) {
+  const { blocked } = await hiddenPeople(viewerId);
+  const visible = { bannedAt: null, ...(blocked.length ? { id: { notIn: blocked } } : {}) };
+  const [following, followers] = await Promise.all([
+    db.user.count({ where: { ...visible, followers: { some: { followerId: viewerId } } } }),
+    db.user.count({ where: { ...visible, following: { some: { followingId: viewerId } } } }),
+  ]);
+  return { following, followers };
 }

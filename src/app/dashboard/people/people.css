@@ -1,0 +1,239 @@
+/* The People page: search and tabs, who's focusing now, and the list of people. */
+
+@layer components {
+  .people-controls {
+    position: sticky;
+    top: calc(var(--topbar-h) + 8px);
+    z-index: 5;
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    backdrop-filter: blur(12px);
+    padding-block: 4px;
+  }
+  @media (width >= 40rem) {
+    .people-controls {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+  }
+
+  .people-search-input {
+    width: 100%;
+    height: 46px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding-inline: 42px 44px;
+    font-size: 15px;
+    outline: none;
+    transition:
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+  .people-search-input::placeholder {
+    color: var(--subtle-foreground);
+  }
+  .people-search-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+  }
+  /* the browser's own clear button doubles ours */
+  .people-search-input::-webkit-search-cancel-button {
+    appearance: none;
+  }
+  .people-spinner {
+    display: block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    animation: people-spin 700ms linear infinite;
+  }
+  @keyframes people-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  .people-tabs {
+    display: flex;
+    gap: 2px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 3px;
+  }
+  .people-tab {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 11px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--muted-foreground);
+    transition:
+      background 150ms,
+      color 150ms;
+  }
+  .people-tab:hover {
+    color: var(--foreground);
+  }
+  .people-tab[aria-current="page"] {
+    background: var(--inset);
+    color: var(--foreground);
+  }
+  .people-tab-count {
+    min-width: 20px;
+    border-radius: 999px;
+    background: var(--inset);
+    padding: 1px 6px;
+    font-size: 11px;
+    color: var(--subtle-foreground);
+  }
+  .people-tab[aria-current="page"] .people-tab-count {
+    background: var(--primary-light);
+    color: var(--primary-text);
+  }
+
+  /* ---- Focusing now ---- */
+  .people-live {
+    margin-bottom: 14px;
+    padding: 16px 16px 12px;
+  }
+  .people-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--live);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 60%, transparent);
+    animation: people-live-pulse 1.8s ease-out infinite;
+  }
+  @keyframes people-live-pulse {
+    to {
+      box-shadow: 0 0 0 8px transparent;
+    }
+  }
+  .people-live-list {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: -4px;
+    padding: 2px 4px 4px;
+  }
+  .people-live-item {
+    display: flex;
+    width: 66px;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    border-radius: 14px;
+    padding: 6px 2px;
+    transition: background 150ms;
+  }
+  .people-live-item:hover {
+    background: var(--inset);
+  }
+  .people-live-ring {
+    border-radius: 50%;
+    padding: 2px;
+    background: var(--live);
+    box-shadow: 0 0 0 2px var(--card) inset;
+  }
+  .people-live-ring > * {
+    outline: 2px solid var(--card);
+  }
+
+  /* ---- The list ---- */
+  .people-list {
+    overflow: hidden;
+    transition: opacity 150ms;
+  }
+  /* while a search is on its way, the old results fade so it's clear they're about to change */
+  .people-controls:has(.people-spinner) ~ .people-list {
+    opacity: 0.5;
+  }
+  .people-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    transition: background 150ms;
+  }
+  .people-row + .people-row {
+    border-top: 1px solid var(--border);
+  }
+  .people-row:hover {
+    background: color-mix(in srgb, var(--inset) 55%, transparent);
+  }
+  /* the whole row opens the profile; the follow button sits above that link */
+  .people-row-link {
+    position: absolute;
+    inset: 0;
+  }
+  .people-row-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+  }
+  .people-row > :not(.people-row-link) {
+    pointer-events: none;
+  }
+  .people-row > .people-row-action {
+    position: relative;
+    pointer-events: auto;
+  }
+  .people-avatar {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .people-avatar-live {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2.5px solid var(--card);
+    background: var(--live);
+  }
+  .people-badge {
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--inset);
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+  .people-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 12px;
+    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--subtle-foreground);
+  }
+  .people-mark {
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+    color: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .people-live-dot,
+    .people-spinner {
+      animation: none;
+    }
+  }
+}
