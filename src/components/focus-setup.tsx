@@ -20,6 +20,7 @@ import {
   useSoundMuted,
 } from "./focus-stage";
 import { Icon } from "./icon";
+import { MusicButton, MusicPanel, YouTubePill } from "./music-panel";
 import { SceneGrid } from "./scene-picker";
 import { DIAL_MAX, DIAL_MIN, DIAL_STEP, formatDialTime, reachesDailyGoal, snapMinutes } from "@/lib/dial";
 import type { ClockStyle } from "@/lib/clock-styles";
@@ -278,7 +279,7 @@ export function FocusSetup(props: Props) {
   const [now, setNow] = useState(props.serverNow); // same on server and client, so hydration matches
   const sound = useSoundMuted();
   const screen = useFullscreen();
-  const menu = useDockMenu<"scene" | "clock" | "settings">();
+  const menu = useDockMenu<"music" | "scene" | "clock" | "settings">();
   const lastKey = useRef(0);
 
   function lockIn() {
@@ -442,6 +443,11 @@ export function FocusSetup(props: Props) {
       </div>
 
       <div ref={menu.wrap} className="stage-dock-wrap">
+        {menu.open === "music" && (
+          <DockPopover title="Music" onClose={menu.close} wide>
+            <MusicPanel />
+          </DockPopover>
+        )}
         {menu.open === "scene" && (
           <DockPopover title="Background" onClose={menu.close}>
             <SceneGrid current={scene} onPick={props.onPickScene} />
@@ -463,6 +469,7 @@ export function FocusSetup(props: Props) {
             </div>
           </DockPopover>
         )}
+        {!menu.open && <YouTubePill />}
         <Dock label="Focus tools">
           <DockButton
             icon={sound.muted ? "mute" : "sound"}
@@ -470,6 +477,7 @@ export function FocusSetup(props: Props) {
             text="Sound"
             onClick={sound.toggle}
           />
+          <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />
           <DockButton icon="clockStyle" label="Clock style" {...menu.triggerProps("clock")} />

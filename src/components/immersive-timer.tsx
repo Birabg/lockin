@@ -22,12 +22,15 @@ import {
   useSoundMuted,
 } from "./focus-stage";
 import { Icon } from "./icon";
+import { MusicButton, MusicPanel, YouTubePill } from "./music-panel";
 import { SceneGrid } from "./scene-picker";
 import { brand } from "@/lib/brand";
 import type { ClockStyle } from "@/lib/clock-styles";
 import type { Scene } from "@/lib/scenes";
 
 const IDLE_MS = 3000;
+
+type StageMenu = "music" | "scene" | "clock";
 
 /** True for a few seconds after any mouse, touch or key activity. */
 function useRecentActivity(enabled: boolean) {
@@ -108,7 +111,7 @@ type ImmersiveProps = StageProps & {
 /** A running session, full screen over everything. */
 export function ImmersiveTimer(props: ImmersiveProps) {
   const { leaving, fadeIn, finishing, timeZone, now, goalPrompt } = props;
-  const menu = useDockMenu<"scene" | "clock">();
+  const menu = useDockMenu<StageMenu>();
   const recent = useRecentActivity(true);
   const screen = useFullscreen();
   const backdrop = useRef<HTMLDivElement>(null);
@@ -178,8 +181,10 @@ export function ImmersiveTimer(props: ImmersiveProps) {
           onPickScene={props.onPickScene}
           onPickClock={props.onPickClock}
         />
+        {!menu.open && <YouTubePill hidden={!showChrome} />}
         <Dock label="Session tools" hidden={!showChrome}>
           <SoundButton />
+          <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />
           <DockButton icon="clockStyle" label="Clock style" {...menu.triggerProps("clock")} />
@@ -210,7 +215,7 @@ export function ImmersiveTimer(props: ImmersiveProps) {
 
 /** A running session inside the page, after minimizing. Same stage, with the sidebar still there. */
 export function SessionStage(props: StageProps & { onExpand: () => void }) {
-  const menu = useDockMenu<"scene" | "clock">();
+  const menu = useDockMenu<StageMenu>();
   return (
     <section
       aria-label="Focus session"
@@ -233,8 +238,10 @@ export function SessionStage(props: StageProps & { onExpand: () => void }) {
           onPickScene={props.onPickScene}
           onPickClock={props.onPickClock}
         />
+        {!menu.open && <YouTubePill />}
         <Dock label="Session tools">
           <SoundButton />
+          <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />
           <DockButton icon="clockStyle" label="Clock style" {...menu.triggerProps("clock")} />
@@ -271,12 +278,18 @@ function StagePopovers({
   onPickScene,
   onPickClock,
 }: {
-  menu: ReturnType<typeof useDockMenu<"scene" | "clock">>;
+  menu: ReturnType<typeof useDockMenu<StageMenu>>;
   scene: Scene;
   clockStyle: ClockStyle;
   onPickScene: (id: string) => void;
   onPickClock: (style: ClockStyle) => void;
 }) {
+  if (menu.open === "music")
+    return (
+      <DockPopover title="Music" onClose={menu.close} wide>
+        <MusicPanel />
+      </DockPopover>
+    );
   if (menu.open === "scene")
     return (
       <DockPopover title="Background" onClose={menu.close}>

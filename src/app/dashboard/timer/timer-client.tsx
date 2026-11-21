@@ -9,6 +9,7 @@ import { FocusSetup } from "@/components/focus-setup";
 import { StageBackdrop, StagePill, captureHandoff, stageStyle } from "@/components/focus-stage";
 import { ImmersiveTimer, SessionStage } from "@/components/immersive-timer";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
+import { YouTubeAudio, useAmbienceOnPage } from "@/components/music-panel";
 import { toast } from "@/components/toaster";
 import { Icon } from "@/components/icon";
 import { DEFAULT_CLOCK_STYLE, clockText, isClockStyle, resolveClockStyle, type ClockStyle } from "@/lib/clock-styles";
@@ -122,6 +123,7 @@ export function TimerClient(props: Props) {
   if (session) lastView.current = { ...view, label: session.label };
 
   useWakeLock(!!session);
+  useAmbienceOnPage();
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -444,6 +446,7 @@ export function TimerClient(props: Props) {
 
   return (
     <>
+      <YouTubeAudio />
       {showOverlay &&
         (mounted ? (
           <ImmersiveTimer
