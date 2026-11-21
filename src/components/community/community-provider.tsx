@@ -14,6 +14,7 @@ import {
   type Viewer,
 } from "@/app/actions/community";
 import type { BoardQuest, WallQuestion, WallSort, WallTake } from "@/lib/community";
+import type { ReportReason } from "@/lib/safety";
 import { toast } from "@/components/toaster";
 
 const POLL_MS = 30_000;
@@ -167,7 +168,7 @@ export type WallState = {
   react: (takeId: string, value: "agree" | "disagree") => Promise<void>;
   post: (body: string) => Promise<boolean>;
   remove: (takeId: string) => Promise<void>;
-  report: (takeId: string) => Promise<void>;
+  report: (takeId: string, reason: ReportReason) => Promise<{ error?: string }>;
 };
 
 function useWallState(enabled: boolean): WallState {
@@ -335,17 +336,12 @@ function useWallState(enabled: boolean): WallState {
     [takes, optimistic],
   );
 
-  const report = useCallback(
-    async (takeId: string) => {
-      if (!viewer) return askToSignIn("report takes");
-      const res = await reportAction("take", takeId).catch(() => ({ error: "Couldn't reach the server. Try again." }));
-      if (res.error) return toast(res.error, "error");
-      // hide it for you straight away; enough reports hide it for everyone
-      setTakes((ts) => ts?.filter((t) => t.id !== takeId) ?? null);
-      toast("Thanks. We'll take a look.");
-    },
-    [viewer],
-  );
+  /** The report dialog shows the outcome; this files it and, once it's in, hides the take for you straight away. */
+  const report = useCallback(async (takeId: string, reason: ReportReason) => {
+    const res = await reportAction("take", takeId, reason);
+    if (!res.error) setTakes((ts) => ts?.filter((t) => t.id !== takeId) ?? null);
+    return res;
+  }, []);
 
   return { question, takes, hasMore, viewer, sort, failed, loadingMore, fresh, setSort, more, vote, react, post, remove, report };
 }

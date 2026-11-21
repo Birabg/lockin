@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     user ? getNavActivity(user.id) : { buddies: false, rooms: false },
     user ? getTodaySeconds(user) : 0,
     user ? getWeekStrip(user, timeZone, goalMin) : [],
-    getFocusingNow(DOCK_ROWS),
+    getFocusingNow(DOCK_ROWS, user?.id ?? null),
     getLeaderboard("today", timeZone, { pageSize: RANK_DEPTH }),
   ]);
   const banner = user ? verifyBanner(user) : null;

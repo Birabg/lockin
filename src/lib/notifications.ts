@@ -1,10 +1,13 @@
 import "server-only";
+import { isBlockedBetween } from "./blocks";
 import { db } from "./db";
 
 export type NotificationType = "LIKE" | "COMMENT" | "FOLLOW" | "SESSION_START" | "NUDGE" | "BUDDY_REQUEST" | "BUDDY_ACCEPT";
 
 export async function notify(n: { userId: string; actorId: string; type: NotificationType; postId?: string }) {
   if (n.userId === n.actorId) return;
+  // a safety net: actions already refuse blocked pairs, but nothing between them should ever arrive
+  if (await isBlockedBetween(n.userId, n.actorId)) return;
   await db.notification.create({ data: n });
 }
 

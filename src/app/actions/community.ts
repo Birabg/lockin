@@ -10,13 +10,15 @@ import {
   getTakes,
   listQuests,
   TAKES_PAGE,
-  wallDay,
   type QuestTab,
   type WallSort,
 } from "@/lib/community";
 import { db } from "@/lib/db";
 import { verifyGate } from "@/lib/email-verify";
-import { HIDE_AFTER_REPORTS, hasBlockedWords, isAdmin } from "@/lib/moderation";
+import { isBlockedBetween } from "@/lib/blocks";
+import { hasBlockedWords, isAdmin } from "@/lib/moderation";
+import { fileReport } from "@/lib/reports";
+import { BLOCKED_MESSAGE, isReportReason } from "@/lib/safety";
 import { QUEST_COLORS, QUEST_DESCRIPTION_MAX, QUEST_LENGTHS, QUEST_TITLE_MAX, questEnd } from "@/lib/quests";
 import { allow, limits } from "@/lib/rate-limit";
 import { TAKE_MAX } from "@/lib/wall";
@@ -177,8 +179,9 @@ export async function reactToTake(takeId: string, value: "agree" | "disagree" | 
     await db.takeReaction.deleteMany({ where: { takeId: tid, userId: user.id } });
     return {};
   }
-  const take = await db.take.findFirst({ where: { id: tid, hidden: false }, select: { id: true } });
+  const take = await db.take.findFirst({ where: { id: tid, hidden: false }, select: { authorId: true } });
   if (!take) return { error: "That take is gone" };
+  if (await isBlockedBetween(user.id, take.authorId)) return { error: BLOCKED_MESSAGE };
   await db.takeReaction.upsert({
     where: { takeId_userId: { takeId: tid, userId: user.id } },
     create: { takeId: tid, userId: user.id, value: v },
@@ -208,45 +211,11 @@ export async function deleteTake(takeId: string): Promise<Result> {
   return count ? {} : { error: "You can only delete your own takes" };
 }
 
-/** One report per person per item. Enough different people hide it. */
-export async function report(targetType: "quest" | "take", targetId: string): Promise<Result> {
+/** One report per person per item, with a reason. Enough different people hide it (see fileReport). */
+export async function report(targetType: "quest" | "take", targetId: string, reason: string): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { error: SIGN_IN };
+  if (!isReportReason(reason)) return { error: "Pick a reason" };
   if (!(await allow(`report:${user.id}`, limits.report))) return { error: SLOW_DOWN };
-  const type = z.enum(["quest", "take"]).parse(targetType);
-  const tid = id.parse(targetId);
-  await db.report.create({ data: { reporterId: user.id, targetType: type, targetId: tid } }).catch((e) => {
-    if (!isDuplicate(e)) throw e;
-  });
-  const count = await db.report.count({ where: { targetType: type, targetId: tid } });
-  if (count >= HIDE_AFTER_REPORTS) {
-    if (type === "quest") await db.quest.updateMany({ where: { id: tid }, data: { hidden: true } });
-    else await db.take.updateMany({ where: { id: tid }, data: { hidden: true } });
-  }
-  return {};
-}
-
-/** Admins only: set the question for a day, today or later. */
-export async function scheduleQuestion(input: { day: string; question: string; options: string[] }): Promise<Result> {
-  const user = await getCurrentUser();
-  if (!user || !isAdmin(user.username)) return { error: "Only admins can schedule questions" };
-  if (!(await allow(`question:${user.id}`, limits.question))) return { error: SLOW_DOWN };
-  const parsed = z
-    .object({
-      day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      question: z.string().trim().min(5).max(120),
-      options: z.array(z.string().trim().min(1).max(40)).min(2).max(4),
-    })
-    .safeParse({ ...input, options: input.options.filter((o) => o.trim()) });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
-  const { day, question, options } = parsed.data;
-  if (day < wallDay()) return { error: "Pick today or a later day" };
-  const existing = await db.dailyQuestion.findUnique({ where: { day }, include: { _count: { select: { votes: true } } } });
-  if (existing && existing._count.votes > 0) return { error: "People already voted on that day's question" };
-  await db.dailyQuestion.upsert({
-    where: { day },
-    create: { day, question, options, createdById: user.id },
-    update: { question, options, createdById: user.id },
-  });
-  return {};
+  return fileReport(user.id, z.enum(["quest", "take"]).parse(targetType), id.parse(targetId), reason);
 }

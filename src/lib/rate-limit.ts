@@ -22,6 +22,8 @@ export const limits = {
   verifyResend: { max: 3, windowSec: 60 * 60 },
   oauth: { max: 30, windowSec: 15 * 60 },
   usernameCheck: { max: 60, windowSec: 60 },
+  safety: { max: 60, windowSec: 60 * 60 },
+  admin: { max: 300, windowSec: 60 * 60 },
   quest: { max: 3, windowSec: 24 * 60 * 60 },
   take: { max: 10, windowSec: 24 * 60 * 60 },
   join: { max: 30, windowSec: 60 },

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, useTransition } from "react";
-import { createQuest, deleteQuest, joinQuest, leaveQuest, loadQuestDetail, report, type NewQuest } from "@/app/actions/community";
+import { createQuest, deleteQuest, joinQuest, leaveQuest, loadQuestDetail, type NewQuest } from "@/app/actions/community";
+import { ReportDialog } from "@/components/report-dialog";
 import type { BoardQuest } from "@/lib/community";
 import {
   QUEST_COLORS,
@@ -242,6 +243,7 @@ type Detail = NonNullable<Awaited<ReturnType<typeof loadQuestDetail>>>;
 function QuestDetail({ id, onClose, onChange }: { id: string; onClose: () => void; onChange?: () => void }) {
   const [detail, setDetail] = useState<Detail | null | undefined>(undefined);
   const [pending, start] = useTransition();
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -379,7 +381,7 @@ function QuestDetail({ id, onClose, onChange }: { id: string; onClose: () => voi
                 disabled={pending}
                 onClick={() => {
                   if (!detail!.signedIn) return askToSignIn("report quests");
-                  act(() => report("quest", q.id), "Thanks. We'll take a look.", true);
+                  setReporting(true);
                 }}
                 className="h-10 rounded-full px-3 text-sm font-bold text-muted hover:bg-inset hover:text-foreground"
               >
@@ -387,6 +389,17 @@ function QuestDetail({ id, onClose, onChange }: { id: string; onClose: () => voi
               </button>
             )}
           </div>
+          {reporting && (
+            <ReportDialog
+              type="quest"
+              id={q.id}
+              onClose={() => setReporting(false)}
+              onReported={() => {
+                onChange?.();
+                onClose();
+              }}
+            />
+          )}
         </div>
       )}
     </Modal>

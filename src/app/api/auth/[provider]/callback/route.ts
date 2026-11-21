@@ -53,6 +53,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     emailOwner: owner ? { id: owner.id, verified: !!owner.emailVerifiedAt, hasProvider: owner.oauthAccounts.length > 0 } : null,
   });
 
+  // a suspended account gets no new session, whichever way it arrives
+  const signsIn = decision.kind === "signin" || (decision.kind === "link" && decision.signin);
+  if (signsIn && (await db.user.findUnique({ where: { id: decision.userId }, select: { bannedAt: true } }))?.bannedAt)
+    return fail("banned");
+
   switch (decision.kind) {
     case "signin":
       await createSession(decision.userId);
