@@ -11,7 +11,7 @@ import { toast } from "./toaster";
 import { Avatar } from "./ui";
 import { blockUser, muteUser } from "@/app/actions/safety";
 import { addComment, deleteComment, deletePost, getReactors, toggleLike, type NewComment, type Reactor } from "@/app/actions/social";
-import { formatCount, formatDuration, timeAgo } from "@/lib/time";
+import { formatCount, timeAgo } from "@/lib/time";
 import { trackView } from "@/lib/view-tracker";
 import type { FeedPost } from "@/lib/queries";
 
@@ -26,7 +26,8 @@ const REACTION = "🔥";
 const LONG_PRESS_MS = 450;
 const HOVER_MS = 350;
 
-export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: Viewer | null; timeZone: string }) {
+/** `timeZone` is accepted for callers that still pass it; the card no longer shows clock times. */
+export function PostCard({ post, viewer }: { post: FeedPost; viewer: Viewer | null; timeZone?: string }) {
   const router = useRouter();
   const signedIn = !!viewer;
   const mine = viewer?.username === post.user.username;
@@ -169,32 +170,31 @@ export function PostCard({ post, viewer, timeZone }: { post: FeedPost; viewer: V
   );
 
   return (
-    <article ref={card} className="panel overflow-hidden">
-      {s ? <SessionPlayer post={post} session={s} timeZone={timeZone} menu={menu} /> : <TextHeader post={post} menu={menu} />}
+    <article ref={card} className={`panel overflow-hidden ${s ? "p-2" : ""}`}>
+      {s ? <SessionPlayer post={post} session={s} streak={post.streak} menu={menu} /> : <TextHeader post={post} menu={menu} />}
 
-      <div className={s ? "px-4 pt-2 pb-2.5" : "px-4 pb-2.5"}>
-        <Caption text={post.body} big={!s} />
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-          {s && <SessionStats session={s} streak={post.streak} />}
-          <div className="ml-auto flex items-center gap-0.5">
-            <ReactButton postId={post.id} liked={like.liked} count={like.count} disabled={pending} onToggle={onLike} />
-            <button
-              onClick={() => setShowComments((v) => !v)}
-              aria-expanded={showComments}
-              aria-label={`Comments, ${commentCount}`}
-              className="flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold text-muted hover:bg-inset hover:text-foreground"
-            >
-              <Icon name="comment" size={18} />
-              {commentCount > 0 && <span className="tabular">{commentCount}</span>}
-            </button>
-            <button
-              onClick={onShare}
-              className="grid size-9 place-items-center rounded-full text-muted hover:bg-inset hover:text-foreground"
-              aria-label="Share a link to this profile"
-            >
-              <Icon name="share" size={18} />
-            </button>
+      <div className={s ? "flex items-start gap-3 px-2 pt-2.5 pb-0.5" : "px-4 pb-3"}>
+        {s ? (
+          <div className="min-w-0 flex-1 pt-2 text-muted">
+            <Caption text={post.body} big={false} />
           </div>
+        ) : (
+          <Caption text={post.body} big />
+        )}
+        <div className={`flex shrink-0 items-center gap-2 ${s ? "" : "mt-2 justify-end"}`}>
+          <ReactButton postId={post.id} liked={like.liked} count={like.count} disabled={pending} onToggle={onLike} />
+          <button
+            onClick={() => setShowComments((v) => !v)}
+            aria-expanded={showComments}
+            aria-label={`Comments, ${commentCount}`}
+            className="post-action"
+          >
+            <Icon name="comment" size={19} />
+            {commentCount > 0 && <span className="tabular">{commentCount}</span>}
+          </button>
+          <button onClick={onShare} className="post-action" aria-label="Share a link to this profile">
+            <Icon name="share" size={19} />
+          </button>
         </div>
       </div>
 
@@ -328,28 +328,7 @@ function Caption({ text, big }: { text: string; big: boolean }) {
   );
 }
 
-function SessionStats({ session, streak }: { session: NonNullable<FeedPost["session"]>; streak: number }) {
-  const pct = Math.round(Math.min(session.durationSec / (session.goalMin * 60), 9.99) * 100);
-  const bits = [session.label, `${pct}% of goal`].filter(Boolean);
-  return (
-    <p className="flex min-w-0 items-baseline gap-2 text-[13px] text-muted tabular">
-      <span className="text-[16px] font-extrabold tracking-[-0.02em] text-foreground">{formatDuration(session.durationSec)}</span>
-      <span className="min-w-0 truncate">
-        {bits.join(" · ")}
-        {streak > 0 && (
-          <>
-            {" · "}
-            <span className="font-bold text-streak">
-              {streak}d <span aria-label="streak">🔥</span>
-            </span>
-          </>
-        )}
-      </span>
-    </p>
-  );
-}
-
-/** Views, delete for the author, and report, mute and block for everyone else. Sits over the player, or at the end of a text post's header. */
+/** Views, delete for the author, and report, mute and block for everyone else. Sits over a session's picture, or at the end of a text post's header. */
 function PostMenu({
   views,
   overlay,
@@ -491,7 +470,7 @@ function ReactButton({
         disabled={disabled}
         aria-pressed={liked}
         aria-label={`React ${REACTION}, ${count} so far`}
-        className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-semibold select-none hover:bg-inset ${liked ? "bg-streak-bg text-streak" : "text-muted hover:text-foreground"}`}
+        className={`post-action select-none ${liked ? "!bg-streak-bg text-streak" : ""}`}
       >
         <span
           aria-hidden
