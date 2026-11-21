@@ -46,6 +46,7 @@ const ICONS = {
   image: { line: "gallery-linear" },
   sound: { line: "volume-loud-linear" },
   mute: { line: "volume-cross-linear" },
+  music: { line: "music-notes-linear" },
   fullscreen: { line: "full-screen-linear" },
   exitFullscreen: { line: "quit-full-screen-linear" },
   minimize: { line: "minimize-linear" },

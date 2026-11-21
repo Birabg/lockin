@@ -169,6 +169,14 @@ After the first deploy, check that you can sign up, finish a session, upload an 
 
 Every deployment runs migrations against the database it's configured with. To keep preview deployments away from production data, give the Preview environment its own `DATABASE_URL` and `DIRECT_URL`, such as a Neon branch.
 
+## Focus music
+
+The Music button in the focus dock plays instruments (Lo-fi keys, Piano, Violin, Cello, Saxophone, Acoustic guitar, Flute & harp, Music box) and nature sounds (Rain, Ocean waves, Brown noise). All of them are made in the browser with Web Audio (`src/lib/ambience.ts` plays them; `src/lib/music-pieces.ts` holds each piece's chords, scale and instruments), so there are no audio files, nothing to license, and they work offline. The pieces are generative: the melody is picked as it plays, so they never loop.
+
+People can also paste a YouTube video or playlist link (`src/lib/youtube.ts`); the YouTube section is at the top of the Music panel. It plays through YouTube's privacy-enhanced embed (youtube-nocookie.com), which needs no API key. YouTube's ads may play, and some videos don't allow embedding. A now-playing pill just above the dock shows the title, play/pause, Open on YouTube and stop. It talks to the embed over its postMessage API, which also carries the volume. YouTube links play audio only, with the embed hidden off-screen. YouTube's terms don't allow that, and YouTube can block embeds for the site.
+
+The choice and volume are saved in the browser. The sound keeps playing between setup and the session, fades out when you leave the timer page, and comes back on your first click the next time you open it. Browsers won't start audio before you've clicked something. The Sound button is separate: it mutes only the dial clicks and the goal chime.
+
 ## Clock styles
 
 The full-screen timer can look five ways: Ring, Rolling, Flip, Reel and Minimal. Each is a component in `src/components/clocks/` taking the same props, and `src/lib/clock-styles.ts` lists them. The choice is saved on the user as `clockStyle`. Shared posts and the small timer card always use the ring.

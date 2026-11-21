@@ -382,6 +382,33 @@
     background: var(--stage-fill-hover);
     color: var(--stage-text);
   }
+  /* YouTube's now-playing pill, just above the dock, in YouTube's own dark look */
+  .stage-yt-pill {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    display: flex;
+    width: max-content;
+    max-width: min(460px, calc(100vw - 32px));
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    background: #212121;
+    padding: 5px 5px 5px 12px;
+    color: #f1f1f1;
+    text-shadow: none;
+    box-shadow:
+      0 0 0 1px #303030,
+      var(--stage-shadow);
+    transform: translateX(-50%);
+    transition: opacity 300ms ease;
+  }
+  .stage-yt-pill > span {
+    max-width: min(360px, calc(100vw - 32px));
+  }
+  .stage-dock-btn[data-on] {
+    color: var(--stage-accent);
+  }
   .stage-dock-btn:disabled {
     opacity: 0.5;
   }
