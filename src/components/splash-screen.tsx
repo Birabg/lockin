@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { logoStyle } from "./ui";
-import { LOCK_PATH, brand } from "@/lib/brand";
+import { Wordmark, logoStyle } from "./ui";
+import { LOCK_MARK } from "@/lib/brand";
 import { loadSoundMuted, playLock, wakeSound } from "@/lib/dial-sound";
 import { SNAP_IMPACT, SPLASH } from "@/lib/splash";
 
@@ -38,9 +38,6 @@ function rememberInteraction() {
     // the click just stays off
   }
 }
-
-/** The shackle, in the logo's own 28-unit tile. */
-const SHACKLE = "M11.33 12.67V11.33a2.67 2.67 0 0 1 5.34 0v1.34";
 
 /**
  * Sent in the HTML and hidden unless the script in <head> marks this visit, so the clock runs on CSS
@@ -142,25 +139,26 @@ export function SplashScreen() {
               </g>
             </g>
             <path className="splash-arc" d="M-6 14A20 20 0 0 1 34 14" />
-            <path className="splash-shackle splash-shackle-light" d={SHACKLE} />
             <circle className="splash-pulse" cx="14" cy="14" r="14" />
           </svg>
 
-          <span className={`${logoStyle.tile} splash-tile relative overflow-hidden`}>
-            <svg viewBox="0 0 24 24" className={`${logoStyle.glyph} splash-glyph`} fill="currentColor">
-              <path d={LOCK_PATH} />
-            </svg>
-            <svg viewBox="0 0 28 28" className="splash-parts absolute inset-0 size-full">
-              <path className="splash-shackle" d={SHACKLE} />
-              <rect className="splash-keyhole" x="9.33" y="12.67" width="9.34" height="7.33" rx="0.67" />
-            </svg>
-            <span className="splash-flash absolute inset-0" />
-          </span>
+          {/* the same padlock as the top bar's logo, in parts that come together */}
+          <svg viewBox="0 0 28 28" className={`${logoStyle.mark} splash-mark relative block`}>
+            <path className="splash-shackle" d={LOCK_MARK.shackle} />
+            <rect className="splash-body" {...LOCK_MARK.body} />
+            <g className="splash-keyhole">
+              <circle {...LOCK_MARK.keyholeTop} />
+              <rect {...LOCK_MARK.keyholeSlot} />
+            </g>
+            <rect className="splash-flash" {...LOCK_MARK.body} />
+          </svg>
         </span>
 
         <span className="splash-word">
           <span className="min-w-0 overflow-hidden">
-            <span className="splash-word-text block pl-2 lowercase">{brand.name}</span>
+            <span className="splash-word-text block pl-2">
+              <Wordmark className="block py-1 whitespace-nowrap" />
+            </span>
           </span>
         </span>
       </div>

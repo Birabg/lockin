@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { AccentDot, AccentPicker, AccentQuick } from "./accent-picker";
 import { AppDock } from "./app-dock";
 import { Icon, type IconName } from "./icon";
 import { StreakCard } from "./rail";
@@ -107,7 +106,7 @@ function useScrolled() {
 function TopBar({ data, path }: { data: ChromeData; path: string }) {
   const scrolled = useScrolled();
   const { user, unread } = data;
-  const menu = usePopover<"account" | "accent" | "more">();
+  const menu = usePopover<"account" | "more">();
   const [sheet, setSheet] = useState(false);
 
   return (
@@ -119,7 +118,7 @@ function TopBar({ data, path }: { data: ChromeData; path: string }) {
         </div>
 
         <div className="app-topbar-center">
-          {path === "/dashboard" ? <AccentQuick /> : <span className="app-title">{titleFor(path)}</span>}
+          <span className="app-title">{titleFor(path)}</span>
         </div>
 
         <div ref={menu.box} className="app-topbar-actions relative">
@@ -168,42 +167,19 @@ function TopBar({ data, path }: { data: ChromeData; path: string }) {
           {user ? (
             <>
               <button
-                onClick={() => menu.setOpen((v) => (v === "account" || v === "accent" ? null : "account"))}
+                onClick={() => menu.toggle("account")}
                 aria-label="Account menu"
-                aria-expanded={menu.open === "account" || menu.open === "accent"}
+                aria-expanded={menu.open === "account"}
                 aria-haspopup="true"
                 className="app-icon-btn ml-1"
               >
                 <Avatar name={user.name} src={user.avatar} size={32} />
               </button>
-              {menu.open === "accent" && (
-                <div
-                  role="dialog"
-                  aria-label="Accent colour"
-                  className="app-pop absolute top-full right-0 mt-2 w-[min(340px,calc(100vw-24px))] p-3"
-                >
-                  <div className="mb-2.5 flex items-center gap-1">
-                    <button
-                      onClick={() => menu.setOpen("account")}
-                      aria-label="Back to account menu"
-                      className="grid size-8 place-items-center rounded-full text-muted hover:bg-inset hover:text-foreground"
-                    >
-                      <Icon name="chevron" size={16} className="rotate-180" />
-                    </button>
-                    <p className="text-[14.5px] font-extrabold tracking-[-0.02em]">Accent colour</p>
-                  </div>
-                  <AccentPicker compact />
-                </div>
-              )}
               {menu.open === "account" && (
                 <div className="app-pop absolute top-full right-0 mt-2" data-menu>
                   <p className="truncate px-3 pt-1.5 pb-2 text-[12.5px] text-muted">@{user.username}</p>
                   <MenuLink href={`/dashboard/u/${user.username}`} icon="profile" label="Profile" path={path} />
                   <MenuLink href="/dashboard/settings" icon="settings" label="Settings" path={path} />
-                  <button onClick={() => menu.setOpen("accent")} className="app-menu-row">
-                    <AccentDot /> Accent colour
-                    <Icon name="chevron" size={16} className="ml-auto text-subtle" />
-                  </button>
                   <form action={logout}>
                     <button className="app-menu-row">
                       <Icon name="logout" size={18} /> Sign out

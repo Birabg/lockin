@@ -7,7 +7,7 @@ import { ACCENTS, ACCENT_GROUPS, ACCENT_KEY, DEFAULT_ACCENT, readAccent, saveAcc
 
 const nameOf = (hex: string) => ACCENTS.find((a) => a.hex.toLowerCase() === hex.toLowerCase())?.name ?? "Custom";
 
-/** The accent this device uses, kept in sync with changes made by any other picker on the page. */
+/** The accent this device uses, kept in sync with changes made from any other tab or component. */
 function useAccent() {
   const [hex, setHex] = useState(DEFAULT_ACCENT);
   useEffect(() => {
@@ -21,9 +21,9 @@ function useAccent() {
 
 /**
  * A palette of accent colours. Picking one re-tints the whole app straight away and is remembered
- * on this device. `compact` is the smaller version for the account menu.
+ * on this device. Lives on the Settings page.
  */
-export function AccentPicker({ compact = false }: { compact?: boolean }) {
+export function AccentPicker() {
   const current = useAccent();
   const grid = useRef<HTMLDivElement>(null);
   const [bounce, setBounce] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function AccentPicker({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className={`accent-picker ${compact ? "accent-compact" : ""}`}>
+    <div className="accent-picker">
       <div className="accent-preview">
         <span className="accent-blob" aria-hidden />
         <span className="min-w-0 flex-1">
@@ -83,7 +83,7 @@ export function AccentPicker({ compact = false }: { compact?: boolean }) {
                     className="accent-swatch"
                     style={{ background: a.hex }}
                   >
-                    {on && <Icon name="check" size={compact ? 13 : 15} className="accent-check" />}
+                    {on && <Icon name="check" size={15} className="accent-check" />}
                   </button>
                 );
               })}
@@ -112,92 +112,6 @@ export function AccentPicker({ compact = false }: { compact?: boolean }) {
           </button>
         )}
       </div>
-    </div>
-  );
-}
-
-/** The current accent as a small dot, for the menu row that opens the picker. */
-export function AccentDot() {
-  useAccent(); // re-renders on change; the colour itself comes from the CSS variable
-  return <span className="accent-dot" aria-hidden />;
-}
-
-/** The five quick picks on Home. Phones show the first three. */
-const QUICK = ["sky", "bubblegum", "mint", "sunflower", "grape"].map((id) => ACCENTS.find((a) => a.id === id)!);
-
-/**
- * "Choose accent", in the middle of the top bar on Home: a few one-tap colours, and a rainbow
- * button that opens the whole palette.
- */
-export function AccentQuick() {
-  const current = useAccent();
-  const box = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [bounce, setBounce] = useState<string | null>(null);
-  const inQuick = QUICK.some((a) => a.hex.toLowerCase() === current.toLowerCase());
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      box.current?.querySelector<HTMLElement>("[aria-expanded=true]")?.focus();
-    };
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={box} className="accent-quick">
-      <span className="accent-quick-label" aria-hidden>
-        Choose accent
-      </span>
-      <div role="radiogroup" aria-label="Choose accent" className="flex items-center gap-1.5">
-        {QUICK.map((a, i) => {
-          const on = a.hex.toLowerCase() === current.toLowerCase();
-          return (
-            <button
-              key={a.id}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              aria-label={a.name}
-              data-tip={a.name}
-              onClick={() => {
-                saveAccent(a.hex);
-                setBounce(a.id);
-              }}
-              onAnimationEnd={() => setBounce(null)}
-              data-bounce={bounce === a.id || undefined}
-              className={`accent-drop ${i >= 3 ? "max-sm:hidden" : ""}`}
-              style={{ background: a.hex }}
-            />
-          );
-        })}
-      </div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-label={inQuick ? "All accent colours" : `All accent colours, ${nameOf(current)} chosen`}
-        data-tip="All colours"
-        data-on={!inQuick || undefined}
-        className="accent-quick-more"
-      >
-        <span className="accent-rainbow">{!inQuick && <span className="accent-rainbow-dot" style={{ background: current }} />}</span>
-      </button>
-      {open && (
-        <div role="dialog" aria-label="Choose accent" className="app-pop accent-quick-pop">
-          <p className="mb-2.5 text-[14.5px] font-extrabold tracking-[-0.02em]">Choose accent</p>
-          <AccentPicker compact />
-        </div>
-      )}
     </div>
   );
 }
