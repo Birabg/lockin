@@ -6,7 +6,7 @@ import { hiddenAuthors } from "./safety";
 import { rankTotals } from "./leaderboard";
 import { LIVE_MS, remainingSeconds, runningSeconds } from "./session-math";
 import { computeStreak } from "./streak";
-import { dayKey, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
+import { dayKey, hourOf, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
 import { leaderboardUserFilter, verificationEnforced } from "./verification";
 
 type Person = { id: string; timeZone: string };
@@ -338,6 +338,59 @@ export async function getWeeklyRecap(person: Person, goalMin: number) {
 }
 
 const addDaysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+
+/** Sessions are split into slices this long to place them on the 24-hour clock. */
+const RHYTHM_SLICE_SEC = 300;
+
+/**
+ * The long view for the stats page: every day of the last `weeks` whole weeks (Monday first, ending
+ * this week), which hours of the day the focus happened in, and the average for each weekday.
+ */
+export async function getFocusHistory(person: Person, weeks = 20) {
+  const today = dayKey(new Date(), person.timeZone);
+  const start = shiftDayKey(weekStartKey(today), -(weeks - 1) * 7);
+  const [totalsByUser, sessions] = await Promise.all([
+    dayTotalsFor([person], start),
+    db.focusSession.findMany({
+      where: { userId: person.id, status: "DONE", startedAt: { gte: addDaysAgo(weeks * 7 + 1) } },
+      select: { startedAt: true, durationSec: true },
+    }),
+  ]);
+  const totals = totalsByUser.get(person.id) ?? new Map<string, number>();
+
+  const days = Array.from({ length: weeks * 7 }, (_, i) => {
+    const key = shiftDayKey(start, i);
+    return { key, sec: totals.get(key) ?? 0, future: key > today };
+  });
+
+  // when in the day it happened: each session in short slices, so a long one spreads over its hours
+  const hours = Array.from({ length: 24 }, () => 0);
+  for (const s of sessions) {
+    if (dayKey(s.startedAt, person.timeZone) < start) continue;
+    for (let t = 0; t < s.durationSec; t += RHYTHM_SLICE_SEC) {
+      const slice = Math.min(RHYTHM_SLICE_SEC, s.durationSec - t);
+      hours[hourOf(new Date(s.startedAt.getTime() + (t + slice / 2) * 1000), person.timeZone)] += slice;
+    }
+  }
+
+  // the average for each weekday, Monday first, over the days that have happened
+  const weekdays = Array.from({ length: 7 }, (_, d) => {
+    const own = days.filter((_, i) => i % 7 === d && !days[i].future);
+    return own.length ? own.reduce((a, x) => a + x.sec, 0) / own.length : 0;
+  });
+
+  const past = days.filter((d) => !d.future);
+  const best = past.reduce<{ key: string; sec: number } | null>((top, d) => (d.sec > (top?.sec ?? 0) ? d : top), null);
+  return {
+    today,
+    days,
+    hours,
+    weekdays,
+    total: past.reduce((a, d) => a + d.sec, 0),
+    activeDays: past.filter((d) => d.sec >= 60).length,
+    bestDay: best,
+  };
+}
 
 export async function getProfile(username: string, viewerId: string | null) {
   const user = await db.user.findUnique({

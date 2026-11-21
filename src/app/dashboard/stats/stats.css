@@ -1,0 +1,378 @@
+/* The stats page: a hero for today, then charts for the month, the patterns and the long view. */
+
+@layer components {
+  .stats-page {
+    margin-inline: auto;
+    max-width: 960px;
+  }
+
+  .stats-card {
+    padding: 18px;
+  }
+  .stats-grid-main {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  @media (width >= 64rem) {
+    .stats-grid-main {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (width >= 40rem) and (width < 64rem) {
+    .stats-grid-main {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .stats-grid-main > .lg\:col-span-2 {
+      grid-column: span 2;
+    }
+  }
+
+  /* ---- Hero ---- */
+  .stats-hero {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    overflow: hidden;
+    padding: 20px;
+    background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 55%), var(--card);
+  }
+  /* the chips sit beside today on wide screens, and on their own row under it otherwise */
+  .stats-chips {
+    display: grid;
+    flex: 1 1 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  @media (width >= 64rem) {
+    .stats-chips {
+      flex: 1 1 360px;
+      max-width: 450px;
+    }
+    .stats-today {
+      max-width: 250px;
+    }
+  }
+  /* on phones each chip stacks its icon over its numbers, so three still fit across */
+  @media (width < 30rem) {
+    .stats-chips {
+      gap: 6px;
+    }
+    .stats-chip {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px;
+    }
+    .stats-chip-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+    }
+  }
+  .stats-chip {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    border-radius: 16px;
+    background: var(--inset);
+    padding: 12px;
+  }
+  .stats-chip-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 12px;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+
+  /* the goal ring */
+  .stats-ring {
+    --ring: var(--primary);
+  }
+  .stats-ring[data-done] {
+    --ring: var(--live);
+  }
+  .stats-ring-track,
+  .stats-ring-fill,
+  .stats-ring-lap,
+  .stats-donut-part {
+    fill: none;
+    stroke-width: 10;
+  }
+  .stats-ring-track {
+    stroke: var(--inset);
+  }
+  .stats-ring-fill,
+  .stats-ring-lap {
+    stroke: var(--ring);
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ring) 45%, transparent));
+    animation: stats-draw 900ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  }
+  /* the second lap, past the goal, a lighter green over the first */
+  .stats-ring-lap {
+    stroke: color-mix(in srgb, var(--live) 55%, #fff);
+    stroke-width: 5;
+  }
+  .stats-donut-part {
+    stroke-width: 14;
+  }
+  @keyframes stats-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+
+  /* this week's dots */
+  .stats-weekdot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--inset);
+  }
+  .stats-weekdot[data-state="hit"] {
+    background: var(--live);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--live) 45%, transparent);
+  }
+  .stats-weekdot[data-state="some"] {
+    background: transparent;
+    box-shadow: inset 0 0 0 2.5px var(--primary);
+  }
+  .stats-weekdot[data-state="future"] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--border);
+  }
+  .stats-weekdot[data-today] {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+
+  /* ---- 30-day bars ---- */
+  .stats-line {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .stats-line span {
+    position: absolute;
+    right: 0;
+    bottom: 3px;
+    border-radius: 6px;
+    background: var(--card);
+    padding: 0 4px;
+    font-size: 10.5px;
+    font-weight: 800;
+  }
+  .stats-line-goal {
+    border-top: 1.5px dashed color-mix(in srgb, var(--live) 70%, transparent);
+  }
+  .stats-line-goal span {
+    color: var(--live);
+  }
+  .stats-line-avg {
+    border-top: 1.5px dotted var(--subtle-foreground);
+  }
+  .stats-line-avg span {
+    left: 0;
+    right: auto;
+    color: var(--muted-foreground);
+  }
+  .stats-bar-col {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex: 1;
+    align-items: flex-end;
+  }
+  .stats-bar {
+    width: 100%;
+    border-radius: 5px 5px 3px 3px;
+    background: var(--inset);
+    transform-origin: bottom;
+    animation: stats-grow 700ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
+    transition: filter 150ms ease;
+  }
+  .stats-bar[data-state="some"] {
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--primary) 40%, transparent),
+      color-mix(in srgb, var(--primary) 70%, transparent)
+    );
+  }
+  .stats-bar[data-state="hit"] {
+    background: linear-gradient(to top, color-mix(in srgb, var(--primary) 80%, #000), var(--primary));
+  }
+  .stats-bar[data-today] {
+    outline: 1.5px solid var(--foreground);
+    outline-offset: 1.5px;
+  }
+  .stats-bar-col:hover .stats-bar {
+    filter: brightness(1.25);
+  }
+  @keyframes stats-grow {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  /* a tooltip over a bar or square, shown on hover */
+  .stats-tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    z-index: 5;
+    display: none;
+    border-radius: 8px;
+    background: var(--foreground);
+    padding: 4px 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--background);
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+  .group:hover > .stats-tip {
+    display: block;
+  }
+
+  /* ---- Insights ---- */
+  .stats-insight {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border-radius: 14px;
+    background: var(--inset);
+    padding: 10px 12px;
+  }
+  .stats-insight-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 9px;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+
+  /* ---- Rhythm, radar ---- */
+  .stats-grid {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+  .stats-axis {
+    fill: var(--subtle-foreground);
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+  .stats-axis[data-best] {
+    fill: var(--live);
+  }
+  .stats-rhythm-bar {
+    fill: var(--primary);
+  }
+  .stats-rhythm-bar[data-empty] {
+    fill: var(--inset);
+  }
+  .stats-rhythm-bar[data-peak] {
+    fill: var(--live);
+  }
+  .stats-radar-shape {
+    fill: color-mix(in srgb, var(--primary) 28%, transparent);
+    stroke: var(--primary);
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .stats-radar-goal {
+    fill: none;
+    stroke: var(--live);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+  }
+  .stats-radar-dot {
+    fill: var(--primary);
+    stroke: var(--card);
+    stroke-width: 2;
+  }
+  .stats-key {
+    width: 14px;
+    height: 0;
+    border-top: 2px solid var(--primary);
+  }
+  .stats-key-goal {
+    border-top: 2px dashed var(--live);
+  }
+
+  /* ---- Heatmap ---- */
+  .stats-heat-scroll {
+    overflow-x: auto;
+    padding-top: 30px;
+    margin-top: -30px;
+  }
+  .stats-heat {
+    display: grid;
+    min-width: 520px;
+    gap: 4px;
+  }
+  .stats-heat-month {
+    height: 16px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--subtle-foreground);
+  }
+  .stats-heat-day {
+    align-self: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--subtle-foreground);
+  }
+  .stats-heat-cell {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--inset);
+  }
+  .stats-heat-cell[data-level="1"] {
+    background: color-mix(in srgb, var(--primary) 28%, var(--inset));
+  }
+  .stats-heat-cell[data-level="2"] {
+    background: color-mix(in srgb, var(--primary) 55%, var(--inset));
+  }
+  .stats-heat-cell[data-level="3"] {
+    background: var(--primary);
+  }
+  .stats-heat-cell[data-level="4"] {
+    background: color-mix(in srgb, var(--primary) 60%, #fff);
+  }
+  .stats-heat-cell[data-future] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 60%, transparent);
+  }
+  .stats-heat-cell[data-today] {
+    outline: 1.5px solid var(--foreground);
+    outline-offset: 1px;
+  }
+  .stats-heat-cell.group:hover {
+    outline: 1.5px solid var(--muted-foreground);
+    outline-offset: 1px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stats-ring-fill,
+    .stats-ring-lap,
+    .stats-bar {
+      animation: none;
+    }
+  }
+}
