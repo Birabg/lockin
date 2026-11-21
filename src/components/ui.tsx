@@ -1,23 +1,39 @@
 import Link from "next/link";
-import { LOCK_PATH, brand } from "@/lib/brand";
+import { LOCK_MARK, brand } from "@/lib/brand";
 
 /** Shared with the splash screen, which has to end on exactly this. */
 export const logoStyle = {
   lockup: "flex items-center gap-2 text-[22px] font-black tracking-tight",
-  tile: "grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground",
-  glyph: "size-4",
+  mark: "size-7 overflow-visible",
 };
 
+/**
+ * The whole padlock as the mark. It snaps shut when the page loads, and pops open and shut again
+ * when you hover it. Styles live in globals.css under "Logo lock".
+ */
 export function Logo({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   return (
-    <Link href="/dashboard" className={`${logoStyle.lockup} ${className}`}>
-      <span className={logoStyle.tile}>
-        <svg viewBox="0 0 24 24" className={logoStyle.glyph} fill="currentColor" aria-hidden>
-          <path d={LOCK_PATH} />
-        </svg>
-      </span>
-      <span className={compact ? "sr-only" : "lowercase"}>{brand.name}</span>
+    <Link href="/dashboard" className={`logo-lock ${logoStyle.lockup} ${className}`}>
+      <svg viewBox="0 0 28 28" className={`logo-lock-mark ${logoStyle.mark}`} aria-hidden>
+        <path className="logo-lock-shackle" d={LOCK_MARK.shackle} />
+        <g className="logo-lock-body">
+          <rect {...LOCK_MARK.body} />
+          <circle className="logo-lock-hole" {...LOCK_MARK.keyholeTop} />
+          <rect className="logo-lock-hole" {...LOCK_MARK.keyholeSlot} />
+        </g>
+      </svg>
+      {compact ? <span className="sr-only">{brand.name}</span> : <Wordmark />}
     </Link>
+  );
+}
+
+/** "lockin" in the round brand face, with "lock" in the accent so it reads with the padlock. */
+export function Wordmark({ className = "" }: { className?: string }) {
+  return (
+    <span className={`font-brand text-[24px] leading-none font-bold tracking-[-0.01em] lowercase ${className}`}>
+      <span className="text-primary">{brand.name.slice(0, 4)}</span>
+      {brand.name.slice(4)}
+    </span>
   );
 }
 

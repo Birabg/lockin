@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans } from "next/font/google";
+import { DM_Sans, Fredoka } from "next/font/google";
 import "./globals.css";
 import { SplashScreen } from "@/components/splash-screen";
 import { Toaster } from "@/components/toaster";
@@ -10,6 +10,8 @@ import { splashScript, splashStyle } from "@/lib/splash";
 import { accentScript } from "@/lib/accents";
 
 const font = DM_Sans({ subsets: ["latin"], variable: "--font-app" });
+/** Round and bubbly like the padlock's shackle. Only the wordmark uses it. */
+const brandFont = Fredoka({ subsets: ["latin"], weight: "700", variable: "--font-brand-face" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -42,7 +44,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // the script in <head> marks <html> before React arrives
-    <html lang="en" className={font.variable} suppressHydrationWarning>
+    <html lang="en" className={`${font.variable} ${brandFont.variable}`} suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: splashStyle }} />
         <script dangerouslySetInnerHTML={{ __html: splashScript }} />

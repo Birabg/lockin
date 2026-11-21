@@ -93,6 +93,7 @@
   --radius-card: var(--radius);
   --font-sans:
     var(--font-app), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-brand: var(--font-brand-face), var(--font-app), system-ui, sans-serif;
 }
 
 html {
@@ -160,6 +161,107 @@ html[data-immersive] [data-app-chrome] {
   to {
     transform: scale(3.2);
     opacity: 0;
+  }
+}
+
+/* Logo lock: the shackle drops and clicks shut on load, and pops open and shut on hover */
+.logo-lock-shackle {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.logo-lock-body {
+  fill: var(--primary);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.logo-lock-hole {
+  fill: var(--primary-foreground);
+}
+.logo-lock-shackle {
+  animation: logo-shackle-shut 700ms cubic-bezier(0.5, 0, 0.3, 1) 250ms both;
+}
+.logo-lock-body {
+  animation: logo-body-thunk 700ms ease-out 250ms both;
+}
+.logo-lock:hover .logo-lock-shackle,
+.logo-lock:focus-visible .logo-lock-shackle {
+  animation: logo-shackle-relock 650ms cubic-bezier(0.5, 0, 0.3, 1) both;
+}
+.logo-lock:hover .logo-lock-body,
+.logo-lock:focus-visible .logo-lock-body {
+  animation: logo-body-relock 650ms ease-out both;
+}
+@keyframes logo-shackle-shut {
+  0%,
+  35% {
+    transform: translateY(-5px);
+  }
+  62% {
+    transform: translateY(0.5px);
+  }
+  80% {
+    transform: translateY(-0.8px);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes logo-body-thunk {
+  0%,
+  58% {
+    transform: none;
+  }
+  66% {
+    transform: scale(1.08, 0.9);
+  }
+  82% {
+    transform: scale(0.97, 1.03);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes logo-shackle-relock {
+  0% {
+    transform: none;
+  }
+  30%,
+  45% {
+    transform: translateY(-5px);
+  }
+  68% {
+    transform: translateY(0.5px);
+  }
+  84% {
+    transform: translateY(-0.8px);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes logo-body-relock {
+  0%,
+  64% {
+    transform: none;
+  }
+  72% {
+    transform: scale(1.08, 0.9);
+  }
+  86% {
+    transform: scale(0.97, 1.03);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-lock-shackle,
+  .logo-lock-body,
+  .logo-lock:hover .logo-lock-shackle,
+  .logo-lock:hover .logo-lock-body {
+    animation: none;
   }
 }
 @keyframes like-pop {
@@ -267,29 +369,30 @@ html[data-splash="reveal"] .splash {
 .splash-arc,
 .splash-shackle,
 .splash-pulse,
-.splash-tile,
-.splash-glyph {
+.splash-body {
   opacity: 0;
 }
 .splash-arc {
   stroke-width: 1;
 }
 .splash-shackle {
-  stroke-width: 1.34;
+  stroke-width: 3;
+  stroke-linecap: round;
   translate: 0 var(--lift);
 }
-.splash-parts .splash-shackle {
-  stroke: var(--primary-foreground);
+.splash-body {
+  fill: var(--primary);
+  transform-origin: 14px 14px;
 }
 .splash-keyhole {
   fill: var(--primary-foreground);
   opacity: 0;
-  transform-origin: 14px 16.33px;
-  transform: scale(0.16, 0.42);
+  transform-origin: 14px 19px;
+  transform: scale(0);
 }
 .splash-flash {
   opacity: 0;
-  background: var(--foreground);
+  fill: var(--foreground);
 }
 .splash-word {
   display: grid;
@@ -312,9 +415,9 @@ html[data-splash-phase="lock"] .splash-face {
 html[data-splash-phase="lock"] .splash-arc {
   animation: splash-arc var(--form) cubic-bezier(0.4, 0, 0.2, 1) both;
 }
-html[data-splash-phase="lock"] .splash-tile {
+html[data-splash-phase="lock"] .splash-body {
   opacity: 1;
-  animation: splash-tile var(--form) cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: splash-body var(--form) cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 html[data-splash-phase="lock"] .splash-shackle {
   animation:
@@ -333,12 +436,6 @@ html[data-splash-phase="lock"] .splash-pulse {
   stroke-width: 1;
   animation: splash-pulse 420ms ease-out var(--impact) forwards;
 }
-html[data-splash-phase="lock"] .splash-glyph {
-  animation: splash-show 1ms linear calc(var(--form) + var(--snap)) both;
-}
-html[data-splash-phase="lock"] .splash-parts {
-  animation: splash-hide 1ms linear calc(var(--form) + var(--snap)) both;
-}
 html[data-splash-phase="lock"] .splash-word {
   animation: splash-word var(--word) ease-out calc(var(--form) + var(--snap)) both;
 }
@@ -351,14 +448,20 @@ html[data-splash-phase="end"] .splash * {
   animation: none !important;
 }
 html[data-splash-phase="end"] .splash-stage,
-html[data-splash-phase="end"] .splash-parts,
 html[data-splash-phase="end"] .splash-flash {
   display: none;
 }
-html[data-splash-phase="end"] .splash-tile,
-html[data-splash-phase="end"] .splash-glyph,
+html[data-splash-phase="end"] .splash-body,
+html[data-splash-phase="end"] .splash-shackle,
+html[data-splash-phase="end"] .splash-keyhole,
 html[data-splash-phase="end"] .splash-word-text {
   opacity: 1;
+}
+html[data-splash-phase="end"] .splash-shackle {
+  translate: none;
+}
+html[data-splash-phase="end"] .splash-keyhole {
+  transform: none;
 }
 html[data-splash-phase="end"] .splash-word {
   grid-template-columns: 1fr;
@@ -378,11 +481,6 @@ html[data-splash-phase="end"] .splash-word {
   }
   to {
     opacity: 1;
-  }
-}
-@keyframes splash-hide {
-  to {
-    opacity: 0;
   }
 }
 @keyframes splash-turn {
@@ -417,15 +515,16 @@ html[data-splash-phase="end"] .splash-word {
   }
   to {
     opacity: 0;
-    stroke-width: 10;
-    transform: translateY(-16.67px) scale(0.133);
+    stroke-width: 12;
+    /* lands exactly on the waiting shackle: radius 5, centred 4.5 above the ring's centre, then lifted */
+    transform: translateY(calc(-4.5px + var(--lift))) scale(0.25);
   }
 }
-@keyframes splash-tile {
+@keyframes splash-body {
   from {
     opacity: 0;
-    transform: scale(1.43);
-    border-radius: 50%;
+    transform: scale(2.2);
+    rx: 7px;
   }
   40% {
     opacity: 1;
