@@ -310,7 +310,7 @@ export function TimerClient(props: Props) {
         setPhoto(null);
         setDone(res.ok ? res.durationSec : null);
         if (!res.ok) setError("That session was already discarded.");
-        if (res.ok && res.shareBlocked) toast("Session saved. Verify your email to share sessions to the feed.");
+        if (res.ok && res.shareBlocked) toast(res.shareBlocked);
         stopRecording();
         setRecording(false);
         if (res.ok && res.postId && hasFrames()) void publishTimelapse(res.postId);

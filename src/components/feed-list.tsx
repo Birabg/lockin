@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { loadMoreFeed } from "@/app/actions/social";
-import { PostCard, type Viewer } from "./post-card";
+import { HIDE_AUTHOR_EVENT, PostCard, type Viewer } from "./post-card";
 import { SectionTitle, btnGhost } from "./ui";
 import type { FeedPost, FeedTab } from "@/lib/queries";
 import { dayKey, formatDayHeading } from "@/lib/time";
@@ -23,7 +23,7 @@ const newestFirst = (a: FeedPost, b: FeedPost) =>
   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || b.id.localeCompare(a.id);
 
 export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, grouped = false, afterSecond }: Props) {
-  const [posts, setPosts] = useState(initial);
+  const [allPosts, setPosts] = useState(initial);
   const [more, setMore] = useState(hasMore);
   const [failed, setFailed] = useState(false);
   const [posting, setPosting] = useState<string | null>(null);
@@ -37,6 +37,14 @@ export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, gr
     return () => window.removeEventListener("lockin:posting", onPosting);
   }, []);
 
+  // muting or blocking someone takes every post of theirs off the list at once, scrolled-in pages included
+  const [goneAuthors, setGoneAuthors] = useState<string[]>([]);
+  useEffect(() => {
+    const onHide = (e: Event) => setGoneAuthors((list) => [...list, (e as CustomEvent<string>).detail]);
+    window.addEventListener(HIDE_AUTHOR_EVENT, onHide);
+    return () => window.removeEventListener(HIDE_AUTHOR_EVENT, onHide);
+  }, []);
+
   // fresh server data wins, and pages already scrolled in stay put
   useEffect(() => {
     setPosting(null);
@@ -46,7 +54,10 @@ export function FeedList({ initial, hasMore, tab, authorId, viewer, timeZone, gr
     });
   }, [initial]);
 
-  const lastId = posts.at(-1)?.id;
+  const posts = allPosts.filter((p) => !goneAuthors.includes(p.user.id));
+
+  // paging goes on from the last post loaded, even if it's now hidden
+  const lastId = allPosts.at(-1)?.id;
 
   const loadMore = useCallback(() => {
     if (pending || !more || !lastId) return;

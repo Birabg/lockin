@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getCurrentUser } from "@/lib/auth";
 import { getFocusingNow } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
 import { Avatar, EmptyState, PageHeader, btnPrimary } from "@/components/ui";
@@ -12,7 +13,8 @@ function timeLeft(remaining: number) {
 }
 
 export default async function FocusingPage() {
-  const { count, sessions } = await getFocusingNow(200);
+  const viewer = await getCurrentUser();
+  const { count, sessions } = await getFocusingNow(200, viewer?.id ?? null);
   return (
     <div className="mx-auto max-w-[720px]">
       <PageHeader title="Focusing now" subtitle={`${count} ${count === 1 ? "person is" : "people are"} in a session right now.`} />

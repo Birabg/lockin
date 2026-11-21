@@ -4,9 +4,11 @@ import { logout } from "@/app/actions/auth";
 import { AccentPicker } from "@/components/accent-picker";
 import { Avatar, PageHeader, btnGhost } from "@/components/ui";
 import { db } from "@/lib/db";
+import { isAdmin } from "@/lib/moderation";
 import { enabledProviders } from "@/lib/oauth";
 import { isProvider, oauthErrorMessage, providerName } from "@/lib/oauth-flow";
 import { AvatarForm } from "./avatar-form";
+import { BlockedPeople } from "./blocked-people";
 import { ConnectedAccounts } from "./connected-accounts";
 import { DeleteAccount } from "./delete-account";
 import { ProfileForm } from "./profile-form";
@@ -15,12 +17,19 @@ export const metadata = { title: "Profile" };
 
 type Params = { connected?: string; oauth_error?: string; provider?: string };
 
+const person = { id: true, username: true, name: true, avatar: true } as const;
+
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireUser("/dashboard/settings");
   const params = await searchParams;
   const login = await db.user.findUniqueOrThrow({
     where: { id: user.id },
-    select: { passwordHash: true, oauthAccounts: { select: { provider: true, email: true }, orderBy: { createdAt: "asc" } } },
+    select: {
+      passwordHash: true,
+      oauthAccounts: { select: { provider: true, email: true }, orderBy: { createdAt: "asc" } },
+      blocking: { select: { blocked: { select: person } }, orderBy: { createdAt: "desc" } },
+      muting: { select: { muted: { select: person } }, orderBy: { createdAt: "desc" } },
+    },
   });
   const linked = login.oauthAccounts.flatMap((a) => (isProvider(a.provider) ? [{ provider: a.provider, email: a.email }] : []));
   const errorText = oauthErrorMessage(params.oauth_error, isProvider(params.provider) ? params.provider : undefined);
@@ -39,6 +48,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <span className="block text-sm text-muted">@{user.username} · view public profile</span>
         </span>
       </Link>
+      {isAdmin(user.username) && (
+        <Link href="/dashboard/admin" className="panel mb-4 flex items-center justify-between p-4 font-bold hover:border-primary/40">
+          Admin
+          <span className="text-sm font-semibold text-muted">reports, hidden content, bans</span>
+        </Link>
+      )}
       <AvatarForm name={user.name} avatar={user.avatar} />
       <section className="panel mb-4 p-4" aria-labelledby="accent-title">
         <h2 id="accent-title" className="font-bold">
@@ -52,6 +67,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         timeZones={[...new Set([user.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])].sort()}
       />
       <ConnectedAccounts linked={linked} available={enabledProviders()} hasPassword={!!login.passwordHash} notice={notice} />
+      <BlockedPeople blocked={login.blocking.map((b) => b.blocked)} muted={login.muting.map((m) => m.muted)} />
       <form action={logout} className="mt-4">
         <button className={`${btnGhost} h-11 w-full text-sm text-danger`}>Log out</button>
       </form>

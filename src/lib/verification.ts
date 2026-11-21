@@ -53,12 +53,13 @@ export const isRestricted = (user: VerifyFields, now: Date, enforced: boolean) =
 export const VERIFY_FIRST = "Verify your email to do that. Check your inbox, or resend the link from the banner.";
 
 /**
- * A Prisma `User` filter for people allowed on the leaderboard, or undefined when everyone is.
- * Mirrors verifyState: verified, or legacy and still inside (or not yet started) grace.
+ * A Prisma `User` filter for people allowed on the leaderboard. Suspended accounts never are. Once verification is
+ * enforced it mirrors verifyState too: verified, or legacy and still inside (or not yet started) grace.
  */
 export function leaderboardUserFilter(now: Date, enforced: boolean) {
-  if (!enforced) return undefined;
+  if (!enforced) return { bannedAt: null };
   return {
+    bannedAt: null,
     OR: [
       { emailVerifiedAt: { not: null } },
       { legacyUnverified: true, verifyGraceEndsAt: null },

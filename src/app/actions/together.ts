@@ -7,7 +7,9 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { isBlockedBetween } from "@/lib/blocks";
 import { notify } from "@/lib/notifications";
+import { BLOCKED_MESSAGE } from "@/lib/safety";
 import { allow, limits } from "@/lib/rate-limit";
 
 async function me() {
@@ -35,6 +37,7 @@ export async function requestBuddy(targetId: string): Promise<Result> {
   if (id === user.id) return { error: "You can't buddy yourself" };
   if (!(await allow(`buddy:${user.id}`, limits.buddy))) return { error: SLOW_DOWN };
   if (!(await db.user.findUnique({ where: { id }, select: { id: true } }))) return { error: "That account is gone" };
+  if (await isBlockedBetween(user.id, id)) return { error: BLOCKED_MESSAGE };
 
   const existing = await db.buddy.findFirst({
     where: {
@@ -89,6 +92,7 @@ export async function nudgeBuddy(targetId: string): Promise<Result> {
     select: { id: true },
   });
   if (!pair) return { error: "You can only nudge your buddies" };
+  if (await isBlockedBetween(user.id, id)) return { error: BLOCKED_MESSAGE };
   if (!(await allow(`nudge:${user.id}:${id}`, limits.nudge))) return { error: "You already nudged them this hour" };
   await notify({ userId: id, actorId: user.id, type: "NUDGE" });
   return {};

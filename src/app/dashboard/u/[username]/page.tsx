@@ -9,6 +9,7 @@ import { getFeed, getProfile, getStreak } from "@/lib/queries";
 import { formatDuration } from "@/lib/time";
 import { Avatar, EmptyState } from "@/components/ui";
 import { FollowButton } from "@/components/follow-button";
+import { ProfileMenu } from "@/components/profile-menu";
 import { BuddyRequestButton } from "@/components/buddy-actions";
 import { FeedList } from "@/components/feed-list";
 import { getBuddyState } from "@/lib/social-features";
@@ -61,7 +62,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           </div>
           {viewer?.id !== profile.id && (
             <div className="flex flex-col items-end gap-2">
-              <FollowButton userId={profile.id} following={profile.isFollowing} signedIn={!!viewer} />
+              <div className="flex items-center gap-1">
+                <FollowButton userId={profile.id} following={profile.isFollowing} signedIn={!!viewer} />
+                {viewer && <ProfileMenu userId={profile.id} username={profile.username} muting={profile.muting} />}
+              </div>
               {buddy && <BuddyRequestButton userId={profile.id} state={buddy.state} id={buddy.id} />}
             </div>
           )}

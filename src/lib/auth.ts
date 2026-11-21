@@ -112,9 +112,11 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       emailVerifiedAt: true,
       legacyUnverified: true,
       verifyGraceEndsAt: true,
+      bannedAt: true,
     },
   });
-  if (!row) return null;
+  // a ban signs the account out everywhere, on its next request
+  if (!row || row.bannedAt) return null;
   const { passwordChangedAt, ...user } = row;
   // sessions are stateless, so this is what signs out every device after a password reset
   if (passwordChangedAt && session.issuedAt < Math.floor(passwordChangedAt.getTime() / 1000)) return null;

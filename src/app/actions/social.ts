@@ -5,8 +5,11 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { isBlockedBetween } from "@/lib/blocks";
 import { verifyGate } from "@/lib/email-verify";
+import { hasBlockedWords } from "@/lib/moderation";
 import { notify, unnotify } from "@/lib/notifications";
+import { BLOCKED_MESSAGE } from "@/lib/safety";
 import { getFeed, type FeedTab } from "@/lib/queries";
 import { allow, limits } from "@/lib/rate-limit";
 import { storage } from "@/lib/storage";
@@ -19,6 +22,7 @@ async function me() {
 }
 
 const SLOW_DOWN = "You're doing that too fast. Try again in a bit.";
+const RUDE = "Let's keep it friendly. Try different words.";
 
 const idSchema = z.string().min(1).max(64);
 const bodySchema = z.string().trim().min(1, "Write something first").max(280, "Keep it under 280 characters");
@@ -31,8 +35,9 @@ export async function toggleLike(postId: string): Promise<Result> {
   const user = await me();
   const id = idSchema.parse(postId);
   if (!(await allow(`like:${user.id}`, limits.like))) return { error: SLOW_DOWN };
-  const post = await db.post.findUnique({ where: { id }, select: { userId: true } });
+  const post = await db.post.findFirst({ where: { id, hidden: false }, select: { userId: true } });
   if (!post) return { error: "That post is gone" };
+  if (await isBlockedBetween(user.id, post.userId)) return { error: BLOCKED_MESSAGE };
   const note = { userId: post.userId, actorId: user.id, type: "LIKE", postId: id } as const;
   const { count } = await db.like.deleteMany({ where: { userId: user.id, postId: id } });
   if (count > 0) {
@@ -56,9 +61,11 @@ export async function addComment(postId: string, body: string): Promise<Result &
   if (!text.success) return { error: text.error.issues[0].message };
   const gate = verifyGate(user);
   if (gate) return { error: gate };
+  if (hasBlockedWords(text.data)) return { error: RUDE };
   if (!(await allow(`comment:${user.id}`, limits.comment))) return { error: SLOW_DOWN };
-  const post = await db.post.findUnique({ where: { id }, select: { userId: true } });
+  const post = await db.post.findFirst({ where: { id, hidden: false }, select: { userId: true } });
   if (!post) return { error: "That post is gone" };
+  if (await isBlockedBetween(user.id, post.userId)) return { error: BLOCKED_MESSAGE };
   const comment = await db.comment.create({
     data: { userId: user.id, postId: id, body: text.data },
     select: { id: true, body: true, createdAt: true, user: { select: { username: true, name: true, avatar: true } } },
@@ -74,6 +81,7 @@ export async function createPost(body: string): Promise<Result> {
   if (!text.success) return { error: text.error.issues[0].message };
   const gate = verifyGate(user);
   if (gate) return { error: gate };
+  if (hasBlockedWords(text.data)) return { error: RUDE };
   if (!(await allow(`post:${user.id}`, limits.post))) return { error: SLOW_DOWN };
   await db.post.create({ data: { userId: user.id, body: text.data } });
   revalidatePath("/dashboard");
@@ -131,6 +139,7 @@ export async function toggleFollow(targetId: string): Promise<Result> {
   if (id === user.id) return { error: "You can't follow yourself" };
   if (!(await allow(`follow:${user.id}`, limits.follow))) return { error: SLOW_DOWN };
   if (!(await db.user.findUnique({ where: { id }, select: { id: true } }))) return { error: "That account is gone" };
+  if (await isBlockedBetween(user.id, id)) return { error: BLOCKED_MESSAGE };
   const note = { userId: id, actorId: user.id, type: "FOLLOW" } as const;
   const { count } = await db.follow.deleteMany({ where: { followerId: user.id, followingId: id } });
   if (count > 0) {
