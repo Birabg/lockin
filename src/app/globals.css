@@ -5,11 +5,11 @@
 :root {
   --background: #0a0a0b;
   --foreground: #ededef;
-  --card: #1b1b1e;
-  --inset: #242428;
+  --card: #101011; /* low-key containers: barely lifted off the background */
+  --inset: #19191d;
   --muted-foreground: #a1a1a8;
   --subtle-foreground: #8e8e96;
-  --border: #303035;
+  --border: #1d1d20;
   --border-shadow: #0d0d0f;
 
   --primary: #4f8ff7;
@@ -193,6 +193,61 @@ html[data-immersive] [data-app-chrome] {
 .logo-lock:focus-visible .logo-lock-body {
   animation: logo-body-relock 650ms ease-out both;
 }
+/* The same padlock on the dock's "Lock in" button, in the button's text colour. Hover lifts the
+   shackle open, as if waiting; pressing clamps it shut; leaving drops it shut again. */
+.app-dock-primary .logo-lock-shackle {
+  stroke: currentColor;
+  animation-delay: 0ms;
+}
+.app-dock-primary .logo-lock-body {
+  fill: currentColor;
+  animation-delay: 0ms;
+}
+.app-dock-primary .logo-lock-hole {
+  fill: var(--primary);
+}
+.app-dock-primary:hover .logo-lock-shackle,
+.app-dock-primary:focus-visible .logo-lock-shackle {
+  animation: dock-shackle-open 320ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.app-dock-primary:hover .logo-lock-body,
+.app-dock-primary:focus-visible .logo-lock-body {
+  animation: dock-body-jiggle 420ms ease-out both;
+}
+.app-dock-primary:active .logo-lock-shackle {
+  animation: dock-shackle-clamp 260ms cubic-bezier(0.5, 0, 0.3, 1) both;
+}
+.app-dock-primary:active .logo-lock-body {
+  animation: logo-body-thunk 300ms ease-out both;
+}
+@keyframes dock-shackle-open {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(-4px);
+  }
+}
+@keyframes dock-shackle-clamp {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes dock-body-jiggle {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: rotate(-6deg);
+  }
+  60% {
+    transform: rotate(4deg);
+  }
+}
 @keyframes logo-shackle-shut {
   0%,
   35% {
@@ -260,7 +315,9 @@ html[data-immersive] [data-app-chrome] {
   .logo-lock-shackle,
   .logo-lock-body,
   .logo-lock:hover .logo-lock-shackle,
-  .logo-lock:hover .logo-lock-body {
+  .logo-lock:hover .logo-lock-body,
+  .app-dock-primary:is(:hover, :focus-visible, :active) .logo-lock-shackle,
+  .app-dock-primary:is(:hover, :focus-visible, :active) .logo-lock-body {
     animation: none;
   }
 }

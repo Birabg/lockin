@@ -245,6 +245,74 @@
     display: block;
   }
 
+  /* ---- Focus breakdown: one card, four views ---- */
+  .stats-tabs {
+    display: flex;
+    gap: 2px;
+    border-radius: 12px;
+    background: var(--inset);
+    padding: 3px;
+  }
+  .stats-tab {
+    border-radius: 9px;
+    padding: 5px 11px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--subtle-foreground);
+    transition:
+      background 150ms,
+      color 150ms;
+  }
+  .stats-tab:hover {
+    color: var(--foreground);
+  }
+  .stats-tab[aria-selected="true"] {
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: 0 1px 0 var(--border-shadow);
+  }
+  .stats-tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+  }
+  /* the chart and its key numbers; a steady height so switching views doesn't make the page jump */
+  .stats-panel {
+    display: grid;
+    gap: 16px;
+    align-items: center;
+  }
+  .stats-panel[hidden] {
+    display: none;
+  }
+  @media (width >= 40rem) {
+    .stats-panel {
+      min-height: 248px;
+      grid-template-columns: minmax(0, 1fr) 150px;
+    }
+    .stats-panel:has(> :only-child) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .stats-panel-chart :is(svg, .aspect-square) {
+    max-width: 230px;
+  }
+  .stats-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  @media (width >= 40rem) {
+    .stats-facts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .stats-fact {
+    min-width: 0;
+    border-radius: 12px;
+    background: var(--inset);
+    padding: 8px 11px;
+  }
+
   /* ---- Insights ---- */
   .stats-insight {
     display: flex;
@@ -314,18 +382,26 @@
   }
 
   /* ---- Heatmap ---- */
+  /* small fixed squares, like a contribution graph. When it doesn't fit, it scrolls, starting at
+     the right so this week is in view (the rtl outer box with an ltr inner one does that without script) */
   .stats-heat-scroll {
     overflow-x: auto;
+    overflow-y: hidden;
     padding-top: 30px;
     margin-top: -30px;
+    direction: rtl;
+    scrollbar-width: thin;
   }
   .stats-heat {
     display: grid;
-    min-width: 520px;
-    gap: 4px;
+    width: max-content;
+    margin-right: auto; /* left-aligned when it fits */
+    gap: 3px;
+    direction: ltr;
+    grid-auto-rows: 13px;
   }
   .stats-heat-month {
-    height: 16px;
+    line-height: 13px;
     font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
@@ -339,8 +415,9 @@
   }
   .stats-heat-cell {
     position: relative;
-    aspect-ratio: 1;
-    border-radius: 4px;
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
     background: var(--inset);
   }
   .stats-heat-cell[data-level="1"] {

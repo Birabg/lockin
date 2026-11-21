@@ -14,16 +14,23 @@ export const logoStyle = {
 export function Logo({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   return (
     <Link href="/dashboard" className={`logo-lock ${logoStyle.lockup} ${className}`}>
-      <svg viewBox="0 0 28 28" className={`logo-lock-mark ${logoStyle.mark}`} aria-hidden>
-        <path className="logo-lock-shackle" d={LOCK_MARK.shackle} />
-        <g className="logo-lock-body">
-          <rect {...LOCK_MARK.body} />
-          <circle className="logo-lock-hole" {...LOCK_MARK.keyholeTop} />
-          <rect className="logo-lock-hole" {...LOCK_MARK.keyholeSlot} />
-        </g>
-      </svg>
+      <LockMark className={logoStyle.mark} />
       {compact ? <span className="sr-only">{brand.name}</span> : <Wordmark />}
     </Link>
+  );
+}
+
+/** The animated padlock on its own: the logo's mark, and the dock's "Lock in" button icon. */
+export function LockMark({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 28 28" className={`logo-lock-mark ${className}`} aria-hidden>
+      <path className="logo-lock-shackle" d={LOCK_MARK.shackle} />
+      <g className="logo-lock-body">
+        <rect {...LOCK_MARK.body} />
+        <circle className="logo-lock-hole" {...LOCK_MARK.keyholeTop} />
+        <rect className="logo-lock-hole" {...LOCK_MARK.keyholeSlot} />
+      </g>
+    </svg>
   );
 }
 

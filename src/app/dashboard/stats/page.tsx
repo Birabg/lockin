@@ -6,12 +6,22 @@ import { getFocusHistory, getStats, getWeekStrip, getWeeklyRecap } from "@/lib/q
 import { formatDuration, formatHour } from "@/lib/time";
 import { btnPrimary } from "@/components/ui";
 import { DayBars, GoalRing, HeatLegend, Heatmap, RhythmClock, SUBJECT_COLORS, SubjectDonut, WeekDots, WeekRadar } from "./charts";
+import { Breakdown, type BreakdownTab } from "./breakdown";
 import { ShareCard } from "./share-card";
 
 export const metadata = { title: "Stats" };
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const HISTORY_WEEKS = 20;
+// a year, like a contribution graph; the hours and weekday views use the same span
+const HISTORY_WEEKS = 52;
+/** parts of the day for the hours view; night wraps past midnight */
+const DAY_PARTS = [
+  { label: "Morning (5–12)", hours: [5, 6, 7, 8, 9, 10, 11] },
+  { label: "Afternoon (12–6)", hours: [12, 13, 14, 15, 16, 17] },
+  { label: "Evening & night", hours: [18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4] },
+];
+
+const pct = (part: number, whole: number) => Math.round((part / Math.max(whole, 1)) * 100);
 
 export default async function StatsPage() {
   const user = await requireUser("/dashboard/stats");
@@ -53,6 +63,97 @@ export default async function StatsPage() {
       tone: "text-gold",
       value: formatDuration(s.allTime),
       sub: `${s.sessionsCount} ${s.sessionsCount === 1 ? "session" : "sessions"}`,
+    },
+  ];
+
+  const avg30 = s.last30.reduce((a, d) => a + d.sec, 0) / Math.max(s.last30.length, 1);
+  const best30 = Math.max(0, ...s.last30.map((d) => d.sec));
+  const hourTotal = history.hours.reduce((a, h) => a + h, 0);
+  const active = history.weekdays.map((w, i) => ({ w, i }));
+  const strongest = active.reduce((m, x) => (x.w > m.w ? x : m)).i;
+  const weakest = active.reduce((m, x) => (x.w < m.w ? x : m)).i;
+  const weekdayAvg = history.weekdays.slice(0, 5).reduce((a, w) => a + w, 0) / 5;
+  const weekendAvg = (history.weekdays[5] + history.weekdays[6]) / 2;
+
+  const tabs: BreakdownTab[] = [
+    {
+      id: "days",
+      label: "Days",
+      aside: "Last 30 days against your goal",
+      chart: <DayBars days={s.last30} goalSec={goalSec} />,
+      facts: [
+        { label: "Daily average", value: formatDuration(avg30) },
+        { label: "Goal hit", value: `${daysHit} / 30 days`, tone: daysHit > 0 ? "text-live" : undefined },
+        { label: "Best day", value: best30 ? formatDuration(best30) : "–" },
+        { label: "Longest session", value: s.longestSession ? formatDuration(s.longestSession) : "–" },
+      ],
+    },
+    {
+      id: "hours",
+      label: "Hours",
+      aside: "When in the day you focus, over the past year",
+      chart: <RhythmClock hours={history.hours} />,
+      facts: hourTotal
+        ? [
+            { label: "Peak hour", value: formatHour(history.hours.indexOf(Math.max(...history.hours))), tone: "text-primary" },
+            ...DAY_PARTS.map((p) => ({
+              label: p.label,
+              value: `${pct(
+                p.hours.reduce((a, h) => a + history.hours[h], 0),
+                hourTotal,
+              )}%`,
+            })),
+          ]
+        : undefined,
+    },
+    {
+      id: "weekdays",
+      label: "Weekdays",
+      aside: "Average per day of the week",
+      chart: (
+        <>
+          <WeekRadar weekdays={history.weekdays} goalSec={goalSec} />
+          <div className="mt-1 flex justify-center gap-4 text-[11px] font-semibold text-subtle">
+            <span className="flex items-center gap-1.5">
+              <span className="stats-key stats-key-shape" /> You
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="stats-key stats-key-goal" /> Goal
+            </span>
+          </div>
+        </>
+      ),
+      facts: history.weekdays.some((w) => w > 0)
+        ? [
+            { label: "Strongest", value: WEEKDAYS[strongest], tone: "text-live" },
+            { label: "Weakest", value: WEEKDAYS[weakest] },
+            { label: "Mon–Fri average", value: formatDuration(weekdayAvg) },
+            { label: "Weekend average", value: formatDuration(weekendAvg) },
+          ]
+        : undefined,
+    },
+    {
+      id: "subjects",
+      label: "Subjects",
+      aside: `${named.length} ${named.length === 1 ? "subject" : "subjects"}, all time`,
+      chart:
+        subjects.length === 0 ? (
+          <p className="text-[13px] text-muted">Label your sessions on the Focus page to see where your time goes.</p>
+        ) : (
+          <div className="flex flex-col items-center gap-5 sm:flex-row">
+            <SubjectDonut subjects={subjects} total={subjectTotal} />
+            <ul className="flex w-full min-w-0 flex-col gap-2">
+              {subjects.map((l, i) => (
+                <li key={l.label} className="flex items-center gap-2.5 text-[13px]">
+                  <span className="size-2.5 shrink-0 rounded-full" style={{ background: SUBJECT_COLORS[i % SUBJECT_COLORS.length] }} />
+                  <span className="min-w-0 flex-1 truncate font-semibold">{l.label}</span>
+                  <span className="text-muted tabular">{formatDuration(l.sec)}</span>
+                  <span className="w-10 text-right text-[12px] text-subtle tabular">{pct(l.sec, subjectTotal)}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ),
     },
   ];
 
@@ -123,11 +224,10 @@ export default async function StatsPage() {
         </ul>
       </section>
 
-      {/* ---- The last month, and what it says ---- */}
+      {/* ---- Where the time goes, and what it says ---- */}
       <div className="stats-grid-main">
         <section className="panel stats-card lg:col-span-2">
-          <CardHead title="Last 30 days" aside={`Longest session ${formatDuration(s.longestSession)}`} />
-          <DayBars days={s.last30} goalSec={goalSec} />
+          <Breakdown tabs={tabs} />
         </section>
 
         <section className="panel stats-card">
@@ -149,56 +249,12 @@ export default async function StatsPage() {
         </section>
       </div>
 
-      {/* ---- Patterns ---- */}
-      <div className="stats-grid-main">
-        <section className="panel stats-card">
-          <CardHead title="Focus rhythm" aside="When you focus" />
-          <RhythmClock hours={history.hours} />
-        </section>
-
-        <section className="panel stats-card">
-          <CardHead title="Week shape" aside="Average per day" />
-          <WeekRadar weekdays={history.weekdays} goalSec={goalSec} />
-          <div className="mt-1 flex justify-center gap-4 text-[11px] font-semibold text-subtle">
-            <span className="flex items-center gap-1.5">
-              <span className="stats-key stats-key-shape" /> You
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="stats-key stats-key-goal" /> Goal
-            </span>
-          </div>
-        </section>
-
-        <section className="panel stats-card">
-          <CardHead title="Subjects" aside={`${named.length} ${named.length === 1 ? "subject" : "subjects"}`} />
-          {subjects.length === 0 ? (
-            <p className="text-[13px] text-muted">Label your sessions on the Focus page to see where your time goes.</p>
-          ) : (
-            <div className="flex flex-col items-center gap-4">
-              <SubjectDonut subjects={subjects} total={subjectTotal} />
-              <ul className="flex w-full flex-col gap-2">
-                {subjects.map((l, i) => (
-                  <li key={l.label} className="flex items-center gap-2.5 text-[13px]">
-                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: SUBJECT_COLORS[i % SUBJECT_COLORS.length] }} />
-                    <span className="min-w-0 flex-1 truncate font-semibold">{l.label}</span>
-                    <span className="text-muted tabular">{formatDuration(l.sec)}</span>
-                    <span className="w-10 text-right text-[12px] text-subtle tabular">
-                      {Math.round((l.sec / Math.max(subjectTotal, 1)) * 100)}%
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      </div>
-
       {/* ---- The long view ---- */}
       <section className="panel stats-card mt-3">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
           <dl className="flex flex-wrap gap-x-7 gap-y-2">
             {[
-              [`Last ${HISTORY_WEEKS} weeks`, formatDuration(history.total)],
+              ["Past year", formatDuration(history.total)],
               ["Active days", String(history.activeDays)],
               ["Best day", history.bestDay ? formatDuration(history.bestDay.sec) : "–"],
               ["Best streak", `${s.streak.best}d`],
