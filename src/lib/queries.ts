@@ -373,9 +373,11 @@ export async function getFocusHistory(person: Person, weeks = 20) {
     }
   }
 
-  // the average for each weekday, Monday first, over the days that have happened
+  // the average for each weekday, Monday first, from the first day with focus to today, so the
+  // weeks before someone started don't drag it down
+  const first = days.findIndex((d) => d.sec >= 60);
   const weekdays = Array.from({ length: 7 }, (_, d) => {
-    const own = days.filter((_, i) => i % 7 === d && !days[i].future);
+    const own = first < 0 ? [] : days.filter((_, i) => i >= first && i % 7 === d && !days[i].future);
     return own.length ? own.reduce((a, x) => a + x.sec, 0) / own.length : 0;
   });
 

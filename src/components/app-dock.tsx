@@ -5,7 +5,7 @@ import Link from "next/link";
 import { isActive, usePopover, type ChromeData } from "./app-shell";
 import { Icon, type IconName } from "./icon";
 import { LeaderboardCard, StreakCard } from "./rail";
-import { Avatar } from "./ui";
+import { Avatar, LockMark } from "./ui";
 import { formatDuration } from "@/lib/time";
 
 type Pop = "streak" | "more" | "live" | "rank";
@@ -119,7 +119,7 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
         <DockLink href="/dashboard/people" icon="people" label="People" path={path} />
 
         <Link href="/dashboard/timer" data-dock-item className="app-dock-primary">
-          <Icon name="startFocus" size={21} solid /> Lock in
+          <LockMark className="size-[24px] shrink-0 overflow-visible" /> Lock in
         </Link>
 
         <DockLink href="/dashboard/buddies" icon="buddies" label="Buddies" path={path} badge={data.activity.buddies} />

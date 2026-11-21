@@ -270,12 +270,15 @@ export function Heatmap({
   today: string;
 }) {
   const weeks = Array.from({ length: Math.ceil(days.length / 7) }, (_, w) => days.slice(w * 7, w * 7 + 7));
+  const startsMonth = (w: typeof days) => w.some((d) => d.key.endsWith("-01"));
+  // the first column names its month too, unless a new month starts within two weeks and the labels would collide
+  const labelFirst = !weeks.slice(0, 3).some(startsMonth);
   return (
     <div className="stats-heat-scroll">
-      <div className="stats-heat" style={{ gridTemplateColumns: `28px repeat(${weeks.length}, minmax(0, 1fr))` }}>
+      <div className="stats-heat" style={{ gridTemplateColumns: `30px repeat(${weeks.length}, 13px)` }}>
         <span />
         {weeks.map((w, i) => {
-          const first = w.find((d) => d.key.endsWith("-01")) ?? (i === 0 ? w[0] : null);
+          const first = w.find((d) => d.key.endsWith("-01")) ?? (i === 0 && labelFirst ? w[0] : null);
           return (
             <span key={w[0].key} className="stats-heat-month">
               {first ? MONTH(first.key) : ""}
