@@ -103,6 +103,7 @@ export async function getFocusingNow(limit = 12, viewerId: string | null = null)
       status: "ACTIVE",
       pausedAt: null,
       lastBeatAt: { gte: new Date(Date.now() - LIVE_MS) },
+      user: { bannedAt: null },
       ...(blocked.length ? { userId: { notIn: blocked } } : {}),
     },
     orderBy: { startedAt: "asc" },
@@ -169,11 +170,11 @@ async function rankedTotals(range: Range, timeZone: string, take?: (running: num
   const today = dayKey(new Date(), timeZone);
   const from = range === "today" ? today : range === "week" ? weekStartKey(today) : null;
   const inRange = (day: string) => !from || (day >= from && day <= today);
-  // once verification is enforced, unverified accounts (outside their grace period) don't rank
+  // suspended accounts never rank; once verification is enforced, nor do unverified ones outside their grace period
   const eligible = leaderboardUserFilter(new Date(), verificationEnforced());
 
   const sessions = await db.focusSession.findMany({
-    where: { status: "ACTIVE", ...(eligible && { user: eligible }) },
+    where: { status: "ACTIVE", user: eligible },
     select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, user: { select: { timeZone: true } } },
   });
   const running = sessions.map(({ user, ...s }) => ({ ...s, timeZone: user.timeZone }));
@@ -181,7 +182,7 @@ async function rankedTotals(range: Range, timeZone: string, take?: (running: num
   // Running sessions can only lift people up, so this many finished rows always covers the page.
   const finished = await db.dailyStat.groupBy({
     by: ["userId"],
-    where: { ...(from && { day: { gte: from, lte: today } }), ...(eligible && { user: eligible }) },
+    where: { ...(from && { day: { gte: from, lte: today } }), user: eligible },
     _sum: { seconds: true },
     orderBy: { _sum: { seconds: "desc" } },
     take: take?.(running.length),
@@ -217,9 +218,11 @@ export async function getFeed(viewerId: string | null, tab: FeedTab, opts: { tak
     if (hideAuthors.length) where.userId = { notIn: hideAuthors };
   }
   where.hidden = false;
+  where.user = { bannedAt: null };
   if (reportedPosts.length) where.id = { notIn: reportedPosts };
   const commentWhere: Prisma.CommentWhereInput = {
     hidden: false,
+    user: { bannedAt: null },
     ...(people.blocked.length ? { userId: { notIn: people.blocked } } : {}),
     ...(reportedComments.length ? { id: { notIn: reportedComments } } : {}),
   };
@@ -347,10 +350,11 @@ export async function getProfile(username: string, viewerId: string | null) {
       avatar: true,
       timeZone: true,
       createdAt: true,
+      bannedAt: true,
       _count: { select: { followers: true, following: true } },
     },
   });
-  if (!user) return null;
+  if (!user || user.bannedAt) return null;
   // blocked either way: the profile simply doesn't exist for them
   if (viewerId && (await hiddenPeople(viewerId)).blocked.includes(user.id)) return null;
   const [isFollowing, muting] = viewerId
@@ -378,6 +382,7 @@ export async function searchPeople(q: string, page: number, viewerId: string | n
           }
         : {}),
       ...(blocked.length ? { id: { notIn: blocked } } : {}),
+      bannedAt: null,
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     skip: (page - 1) * PEOPLE_PAGE,

@@ -31,6 +31,8 @@ export default defineConfig({
       EMAIL_TEST_DOMAINS: "example.com",
       // Google/GitHub sign-in with a fake provider; refused anywhere on Vercel
       OAUTH_TEST_MODE: "1",
+      // the admin page's test signs in as this account; it replaces .env's list for the test server only
+      ADMIN_USERNAMES: "e2e_admin",
     },
   },
 });

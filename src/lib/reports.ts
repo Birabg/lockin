@@ -27,8 +27,8 @@ async function hide(type: ReportTarget, id: string) {
 }
 
 /**
- * One report per person per target; reporting again just updates the reason.
- * Enough different people hide content for everyone (people themselves are left to admins).
+ * One report per person per target; reporting again updates the reason and reopens it if an admin had dismissed it.
+ * Enough different people with open reports hide content for everyone (people themselves are left to admins).
  */
 export async function fileReport(
   reporterId: string,
@@ -44,13 +44,13 @@ export async function fileReport(
     await db.report.upsert({
       where: { reporterId_targetType_targetId: { reporterId, targetType: type, targetId } },
       create: { reporterId, targetType: type, targetId, reason },
-      update: { reason },
+      update: { reason, resolvedAt: null },
     });
   } catch (e) {
     // two reports racing: the other one won, which is fine
     if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
   }
-  const count = await db.report.count({ where: { targetType: type, targetId } });
+  const count = await db.report.count({ where: { targetType: type, targetId, resolvedAt: null } });
   if (shouldHide(type, count)) await hide(type, targetId);
   return {};
 }

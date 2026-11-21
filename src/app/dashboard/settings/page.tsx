@@ -4,6 +4,7 @@ import { logout } from "@/app/actions/auth";
 import { AccentPicker } from "@/components/accent-picker";
 import { Avatar, PageHeader, btnGhost } from "@/components/ui";
 import { db } from "@/lib/db";
+import { isAdmin } from "@/lib/moderation";
 import { enabledProviders } from "@/lib/oauth";
 import { isProvider, oauthErrorMessage, providerName } from "@/lib/oauth-flow";
 import { AvatarForm } from "./avatar-form";
@@ -47,6 +48,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <span className="block text-sm text-muted">@{user.username} · view public profile</span>
         </span>
       </Link>
+      {isAdmin(user.username) && (
+        <Link href="/dashboard/admin" className="panel mb-4 flex items-center justify-between p-4 font-bold hover:border-primary/40">
+          Admin
+          <span className="text-sm font-semibold text-muted">reports, hidden content, bans</span>
+        </Link>
+      )}
       <AvatarForm name={user.name} avatar={user.avatar} />
       <section className="panel mb-4 p-4" aria-labelledby="accent-title">
         <h2 id="accent-title" className="font-bold">
