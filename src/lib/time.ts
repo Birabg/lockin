@@ -93,6 +93,24 @@ function formatTick(date: Date, timeZone: string): string {
 }
 
 /** How far past the hour a moment is on that zone's clock. Half-hour zones make this differ from UTC. */
+const hourFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** The hour of the day, 0 to 23, in a time zone. */
+export function hourOf(date: Date, timeZone: string): number {
+  let format = hourFormats.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hourCycle: "h23" });
+    hourFormats.set(timeZone, format);
+  }
+  return Number(format.format(date)) % 24;
+}
+
+/** 0 -> "12 AM", 13 -> "1 PM" */
+export function formatHour(hour: number): string {
+  const h = ((hour % 24) + 24) % 24;
+  return `${h % 12 || 12} ${h < 12 ? "AM" : "PM"}`;
+}
+
 function msPastHour(date: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, minute: "numeric", second: "numeric" }).formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0);
