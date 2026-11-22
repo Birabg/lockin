@@ -5,6 +5,7 @@ import {
   formatCountdown,
   formatDuration,
   isValidTimeZone,
+  secondsUntilReset,
   sessionWindow,
   shiftDayKey,
   weekStartKey,
@@ -121,5 +122,23 @@ describe("formatting", () => {
     expect(formatDuration(59 * 60)).toBe("59m");
     expect(formatDuration(3 * 3600)).toBe("3h");
     expect(formatDuration(2 * 3600 + 24 * 60)).toBe("2h 24m");
+  });
+});
+
+describe("secondsUntilReset", () => {
+  // Wednesday 2026-11-18 22:30:00 UTC
+  const now = new Date("2026-11-18T22:30:00Z");
+
+  it("counts to the next local midnight for today", () => {
+    expect(secondsUntilReset("today", "UTC", now)).toBe(90 * 60);
+    // 01:30 Thursday in Addis Ababa (UTC+3)
+    expect(secondsUntilReset("today", "Africa/Addis_Ababa", now)).toBe(22.5 * 3600);
+  });
+
+  it("counts to the next local Monday for the week", () => {
+    // Wednesday night in UTC: the rest of Wednesday plus Thursday to Sunday
+    expect(secondsUntilReset("week", "UTC", now)).toBe(90 * 60 + 4 * 86_400);
+    // already Thursday in Addis Ababa: the rest of Thursday plus Friday to Sunday
+    expect(secondsUntilReset("week", "Africa/Addis_Ababa", now)).toBe(22.5 * 3600 + 3 * 86_400);
   });
 });

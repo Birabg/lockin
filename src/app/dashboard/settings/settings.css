@@ -1,0 +1,254 @@
+/* Settings: a section nav (sticky on wide screens, scrolling chips on phones) beside one card per section. */
+
+@layer components {
+  .set-layout {
+    display: grid;
+    /* without this the column grows to the chip row's full width on phones */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  @media (width >= 56rem) {
+    .set-layout {
+      grid-template-columns: 180px minmax(0, 1fr);
+      align-items: start;
+      gap: 20px;
+    }
+    .set-aside {
+      position: sticky;
+      top: 84px;
+    }
+  }
+
+  .set-nav {
+    display: flex;
+    gap: 4px;
+  }
+  @media (width >= 56rem) {
+    .set-nav {
+      flex-direction: column;
+    }
+  }
+  /* phones: a row of chips that scrolls sideways and stays under the top bar */
+  @media (width < 56rem) {
+    .set-aside {
+      position: sticky;
+      top: 56px;
+      z-index: 5;
+      margin-inline: -16px;
+      background: color-mix(in srgb, var(--background) 88%, transparent);
+      backdrop-filter: blur(10px);
+      padding: 6px 16px;
+    }
+    .set-nav {
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .set-nav::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  .set-nav-link {
+    flex-shrink: 0;
+    border-radius: 11px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    transition:
+      background 150ms,
+      color 150ms;
+  }
+  .set-nav-link:hover {
+    color: var(--foreground);
+  }
+  .set-nav-link[aria-current] {
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  @media (width < 56rem) {
+    .set-nav-link {
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+  }
+  .set-admin {
+    display: none;
+  }
+  @media (width >= 56rem) {
+    .set-admin {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      border-top: 1px solid var(--border);
+      padding: 12px 12px 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted-foreground);
+    }
+    .set-admin:hover {
+      color: var(--foreground);
+    }
+  }
+
+  .set-section {
+    scroll-margin-top: 110px;
+    padding: 20px;
+  }
+  @media (width < 30rem) {
+    .set-section {
+      padding: 16px;
+    }
+  }
+  .set-label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+  .set-link {
+    font-weight: 700;
+    color: var(--primary-text);
+  }
+  .set-link:hover {
+    text-decoration: underline;
+  }
+
+  /* save only when something changed; the row sits under a hairline */
+  .set-save {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+
+  .set-avatar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    border-radius: 16px;
+    background: var(--inset);
+    padding: 14px;
+  }
+  .set-avatar-busy {
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--primary);
+    animation: set-spin 0.8s linear infinite;
+  }
+  @keyframes set-spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+
+  .set-chip {
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--inset);
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    transition:
+      background 150ms,
+      color 150ms,
+      border-color 150ms;
+  }
+  .set-chip:hover {
+    color: var(--foreground);
+  }
+  .set-chip[aria-pressed="true"] {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: var(--primary-text);
+  }
+  .set-custom {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--inset);
+    padding: 0 14px 0 4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--subtle-foreground);
+  }
+  .set-custom:focus-within {
+    border-color: var(--primary);
+  }
+  .set-custom input {
+    width: 54px;
+    background: transparent;
+    padding: 7px 0 7px 10px;
+    font-weight: 800;
+    color: var(--foreground);
+    outline: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .set-group {
+    border-radius: 16px;
+    background: var(--inset);
+    padding: 12px 14px;
+  }
+  .set-group li {
+    border-color: var(--border);
+  }
+  .set-count {
+    border-radius: 6px;
+    background: var(--card);
+    padding: 0 6px;
+    font-size: 11.5px;
+    color: var(--muted-foreground);
+  }
+
+  .set-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 16px;
+    background: var(--inset);
+    padding: 12px 14px;
+  }
+  .set-danger {
+    margin-top: 10px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+    background: color-mix(in srgb, var(--danger) 5%, transparent);
+    padding: 12px 14px;
+  }
+  .set-danger > summary {
+    display: flex;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 12px;
+  }
+  .set-danger > summary::-webkit-details-marker {
+    display: none;
+  }
+  .set-danger-chev {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--subtle-foreground);
+    transition: rotate 150ms;
+  }
+  .set-danger[open] .set-danger-chev {
+    rotate: 90deg;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .set-avatar-busy {
+      animation-duration: 2s;
+    }
+  }
+}

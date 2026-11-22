@@ -168,7 +168,7 @@ export async function getLeaderboard(range: Range, timeZone: string, opts: { pag
     const user = byId.get(id);
     return user ? [{ rank: offset + i + 1, user, sec }] : [];
   });
-  return { rows, hasNext: ranked.length > offset + pageSize };
+  return { rows, hasNext: ranked.length > offset + pageSize, topSec: ranked[0]?.[1] ?? 0 };
 }
 
 /** Where one person stands on the board for the period, or null if they haven't focused in it. */
@@ -176,6 +176,18 @@ export async function getRank(range: Range, timeZone: string, userId: string) {
   const ranked = await rankedTotals(range, timeZone);
   const i = ranked.findIndex(([id]) => id === userId);
   return i === -1 ? null : i + 1;
+}
+
+/**
+ * Where someone stands for the period: their rank and time, how far behind the next person up they are,
+ * and how many people are on the board. Rank is null when they haven't focused in the period.
+ */
+export async function getStanding(range: Range, timeZone: string, userId: string) {
+  const ranked = await rankedTotals(range, timeZone);
+  const i = ranked.findIndex(([id]) => id === userId);
+  if (i === -1) return { rank: null, sec: 0, gap: null, total: ranked.length };
+  const sec = ranked[i][1];
+  return { rank: i + 1, sec, gap: i > 0 ? ranked[i - 1][1] - sec : null, total: ranked.length };
 }
 
 /** Everyone's total for the period, highest first. `take` limits the finished rows read, given the running count. */

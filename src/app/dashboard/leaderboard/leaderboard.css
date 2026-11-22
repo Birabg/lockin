@@ -1,0 +1,220 @@
+/* The leaderboard: period tabs, where you stand, a podium for the top three, then everyone else. */
+
+@layer components {
+  .lb-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+
+  .lb-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 3px;
+  }
+  .lb-tab {
+    flex: 1;
+    border-radius: 11px;
+    padding: 9px 12px;
+    text-align: center;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    transition:
+      background 150ms,
+      color 150ms;
+  }
+  .lb-tab:hover {
+    color: var(--foreground);
+  }
+  .lb-tab[aria-current="page"] {
+    background: var(--inset);
+    color: var(--foreground);
+  }
+
+  /* ---- Your standing ---- */
+  .lb-standing {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+    background: color-mix(in srgb, var(--primary) 8%, var(--card));
+    padding: 12px 14px;
+  }
+  .lb-standing-rank {
+    display: flex;
+    min-width: 58px;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    border-radius: 14px;
+    background: var(--card);
+    padding: 8px 10px;
+  }
+
+  /* ---- Podium ---- */
+  .lb-podium {
+    --lb-avatar: 60px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .lb-place {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+  }
+  .lb-place[data-rank="1"] {
+    --lb-avatar: 76px;
+  }
+  .lb-place-person {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px 10px;
+    text-align: center;
+  }
+  .lb-place-avatar {
+    position: relative;
+    margin-bottom: 4px;
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 3px var(--background),
+      0 0 0 5px var(--lb-tone);
+  }
+  .lb-crown {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    translate: -50% 0;
+    color: var(--gold);
+    filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--gold) 45%, transparent));
+  }
+  .lb-place[data-rank="1"] {
+    --lb-tone: var(--gold);
+    --lb-plinth: 92px;
+  }
+  .lb-place[data-rank="2"] {
+    --lb-tone: var(--silver);
+    --lb-plinth: 66px;
+  }
+  .lb-place[data-rank="3"] {
+    --lb-tone: var(--bronze);
+    --lb-plinth: 50px;
+  }
+  .lb-plinth {
+    display: grid;
+    width: 100%;
+    height: var(--lb-plinth);
+    place-items: start center;
+    border-radius: 16px 16px 6px 6px;
+    border: 1px solid var(--border);
+    border-top: 2px solid color-mix(in srgb, var(--lb-tone) 70%, transparent);
+    background: linear-gradient(color-mix(in srgb, var(--lb-tone) 14%, var(--card)), var(--card));
+    padding-top: 8px;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--lb-tone);
+  }
+  .lb-place[data-you] .lb-place-person > span:nth-child(2) {
+    color: var(--primary-text);
+  }
+  @media (width < 30rem) {
+    .lb-podium {
+      --lb-avatar: 48px;
+      gap: 6px;
+    }
+    .lb-place[data-rank="1"] {
+      --lb-avatar: 60px;
+    }
+  }
+
+  /* ---- Everyone else ---- */
+  .lb-list {
+    overflow: hidden;
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+  .lb-row + .lb-row {
+    border-top: 1px solid var(--border);
+  }
+  .lb-row[data-you] {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+  .lb-rank {
+    width: 24px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--subtle-foreground);
+  }
+  .lb-you {
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--primary-light);
+    padding: 1px 6px;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--primary-text);
+  }
+  /* time against the leader's, so the gaps read at a glance */
+  .lb-bar {
+    display: block;
+    height: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--inset);
+  }
+  .lb-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--primary) 70%, transparent);
+  }
+  .lb-row[data-you] .lb-bar > span {
+    background: var(--primary);
+  }
+
+  .lb-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 36px 20px;
+    text-align: center;
+  }
+  .lb-empty-icon {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 6px;
+    place-items: center;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--gold) 14%, var(--inset));
+    color: var(--gold);
+  }
+}

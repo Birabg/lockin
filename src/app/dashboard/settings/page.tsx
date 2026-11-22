@@ -1,8 +1,10 @@
+import "./settings.css";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { AccentPicker } from "@/components/accent-picker";
-import { Avatar, PageHeader, btnGhost } from "@/components/ui";
+import { Icon } from "@/components/icon";
+import { PageHeader, btnGhost } from "@/components/ui";
 import { db } from "@/lib/db";
 import { isAdmin } from "@/lib/moderation";
 import { enabledProviders } from "@/lib/oauth";
@@ -11,13 +13,37 @@ import { AvatarForm } from "./avatar-form";
 import { BlockedPeople } from "./blocked-people";
 import { ConnectedAccounts } from "./connected-accounts";
 import { DeleteAccount } from "./delete-account";
-import { ProfileForm } from "./profile-form";
+import { FocusForm, IdentityForm } from "./profile-form";
+import { SettingsNav } from "./settings-nav";
 
-export const metadata = { title: "Profile" };
+export const metadata = { title: "Settings" };
 
 type Params = { connected?: string; oauth_error?: string; provider?: string };
 
 const person = { id: true, username: true, name: true, avatar: true } as const;
+
+const SECTIONS = [
+  { id: "profile", label: "Profile" },
+  { id: "focus", label: "Focus" },
+  { id: "appearance", label: "Appearance" },
+  { id: "sign-in", label: "Sign-in" },
+  { id: "privacy", label: "Privacy" },
+  { id: "account", label: "Account" },
+];
+
+function Section({ id, title, body, children }: { id: string; title: string; body?: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="panel set-section" aria-labelledby={`${id}-title`}>
+      <header className="mb-4">
+        <h2 id={`${id}-title`} className="text-[16px] font-extrabold tracking-tight">
+          {title}
+        </h2>
+        {body && <p className="mt-1 text-[13px] text-muted">{body}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await requireUser("/dashboard/settings");
@@ -38,55 +64,84 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     : isProvider(params.connected)
       ? { text: `${providerName(params.connected)} is connected. You can use it to sign in.`, tone: "info" as const }
       : null;
+  const saved = { name: user.name, bio: user.bio ?? "", dailyGoalMin: user.dailyGoalMin, timeZone: user.timeZone };
+  const admin = isAdmin(user.username);
+
   return (
-    <div className="mx-auto max-w-[560px]">
+    <div className="mx-auto max-w-[900px]">
       <PageHeader title="Settings" />
-      <Link href={`/dashboard/u/${user.username}`} className="panel mb-4 flex items-center gap-3 p-4 hover:border-primary/40">
-        <Avatar name={user.name} src={user.avatar} size={48} />
-        <span>
-          <span className="block font-bold">{user.name}</span>
-          <span className="block text-sm text-muted">@{user.username} · view public profile</span>
-        </span>
-      </Link>
-      {isAdmin(user.username) && (
-        <Link href="/dashboard/admin" className="panel mb-4 flex items-center justify-between p-4 font-bold hover:border-primary/40">
-          Admin
-          <span className="text-sm font-semibold text-muted">reports, hidden content, bans</span>
-        </Link>
-      )}
-      <AvatarForm name={user.name} avatar={user.avatar} />
-      <section className="panel mb-4 p-4" aria-labelledby="accent-title">
-        <h2 id="accent-title" className="font-bold">
-          Accent colour
-        </h2>
-        <p className="mb-3.5 text-sm text-muted">Pick the colour for buttons, highlights and progress. Saved on this device.</p>
-        <AccentPicker />
-      </section>
-      <ProfileForm
-        user={{ name: user.name, bio: user.bio ?? "", dailyGoalMin: user.dailyGoalMin, timeZone: user.timeZone }}
-        timeZones={[...new Set([user.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])].sort()}
-      />
-      <ConnectedAccounts linked={linked} available={enabledProviders()} hasPassword={!!login.passwordHash} notice={notice} />
-      <BlockedPeople blocked={login.blocking.map((b) => b.blocked)} muted={login.muting.map((m) => m.muted)} />
-      <form action={logout} className="mt-4">
-        <button className={`${btnGhost} h-11 w-full text-sm text-danger`}>Log out</button>
-      </form>
-      <DeleteAccount hasPassword={!!login.passwordHash} username={user.username} />
-      <p className="mt-4 text-center text-xs">
-        <Link href="/privacy" className="text-subtle underline">
-          Privacy
-        </Link>
-      </p>
-      <p className="mt-2 text-center text-xs text-subtle">
-        Icons:{" "}
-        <a href="https://www.figma.com/community/file/1166831539721848736" className="underline" target="_blank" rel="noreferrer">
-          Solar by 480 Design
-        </a>
-        ,{" "}
-        <a href="https://creativecommons.org/licenses/by/4.0/" className="underline" target="_blank" rel="noreferrer">
-          CC BY 4.0
-        </a>
-      </p>
+      <header className="mb-4 px-1">
+        <h1 className="text-[22px] leading-tight font-extrabold tracking-tight">Settings</h1>
+        <p className="mt-1 text-[13px] text-muted">How you show up, how your days count, and your account.</p>
+      </header>
+
+      <div className="set-layout">
+        <aside className="set-aside">
+          <SettingsNav items={SECTIONS} />
+          {admin && (
+            <Link href="/dashboard/admin" className="set-admin">
+              <Icon name="report" size={15} /> Admin
+            </Link>
+          )}
+        </aside>
+
+        <div className="min-w-0 space-y-3">
+          <Section id="profile" title="Profile" body="What people see on your profile, in rooms and on the leaderboard.">
+            <AvatarForm name={user.name} avatar={user.avatar} username={user.username} />
+            <IdentityForm saved={saved} />
+          </Section>
+
+          <Section id="focus" title="Focus" body="Your daily target and the clock your days run on.">
+            <FocusForm saved={saved} timeZones={[...new Set([user.timeZone, "UTC", ...Intl.supportedValuesOf("timeZone")])].sort()} />
+          </Section>
+
+          <Section id="appearance" title="Appearance" body="The colour for buttons, highlights and progress. Saved on this device.">
+            <AccentPicker />
+          </Section>
+
+          <Section
+            id="sign-in"
+            title="Sign-in"
+            body={`Ways into your account, as well as ${login.passwordHash ? "your password" : "each other"}. You always keep at least one.`}
+          >
+            <ConnectedAccounts linked={linked} available={enabledProviders()} hasPassword={!!login.passwordHash} notice={notice} />
+          </Section>
+
+          <Section id="privacy" title="Privacy & safety" body="People you’ve blocked or muted. They aren’t told.">
+            <BlockedPeople blocked={login.blocking.map((b) => b.blocked)} muted={login.muting.map((m) => m.muted)} />
+          </Section>
+
+          <Section id="account" title="Account">
+            <div className="set-row">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-bold">Log out</span>
+                <span className="block text-[12.5px] text-muted">Signed in as @{user.username} on this device.</span>
+              </span>
+              <form action={logout}>
+                <button className={`${btnGhost} h-10 px-4 text-sm`}>
+                  <Icon name="logout" size={15} /> Log out
+                </button>
+              </form>
+            </div>
+            <DeleteAccount hasPassword={!!login.passwordHash} username={user.username} />
+          </Section>
+
+          <p className="pt-2 text-center text-xs text-subtle">
+            <Link href="/privacy" className="underline">
+              Privacy policy
+            </Link>
+            {" · "}
+            Icons:{" "}
+            <a href="https://www.figma.com/community/file/1166831539721848736" className="underline" target="_blank" rel="noreferrer">
+              Solar by 480 Design
+            </a>
+            ,{" "}
+            <a href="https://creativecommons.org/licenses/by/4.0/" className="underline" target="_blank" rel="noreferrer">
+              CC BY 4.0
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

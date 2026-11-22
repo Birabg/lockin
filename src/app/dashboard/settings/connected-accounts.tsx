@@ -38,22 +38,12 @@ export function ConnectedAccounts({
   }
 
   return (
-    <section className="panel mb-4 p-4" aria-labelledby="connected-title">
-      <h2 id="connected-title" className="font-bold">
-        Connected accounts
-      </h2>
-      <p className="mb-3 text-sm text-muted">
-        Sign in with these as well as {hasPassword ? "your password" : "each other"}. You always keep at least one way in.
-      </p>
+    <div>
       {notice && <p className={`mb-3 text-sm ${notice.tone === "error" ? "text-danger" : "text-primary-text"}`}>{notice.text}</p>}
       {linked.length > 0 && (
         <ul className="mb-3 space-y-2">
           {linked.map((l) => (
-            <li
-              key={l.provider}
-              data-linked={l.provider}
-              className="flex items-center gap-3 rounded-xl border-2 border-border bg-inset px-3 py-2"
-            >
+            <li key={l.provider} data-linked={l.provider} className="flex items-center gap-3 rounded-xl bg-inset px-3.5 py-2.5">
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{providerName(l.provider)}</span>
                 {l.email && <span className="block truncate text-sm text-muted">{l.email}</span>}
@@ -63,7 +53,7 @@ export function ConnectedAccounts({
                 onClick={() => unlink(l.provider)}
                 disabled={pending || methods <= 1}
                 title={methods <= 1 ? "This is your only way to sign in" : undefined}
-                className="rounded-full border-2 border-border bg-card px-3 py-1 text-sm font-bold hover:bg-inset disabled:opacity-50"
+                className="rounded-full border border-border bg-card px-3 py-1 text-[13px] font-bold hover:bg-inset disabled:opacity-50"
               >
                 Disconnect
               </button>
@@ -75,6 +65,6 @@ export function ConnectedAccounts({
       {linked.length === 0 && connectable.length === 0 && (
         <p className="text-sm text-subtle">Google and GitHub sign-in aren&apos;t set up here.</p>
       )}
-    </section>
+    </div>
   );
 }
