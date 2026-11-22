@@ -171,7 +171,7 @@ export function LengthTape({ goal, onGoal, locked }: { goal: number; onGoal: (mi
           {MARKS.map((m) => {
             const stop = STOPS.includes(m);
             const major = m % 30 === 0;
-            const crowded = STOPS.some((at) => at !== m && Math.abs(at - m) < 10); // a stop's label sits right there
+            const crowded = STOPS.some((at) => at !== m && Math.abs(at - m) <= 10); // a stop's label sits right there
             return (
               <span key={m} data-tick={m} data-major={major || undefined} className="stage-tape-tick" style={{ left: toLeft(m) }}>
                 <span className="stage-tape-line" />
@@ -200,6 +200,10 @@ export function LengthTape({ goal, onGoal, locked }: { goal: number; onGoal: (mi
         </div>
       </div>
       <span aria-hidden className="stage-tape-needle" />
+      {/* what the needle is on, always readable, whatever it lands on */}
+      <span aria-hidden className="stage-tape-value tabular">
+        {formatDialTime(goal)}
+      </span>
     </div>
   );
 }
