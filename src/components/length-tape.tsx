@@ -122,10 +122,30 @@ export function LengthTape({ goal, onGoal, locked }: { goal: number; onGoal: (mi
         className="stage-tape"
         onScroll={onScroll}
         onScrollEnd={(e) => {
-          // settle on the nearest tick once a flick or a cut-short glide comes to rest
-          steering.current = null;
-          onScroll();
           const el = e.currentTarget;
+          // gliding to a value we picked: keep going until it gets there. A scroll that ended just before
+          // (bringing a stop into view, say) must not cut it short and pick up wherever the tape is mid-glide.
+          // Grabbing or wheeling clears steering, and a key or another stop points it somewhere new.
+          if (steering.current !== null) {
+            if (toMinutes(el.scrollLeft) === steering.current) {
+              steering.current = null;
+              return;
+            }
+            // restart the glide only if nothing is moving it. Restarting one that's under way cancels it,
+            // which ends another scroll, and the tape would never get anywhere.
+            const at = el.scrollLeft;
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                const target = steering.current;
+                if (target === null || Math.abs(el.scrollLeft - at) > 0.5) return;
+                if (toMinutes(el.scrollLeft) === target) steering.current = null;
+                else el.scrollTo({ left: toLeft(target), behavior: prefersReducedMotion() ? "instant" : "smooth" });
+              }),
+            );
+            return;
+          }
+          // a flick coming to rest: take its value and settle on the nearest tick
+          onScroll();
           const left = toLeft(toMinutes(el.scrollLeft));
           if (!drag.current && Math.abs(el.scrollLeft - left) > 0.5)
             el.scrollTo({ left, behavior: prefersReducedMotion() ? "instant" : "smooth" });
