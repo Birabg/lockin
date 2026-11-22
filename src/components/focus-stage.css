@@ -237,9 +237,31 @@
   }
 
   /* ---- Session length: a sideways tape of minutes under a fixed needle ---- */
+  /* one solid card for setting up: the length on top, what you are working on below */
+  .stage-setup-card {
+    display: flex;
+    width: min(520px, 100%);
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--stage-line);
+    border-radius: 26px;
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0.05), transparent 40%), var(--stage-surface);
+    padding: 10px 0 8px;
+    box-shadow:
+      var(--stage-shadow),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+    backdrop-filter: blur(var(--stage-blur));
+    -webkit-backdrop-filter: blur(var(--stage-blur));
+  }
+  .stage-setup-card > .stage-scroll-row {
+    width: 100%;
+    margin-top: 6px;
+    border-top: 1px solid var(--stage-line);
+    padding-top: 9px;
+  }
   .stage-tape-wrap {
     position: relative;
-    width: min(460px, 100%);
+    width: 100%;
   }
   .stage-tape-wrap[data-locked] {
     opacity: 0.5;
@@ -288,15 +310,18 @@
     opacity: calc(1 - var(--d) * 0.6);
   }
   .stage-tape-line {
+    /* the tick under the needle steps aside, so there is only ever one line in the middle */
+    opacity: clamp(0, calc(var(--d) * 40), 1);
     width: 2px;
-    height: calc(16px - var(--d) * 6px);
+    height: calc(18px - var(--d) * 6px);
     margin-top: calc(14px + var(--d) * 3px);
     border-radius: 2px;
-    background: var(--stage-muted);
+    background: rgb(243 245 249 / 0.5);
   }
   .stage-tape-tick[data-major] .stage-tape-line {
-    height: calc(26px - var(--d) * 8px);
-    margin-top: calc(6px + var(--d) * 4px);
+    width: 2.5px;
+    height: calc(28px - var(--d) * 8px);
+    margin-top: calc(4px + var(--d) * 4px);
     background: var(--stage-text);
   }
   .stage-tape-num,
@@ -307,7 +332,9 @@
     white-space: nowrap;
     font-size: 13px;
     font-weight: 650;
-    color: var(--stage-muted);
+    color: rgb(243 245 249 / 0.62);
+    /* labels clear out of the way of the value under the needle */
+    opacity: clamp(0, calc((var(--d) - 0.1) * 10), 1);
     transform: translateX(-50%) scale(calc(1 - var(--d) * 0.25));
   }
   /* the quick stops: a dot over the tick, and a label you can tap */
@@ -335,22 +362,50 @@
     background: var(--stage-fill-hover);
     color: var(--stage-text);
   }
-  .stage-tape-stop[aria-pressed="true"] {
-    background: var(--stage-fill-active);
+  /* the value under the needle: a solid pill that never moves */
+  .stage-tape-value {
+    position: absolute;
+    top: 37px;
+    left: 50%;
+    min-width: 58px;
+    border-radius: 999px;
+    background: var(--stage-accent);
+    padding: 3px 12px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 13.5px;
+    font-weight: 750;
     color: var(--stage-on-active);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--stage-accent) 40%, transparent);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .stage-tape-wrap[data-locked] .stage-tape-value {
+    opacity: 0.8;
   }
   /* the needle, fixed in the middle, with a soft lens behind it */
   .stage-tape-needle {
     position: absolute;
-    top: 2px;
+    top: 4px;
     left: 50%;
-    width: 3px;
-    height: 34px;
+    width: 4px;
+    height: 32px;
     border-radius: 3px;
     background: var(--stage-accent);
     box-shadow: 0 0 14px color-mix(in srgb, var(--stage-accent) 70%, transparent);
     transform: translateX(-50%);
     pointer-events: none;
+  }
+  /* a small notch on top of the needle, pointing down at the value */
+  .stage-tape-needle::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    border: 5px solid transparent;
+    border-top: 6px solid var(--stage-accent);
+    border-bottom: 0;
+    transform: translateX(-50%);
   }
   .stage-tape-wrap::before {
     content: "";
@@ -368,7 +423,7 @@
   /* ---- What you're working on: quiet tags, so the length and the lock lead ---- */
   .stage-tag {
     display: inline-flex;
-    height: 28px;
+    height: 30px;
     max-width: 160px;
     flex-shrink: 0;
     align-items: center;

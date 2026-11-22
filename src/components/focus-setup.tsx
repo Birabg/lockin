@@ -319,8 +319,10 @@ export function FocusSetup(props: Props) {
         />
 
         <div className="stage-mid stage-fade" data-setup-only>
-          <LengthTape goal={goal} onGoal={onGoal} locked={starting} />
-          <LabelChips labels={labels} label={label} onChange={onLabel} locked={starting} />
+          <div className="stage-setup-card">
+            <LengthTape goal={goal} onGoal={onGoal} locked={starting} />
+            <LabelChips labels={labels} label={label} onChange={onLabel} locked={starting} />
+          </div>
         </div>
 
         <LockButton
