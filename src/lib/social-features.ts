@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "./db";
-import { getStreaks } from "./queries";
+import { getStreaksAndToday } from "./queries";
 import { LIVE_MS, isExpired } from "./session-math";
 
 const person = { select: { id: true, username: true, name: true, avatar: true, timeZone: true } };
@@ -19,8 +19,8 @@ export async function getBuddies(userId: string) {
   const accepted = rows.filter((r) => r.status === "ACCEPTED");
   const friends = accepted.map((r) => ({ id: r.id, user: r.requesterId === userId ? r.addressee : r.requester }));
 
-  const [streaks, sessions] = await Promise.all([
-    getStreaks(friends.map((f) => f.user)),
+  const [progress, sessions] = await Promise.all([
+    getStreaksAndToday(friends.map((f) => f.user)),
     db.focusSession.findMany({
       where: { status: "ACTIVE", userId: { in: friends.map((f) => f.user.id) } },
       select: { userId: true, ...timing },
@@ -29,16 +29,21 @@ export async function getBuddies(userId: string) {
   const sessionOf = new Map(sessions.map((s) => [s.userId, s]));
 
   return {
-    buddies: friends.map(({ id, user: { id: userId, username, name, avatar } }) => {
-      const session = sessionOf.get(userId);
-      return {
-        id,
-        user: { id: userId, username, name, avatar },
-        streak: streaks.get(userId) ?? 0,
-        live: isLive(session),
-        label: session?.label ?? null,
-      };
-    }),
+    buddies: friends
+      .map(({ id, user: { id: userId, username, name, avatar } }) => {
+        const session = sessionOf.get(userId);
+        const p = progress.get(userId);
+        return {
+          id,
+          user: { id: userId, username, name, avatar },
+          streak: p?.streak ?? 0,
+          todaySec: p?.todaySec ?? 0,
+          live: isLive(session),
+          label: session?.label ?? null,
+        };
+      })
+      // focusing now first, then whoever is furthest into a streak
+      .sort((a, b) => Number(b.live) - Number(a.live) || b.streak - a.streak || b.todaySec - a.todaySec),
     incoming: rows.filter((r) => r.status === "PENDING" && r.addresseeId === userId).map((r) => ({ id: r.id, user: r.requester })),
     outgoing: rows.filter((r) => r.status === "PENDING" && r.requesterId === userId).map((r) => ({ id: r.id, user: r.addressee })),
   };
@@ -60,13 +65,47 @@ export async function getBuddyState(viewerId: string, otherId: string): Promise<
   return { state: row.requesterId === viewerId ? "outgoing" : "incoming", id: row.id };
 }
 
-export const getMyRooms = (userId: string) =>
-  db.room.findMany({
+/**
+ * The rooms someone is in, for the rooms list: a few member faces, how many are focusing right now,
+ * and live rooms first so the ones worth jumping into are on top.
+ */
+export async function getMyRooms(userId: string) {
+  const rooms = await db.room.findMany({
     where: { members: { some: { userId } } },
     orderBy: { createdAt: "desc" },
     take: 50,
-    select: { id: true, code: true, name: true, _count: { select: { members: true } } },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      ownerId: true,
+      _count: { select: { members: true } },
+      members: { orderBy: { joinedAt: "asc" }, take: 40, select: { user: { select: { id: true, name: true, avatar: true } } } },
+    },
   });
+  const ids = [...new Set(rooms.flatMap((r) => r.members.map((m) => m.user.id)))];
+  const sessions = ids.length
+    ? await db.focusSession.findMany({
+        where: { status: "ACTIVE", userId: { in: ids } },
+        select: { userId: true, pausedAt: true, lastBeatAt: true },
+      })
+    : [];
+  const live = new Set(sessions.filter(isLive).map((s) => s.userId));
+  return rooms
+    .map(({ members, _count, ...r }) => {
+      const users = members.map((m) => m.user);
+      // focusing people first, so the faces shown are the live ones
+      const sorted = [...users.filter((u) => live.has(u.id)), ...users.filter((u) => !live.has(u.id))];
+      return {
+        ...r,
+        size: _count.members,
+        live: users.filter((u) => live.has(u.id)).length,
+        faces: sorted.slice(0, 5).map((u) => ({ ...u, live: live.has(u.id) })),
+        mine: r.ownerId === userId,
+      };
+    })
+    .sort((x, y) => Number(y.live > 0) - Number(x.live > 0) || y.live - x.live);
+}
 
 export async function getRoom(code: string, viewerId: string | null) {
   const room = await db.room.findUnique({
@@ -75,6 +114,8 @@ export async function getRoom(code: string, viewerId: string | null) {
       id: true,
       code: true,
       name: true,
+      ownerId: true,
+      createdAt: true,
       members: {
         orderBy: { joinedAt: "asc" },
         take: 100,
@@ -94,6 +135,8 @@ export async function getRoom(code: string, viewerId: string | null) {
     code: room.code,
     name: room.name,
     isMember: !!viewerId && ids.includes(viewerId),
+    ownerId: room.ownerId,
+    createdAt: room.createdAt.toISOString(),
     members: room.members.map(({ user }) => {
       const s = sessionOf.get(user.id);
       return {

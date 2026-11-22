@@ -55,6 +55,19 @@ export async function getStreaks(people: Person[]) {
   return new Map(people.map((p) => [p.id, computeStreak(totals.get(p.id) ?? new Map(), dayKey(now, p.timeZone)).current]));
 }
 
+/** Current streak and time focused today for many users, in the same two queries as getStreaks. */
+export async function getStreaksAndToday(people: Person[]) {
+  const totals = await dayTotalsFor(people);
+  const now = new Date();
+  return new Map(
+    people.map((p) => {
+      const days = totals.get(p.id) ?? new Map<string, number>();
+      const today = dayKey(now, p.timeZone);
+      return [p.id, { streak: computeStreak(days, today).current, todaySec: days.get(today) ?? 0 }];
+    }),
+  );
+}
+
 export type WeekDay = { key: string; letter: string; sec: number; hit: boolean; isToday: boolean; isFuture: boolean };
 
 /** Monday..Sunday of the current week, for the streak card strip. */
@@ -404,6 +417,7 @@ export async function getProfile(username: string, viewerId: string | null) {
       bio: true,
       avatar: true,
       timeZone: true,
+      dailyGoalMin: true,
       createdAt: true,
       bannedAt: true,
       _count: { select: { followers: true, following: true } },

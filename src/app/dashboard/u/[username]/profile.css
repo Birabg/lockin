@@ -1,0 +1,176 @@
+/* A profile: cover, avatar and actions, who they are, the numbers, consistency, then their sessions. */
+
+@layer components {
+  .profile-card {
+    --profile-avatar: 96px;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+  }
+  @media (width < 30rem) {
+    .profile-card {
+      --profile-avatar: 80px;
+    }
+  }
+  /* a soft band in the person's own colour, so every profile feels a little different */
+  .profile-cover {
+    height: 104px;
+    background:
+      radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--cover) 45%, transparent), transparent 60%),
+      radial-gradient(90% 140% at 100% 100%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 60%),
+      color-mix(in srgb, var(--cover) 10%, var(--card));
+  }
+  .profile-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: calc(var(--profile-avatar) / -2);
+    padding-inline: 20px;
+  }
+  .profile-avatar {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px var(--card);
+  }
+  .profile-avatar[data-live] {
+    box-shadow:
+      0 0 0 4px var(--card),
+      0 0 0 7px var(--live);
+  }
+  .profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+  /* phones: keep the buttons on one line beside the avatar, a little tighter */
+  @media (width < 30rem) {
+    .profile-top {
+      padding-inline: 16px;
+    }
+    .profile-actions {
+      flex-wrap: nowrap;
+      gap: 6px;
+    }
+    .profile-actions > button,
+    .profile-actions > a,
+    .profile-actions > span {
+      padding-inline: 12px;
+    }
+    .profile-actions button[aria-pressed] {
+      min-width: 84px;
+    }
+  }
+  .profile-body {
+    padding: 12px 20px 0;
+  }
+  .profile-badge {
+    border-radius: 6px;
+    background: var(--inset);
+    padding: 2px 7px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+  .profile-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--live) 12%, transparent);
+    padding: 5px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--live);
+  }
+  .profile-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--live);
+    animation: profile-pulse 1.8s ease-out infinite;
+  }
+  @keyframes profile-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 7px transparent;
+    }
+  }
+  .profile-add-bio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+  .profile-add-bio:hover {
+    border-color: var(--primary);
+    color: var(--foreground);
+  }
+  .profile-chip {
+    border-radius: 999px;
+    background: var(--inset);
+    padding: 4px 11px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+  }
+
+  .profile-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 18px 20px 20px;
+  }
+  @media (width < 36rem) {
+    .profile-stats {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    /* three across, then two wider ones under them */
+    .profile-stats > :nth-child(-n + 3) {
+      grid-column: span 2;
+    }
+    .profile-stats > :nth-child(n + 4) {
+      grid-column: span 3;
+    }
+  }
+  .profile-stat {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    border-radius: 14px;
+    background: var(--inset);
+    padding: 10px 12px;
+  }
+  .profile-stat-link {
+    transition: background 150ms;
+  }
+  .profile-stat-link:hover {
+    background: color-mix(in srgb, var(--foreground) 7%, var(--inset));
+  }
+
+  .profile-section {
+    margin-top: 12px;
+    padding: 18px 20px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .profile-live-dot {
+      animation: none;
+    }
+  }
+}

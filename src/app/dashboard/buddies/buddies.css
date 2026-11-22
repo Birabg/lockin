@@ -1,0 +1,172 @@
+/* Focus buddies: requests, your buddies as cards, and requests you're waiting on. */
+
+@layer components {
+  .buddies-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--live);
+    animation: buddies-pulse 1.8s ease-out infinite;
+  }
+  @keyframes buddies-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 7px transparent;
+    }
+  }
+  .buddies-count {
+    display: grid;
+    min-width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--primary);
+    padding-inline: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--primary-foreground);
+  }
+
+  /* ---- Requests: a highlighted panel, since they need an answer ---- */
+  .buddies-requests {
+    margin-bottom: 14px;
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+    background: color-mix(in srgb, var(--primary) 6%, var(--card));
+    padding: 14px 14px 10px;
+  }
+  .buddies-request {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    border-radius: 14px;
+    padding: 6px;
+  }
+
+  /* ---- Buddies ---- */
+  .buddies-grid {
+    display: grid;
+    gap: 10px;
+  }
+  @media (width >= 40rem) {
+    .buddies-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .buddy-card {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .buddy-card[data-live] {
+    border-color: color-mix(in srgb, var(--live) 32%, var(--border));
+    background: radial-gradient(90% 90% at 0% 0%, color-mix(in srgb, var(--live) 7%, transparent), transparent 60%), var(--card);
+  }
+  .buddy-avatar {
+    position: relative;
+    flex-shrink: 0;
+    border-radius: 50%;
+  }
+  .buddy-card[data-live] .buddy-avatar {
+    box-shadow:
+      0 0 0 2px var(--card),
+      0 0 0 4px var(--live);
+  }
+  .buddy-avatar-live {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2.5px solid var(--card);
+    background: var(--live);
+  }
+  .buddy-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .buddy-stat {
+    border-radius: 12px;
+    background: var(--inset);
+    padding: 9px 12px;
+  }
+  .buddy-stat dt {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+  .buddy-stat dd {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .buddies-waiting > li + li {
+    border-top: 1px solid var(--border);
+  }
+
+  /* ---- Empty ---- */
+  .buddies-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 32px 20px;
+    text-align: center;
+  }
+  .buddies-empty-icon {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 4px;
+    place-items: center;
+    border-radius: 18px;
+    background: var(--primary-light);
+    color: var(--primary-text);
+  }
+  .buddies-perks {
+    display: grid;
+    width: 100%;
+    gap: 8px;
+    margin-block: 10px 8px;
+    text-align: left;
+  }
+  @media (width >= 40rem) {
+    .buddies-perks {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .buddies-perk {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-radius: 14px;
+    background: var(--inset);
+    padding: 14px;
+  }
+  .buddies-perk-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 6px;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--card);
+    color: var(--primary-text);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .buddies-live-dot {
+      animation: none;
+    }
+  }
+}
