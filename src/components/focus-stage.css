@@ -236,6 +236,205 @@
     color: var(--stage-faint);
   }
 
+  /* ---- Session length: a sideways tape of minutes under a fixed needle ---- */
+  .stage-tape-wrap {
+    position: relative;
+    width: min(460px, 100%);
+  }
+  .stage-tape-wrap[data-locked] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .stage-tape {
+    position: relative;
+    height: 68px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-inline: 50%;
+    border-radius: 18px;
+    outline: none;
+    cursor: grab;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    /* fades out at both ends, like the far side of a wheel */
+    mask-image: linear-gradient(to right, transparent, #000 16%, #000 84%, transparent);
+  }
+  .stage-tape::-webkit-scrollbar {
+    display: none;
+  }
+  .stage-tape[data-dragging] {
+    cursor: grabbing;
+  }
+  .stage-tape:focus-visible + .stage-tape-needle {
+    box-shadow:
+      0 0 0 2px var(--stage-base),
+      0 0 0 4px var(--stage-text);
+  }
+  .stage-tape-track {
+    position: relative;
+    height: 100%;
+  }
+  .stage-tape-tick {
+    --d: 1;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+    opacity: calc(1 - var(--d) * 0.6);
+  }
+  .stage-tape-line {
+    width: 2px;
+    height: calc(16px - var(--d) * 6px);
+    margin-top: calc(14px + var(--d) * 3px);
+    border-radius: 2px;
+    background: var(--stage-muted);
+  }
+  .stage-tape-tick[data-major] .stage-tape-line {
+    height: calc(26px - var(--d) * 8px);
+    margin-top: calc(6px + var(--d) * 4px);
+    background: var(--stage-text);
+  }
+  .stage-tape-num,
+  .stage-tape-stop {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--stage-muted);
+    transform: translateX(-50%) scale(calc(1 - var(--d) * 0.25));
+  }
+  /* the quick stops: a dot over the tick, and a label you can tap */
+  .stage-tape-stop {
+    top: 36px;
+    border-radius: 999px;
+    padding: 2px 9px;
+    color: var(--stage-text);
+    transition:
+      background 150ms ease,
+      color 150ms ease;
+  }
+  .stage-tape-stop::before {
+    content: "";
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--stage-accent);
+    transform: translateX(-50%);
+  }
+  .stage-tape-stop:hover {
+    background: var(--stage-fill-hover);
+    color: var(--stage-text);
+  }
+  .stage-tape-stop[aria-pressed="true"] {
+    background: var(--stage-fill-active);
+    color: var(--stage-on-active);
+  }
+  /* the needle, fixed in the middle, with a soft lens behind it */
+  .stage-tape-needle {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    width: 3px;
+    height: 34px;
+    border-radius: 3px;
+    background: var(--stage-accent);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--stage-accent) 70%, transparent);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .stage-tape-wrap::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 64px;
+    height: 34px;
+    border-radius: 12px;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--stage-accent) 18%, transparent), transparent);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  /* ---- What you're working on: quiet tags, so the length and the lock lead ---- */
+  .stage-tag {
+    display: inline-flex;
+    height: 28px;
+    max-width: 160px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding-inline: 11px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stage-muted);
+    transition:
+      background 150ms ease,
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+  .stage-tag::before {
+    content: "#";
+    opacity: 0.55;
+  }
+  .stage-tag[data-dashed]::before {
+    content: none;
+  }
+  .stage-tag > .truncate {
+    min-width: 0;
+  }
+  .stage-tag:hover {
+    background: var(--stage-fill);
+    color: var(--stage-text);
+  }
+  .stage-tag[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--stage-accent) 55%, transparent);
+    background: color-mix(in srgb, var(--stage-accent) 16%, transparent);
+    color: var(--stage-text);
+  }
+  .stage-tag[data-dashed] {
+    border-color: var(--stage-line);
+    border-style: dashed;
+  }
+  .stage-tag:disabled {
+    opacity: 0.5;
+  }
+
+  /* ---- The start button: a padlock that closes as the hold ring fills ---- */
+  .stage-hold-fill {
+    stroke-dashoffset: calc(1 - var(--hold));
+  }
+  .stage-action[data-locked] {
+    --hold: 1;
+  }
+  .stage-padlock-shackle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    /* sits a little high at rest and presses down into the body as the ring fills */
+    transform: translateY(calc((1 - var(--hold)) * -2.2px));
+  }
+  .stage-padlock-hole {
+    fill: var(--stage-accent);
+  }
+  /* a small lift on hover, so it reads as something to press */
+  .stage-action[data-hold]:hover:not([data-locked]) .stage-padlock-shackle {
+    translate: 0 -0.8px;
+    transition: translate 200ms ease;
+  }
+
   /* ---- Round actions: the hold-to-start button, and pause, end and discard in a session ---- */
   .stage-actions {
     display: flex;
@@ -580,4 +779,11 @@
       --stage-chip-h: 32px;
     }
   }
+}
+
+/* lets the lock's hold progress spring back smoothly instead of jumping */
+@property --hold {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
 }

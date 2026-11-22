@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode, type Ref } from "react";
 import { Clock } from "./clocks/clock";
 import { ClockPicker } from "./clocks/clock-picker";
 import {
@@ -10,7 +10,6 @@ import {
   DockPopover,
   HomeLink,
   LivePill,
-  RoundAction,
   StageBackdrop,
   StageHero,
   stageStyle,
@@ -20,11 +19,12 @@ import {
   useSoundMuted,
 } from "./focus-stage";
 import { Icon } from "./icon";
+import { LengthTape } from "./length-tape";
 import { MusicButton, MusicPanel, YouTubePill } from "./music-panel";
 import { SceneGrid } from "./scene-picker";
-import { DIAL_MAX, DIAL_MIN, DIAL_STEP, formatDialTime, reachesDailyGoal, snapMinutes } from "@/lib/dial";
+import { reachesDailyGoal } from "@/lib/dial";
 import type { ClockStyle } from "@/lib/clock-styles";
-import { playLock, playTick, wakeSound } from "@/lib/dial-sound";
+import { playLock, wakeSound } from "@/lib/dial-sound";
 import { prefersReducedMotion } from "@/lib/motion";
 import type { Scene } from "@/lib/scenes";
 import { formatClock, formatDuration } from "@/lib/time";
@@ -32,43 +32,42 @@ import { formatClock, formatDuration } from "@/lib/time";
 const HOLD_MS = 1000;
 const CLOCK_MS = 15_000;
 const MAX_LABELS = 8;
-const SPRING_BACK = "stroke-dashoffset 320ms cubic-bezier(0.34, 1.56, 0.64, 1)";
-const PRESETS = [
-  { minutes: 25, text: "25m" },
-  { minutes: 50, text: "50m" },
-  { minutes: 90, text: "90m" },
-  { minutes: 120, text: "2h" },
-];
+const SPRING_BACK = "--hold 420ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 
 /** Some engines put a narrow space before "PM", which would differ between server and browser. */
 const endsAt = (now: number, minutes: number, timeZone: string) =>
   formatClock(new Date(now + minutes * 60_000), timeZone).replace(/\s/g, " ");
 
-/** Fills the ring round the button while pressed, and calls onFull once it gets there. */
+/** Drives --hold (0 to 1) on the lock while pressed: the shackle drops and the body fills. Calls onFull once it's shut. */
 function useHold(onFull: () => void) {
-  const fill = useRef<SVGCircleElement>(null);
+  const target = useRef<HTMLButtonElement>(null);
   const hold = useRef({ active: false, frame: 0 });
   const full = useRef(onFull);
   full.current = onFull;
+
+  function set(progress: number, transition: string) {
+    const el = target.current;
+    if (!el) return;
+    el.style.transition = transition;
+    el.style.setProperty("--hold", String(progress));
+  }
 
   function press() {
     const h = hold.current;
     if (h.active) return;
     h.active = true;
     wakeSound();
+    target.current?.setAttribute("data-holding", "");
     const startedAt = performance.now();
     const frame = (time: number) => {
       const progress = Math.min(Math.max(time - startedAt, 0) / HOLD_MS, 1);
-      const el = fill.current;
-      if (el) {
-        el.style.transition = "none";
-        el.style.strokeDashoffset = String(1 - progress);
-      }
+      set(progress, "none");
       if (progress < 1) {
         h.frame = requestAnimationFrame(frame);
         return;
       }
       h.active = false;
+      target.current?.removeAttribute("data-holding");
       full.current();
     };
     h.frame = requestAnimationFrame(frame);
@@ -79,114 +78,11 @@ function useHold(onFull: () => void) {
     if (!h.active) return;
     h.active = false;
     cancelAnimationFrame(h.frame);
-    const el = fill.current;
-    if (el) {
-      el.style.transition = prefersReducedMotion() ? "none" : SPRING_BACK;
-      el.style.strokeDashoffset = "1";
-    }
+    target.current?.removeAttribute("data-holding");
+    set(0, prefersReducedMotion() ? "none" : SPRING_BACK);
   }
 
-  return { fill, press, release, isHeld: () => hold.current.active };
-}
-
-function Presets({ goal, onGoal, locked }: { goal: number; onGoal: (minutes: number) => void; locked: boolean }) {
-  const isPreset = PRESETS.some((p) => p.minutes === goal);
-  const [custom, setCustom] = useState(!isPreset);
-  const customOn = custom || !isPreset;
-
-  function pick(minutes: number) {
-    wakeSound();
-    const next = snapMinutes(minutes);
-    if (next === goal) return;
-    playTick();
-    onGoal(next);
-  }
-
-  return (
-    <div role="group" aria-label="Session length" className="stage-row">
-      {PRESETS.map(({ minutes, text }) => (
-        <button
-          key={minutes}
-          disabled={locked}
-          onClick={() => {
-            setCustom(false);
-            pick(minutes);
-          }}
-          aria-label={`Set to ${formatDialTime(minutes)}`}
-          aria-pressed={!customOn && goal === minutes}
-          className="stage-chip tabular"
-        >
-          {text}
-        </button>
-      ))}
-      {customOn ? (
-        <CustomLength goal={goal} onPick={pick} locked={locked} />
-      ) : (
-        <button disabled={locked} onClick={() => setCustom(true)} aria-pressed={false} className="stage-chip">
-          Custom
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** The custom pill opens into a small stepper, which also takes a typed number of minutes. */
-function CustomLength({ goal, onPick, locked }: { goal: number; onPick: (minutes: number) => void; locked: boolean }) {
-  const [draft, setDraft] = useState<string | null>(null);
-
-  function commit() {
-    if (draft === null) return;
-    const typed = parseInt(draft, 10);
-    setDraft(null);
-    if (Number.isFinite(typed)) onPick(typed);
-  }
-
-  return (
-    <span className="stage-chip gap-1 px-1.5" data-active>
-      <button
-        disabled={locked || goal <= DIAL_MIN}
-        onClick={() => onPick(goal - DIAL_STEP)}
-        aria-label={`${DIAL_STEP} minutes less`}
-        className="stage-chip-step"
-      >
-        <span aria-hidden className="text-base leading-none">
-          −
-        </span>
-      </button>
-      <label className="flex items-baseline">
-        <input
-          autoFocus
-          disabled={locked}
-          type="text"
-          inputMode="numeric"
-          aria-label="Session length in minutes"
-          value={draft ?? String(goal)}
-          onChange={(e) => setDraft(e.target.value.replace(/\D/g, "").slice(0, 3))}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") setDraft(null);
-            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-              e.preventDefault();
-              setDraft(null);
-              onPick(goal + (e.key === "ArrowUp" ? DIAL_STEP : -DIAL_STEP));
-            }
-          }}
-        />
-        <span aria-hidden>m</span>
-      </label>
-      <button
-        disabled={locked || goal >= DIAL_MAX}
-        onClick={() => onPick(goal + DIAL_STEP)}
-        aria-label={`${DIAL_STEP} minutes more`}
-        className="stage-chip-step"
-      >
-        <span aria-hidden className="text-base leading-none">
-          +
-        </span>
-      </button>
-    </span>
-  );
+  return { target, press, release, isHeld: () => hold.current.active };
 }
 
 function LabelChips({
@@ -217,7 +113,7 @@ function LabelChips({
           onClick={() => onChange(chip === label ? "" : chip)}
           aria-pressed={chip === label}
           title={chip}
-          className="stage-chip"
+          className="stage-tag"
         >
           <span className="truncate">{chip}</span>
         </button>
@@ -240,13 +136,46 @@ function LabelChips({
           disabled={locked}
           onClick={() => setAdding(true)}
           aria-label="Add something new to work on"
-          className="stage-chip"
+          className="stage-tag"
           data-dashed
         >
-          <Icon name="add" size={15} /> new
+          <Icon name="add" size={14} /> new
         </button>
       )}
     </div>
+  );
+}
+
+type LockProps = ButtonHTMLAttributes<HTMLButtonElement> & { locked: boolean; ref: Ref<HTMLButtonElement> };
+
+/** The round start button. Its padlock is open at rest, closes as the ring fills, and snaps shut when it's full. */
+function LockButton({ locked, ref, ...rest }: LockProps) {
+  return (
+    <button
+      {...rest}
+      ref={ref}
+      data-hold
+      data-big
+      data-tone="accent"
+      data-locked={locked || undefined}
+      disabled={locked}
+      className="stage-action"
+    >
+      <span className="stage-action-disc">
+        <svg viewBox="0 0 100 100" className="stage-hold-ring" aria-hidden>
+          <circle cx="50" cy="50" r="48" stroke="var(--stage-line)" />
+          <circle cx="50" cy="50" r="48" stroke="var(--stage-accent)" pathLength={1} strokeDasharray="1 1" className="stage-hold-fill" />
+        </svg>
+        {locked && <span data-lock-pulse className="stage-hold-pulse animate-lock-pulse" aria-hidden />}
+        <svg viewBox="0 0 24 24" width="30" height="30" className={`stage-padlock ${locked ? "animate-lock-snap" : ""}`} aria-hidden>
+          {/* a chunky shackle with long legs, so it never leaves the body: holding just presses it home */}
+          <path className="stage-padlock-shackle" d="M8.4 14V8.4a3.6 3.6 0 0 1 7.2 0V14" />
+          <rect x="4.6" y="10.4" width="14.8" height="11.4" rx="3.6" fill="currentColor" />
+          <path className="stage-padlock-hole" d="M12 13.9a1.7 1.7 0 0 0-.85 3.17v1.33a.85.85 0 0 0 1.7 0v-1.33A1.7 1.7 0 0 0 12 13.9z" />
+        </svg>
+      </span>
+      <span>{locked ? "Locked in" : "Hold to lock in"}</span>
+    </button>
   );
 }
 
@@ -290,6 +219,11 @@ export function FocusSetup(props: Props) {
   const hold = useHold(lockIn);
   const latest = useRef({ hold, starting });
   latest.current = { hold, starting };
+
+  // if starting fails, open the lock back up so it can be held again
+  useEffect(() => {
+    if (!starting) hold.target.current?.style.setProperty("--hold", "0");
+  }, [starting, hold.target]);
 
   useEffect(() => {
     setNow(Date.now());
@@ -385,35 +319,13 @@ export function FocusSetup(props: Props) {
         />
 
         <div className="stage-mid stage-fade" data-setup-only>
-          <Presets goal={goal} onGoal={onGoal} locked={starting} />
+          <LengthTape goal={goal} onGoal={onGoal} locked={starting} />
           <LabelChips labels={labels} label={label} onChange={onLabel} locked={starting} />
         </div>
 
-        <RoundAction
-          data-hold
-          big
-          tone="accent"
-          disabled={starting}
-          icon={starting ? <Icon name="lock" size={28} className="animate-lock-snap" /> : <Icon name="startFocus" size={30} solid />}
-          label={starting ? "Locked in" : "Hold to lock in"}
-          extra={
-            <>
-              <svg viewBox="0 0 100 100" className="stage-hold-ring" aria-hidden>
-                <circle cx="50" cy="50" r="48" stroke="var(--stage-line)" />
-                <circle
-                  ref={hold.fill}
-                  cx="50"
-                  cy="50"
-                  r="48"
-                  stroke="var(--stage-accent)"
-                  pathLength={1}
-                  strokeDasharray="1 1"
-                  style={{ strokeDashoffset: starting ? 0 : 1 }}
-                />
-              </svg>
-              {starting && <span data-lock-pulse className="stage-hold-pulse animate-lock-pulse" aria-hidden />}
-            </>
-          }
+        <LockButton
+          ref={hold.target}
+          locked={starting}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             e.currentTarget.setPointerCapture(e.pointerId);
