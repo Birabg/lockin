@@ -240,6 +240,7 @@
   .stage-tape-wrap {
     position: relative;
     width: min(460px, 100%);
+    margin-bottom: 6px;
   }
   .stage-tape-wrap[data-locked] {
     opacity: 0.5;
@@ -288,6 +289,8 @@
     opacity: calc(1 - var(--d) * 0.6);
   }
   .stage-tape-line {
+    /* the tick under the needle steps aside, so there is only ever one line in the middle */
+    opacity: clamp(0, calc(var(--d) * 40), 1);
     width: 2px;
     height: calc(16px - var(--d) * 6px);
     margin-top: calc(14px + var(--d) * 3px);
@@ -308,6 +311,8 @@
     font-size: 13px;
     font-weight: 650;
     color: var(--stage-muted);
+    /* labels clear out of the way of the value under the needle */
+    opacity: clamp(0, calc((var(--d) - 0.1) * 10), 1);
     transform: translateX(-50%) scale(calc(1 - var(--d) * 0.25));
   }
   /* the quick stops: a dot over the tick, and a label you can tap */
@@ -335,9 +340,26 @@
     background: var(--stage-fill-hover);
     color: var(--stage-text);
   }
-  .stage-tape-stop[aria-pressed="true"] {
+  /* the value under the needle: a solid pill that never moves */
+  .stage-tape-value {
+    position: absolute;
+    top: 37px;
+    left: 50%;
+    min-width: 58px;
+    border-radius: 999px;
     background: var(--stage-fill-active);
+    padding: 3px 11px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 700;
     color: var(--stage-on-active);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .stage-tape-wrap[data-locked] .stage-tape-value {
+    opacity: 0.8;
   }
   /* the needle, fixed in the middle, with a soft lens behind it */
   .stage-tape-needle {
@@ -368,7 +390,7 @@
   /* ---- What you're working on: quiet tags, so the length and the lock lead ---- */
   .stage-tag {
     display: inline-flex;
-    height: 28px;
+    height: 30px;
     max-width: 160px;
     flex-shrink: 0;
     align-items: center;
