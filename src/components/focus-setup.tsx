@@ -16,7 +16,6 @@ import {
   toggleFullscreen,
   useDockMenu,
   useFullscreen,
-  useSoundMuted,
 } from "./focus-stage";
 import { Icon } from "./icon";
 import { LengthTape } from "./length-tape";
@@ -206,7 +205,6 @@ type Props = {
 export function FocusSetup(props: Props) {
   const { scene, goal, onGoal, label, onLabel, labels, liveCount, todaySec, dailyGoalMin, timeZone, starting } = props;
   const [now, setNow] = useState(props.serverNow); // same on server and client, so hydration matches
-  const sound = useSoundMuted();
   const screen = useFullscreen();
   const menu = useDockMenu<"music" | "scene" | "clock" | "settings">();
   const lastKey = useRef(0);
@@ -385,12 +383,6 @@ export function FocusSetup(props: Props) {
         )}
         {!menu.open && <YouTubePill />}
         <Dock label="Focus tools">
-          <DockButton
-            icon={sound.muted ? "mute" : "sound"}
-            label={sound.muted ? "Turn sounds on" : "Mute sounds"}
-            text="Sound"
-            onClick={sound.toggle}
-          />
           <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />

@@ -19,7 +19,6 @@ import {
   useDockMenu,
   useFullscreen,
   useHandoff,
-  useSoundMuted,
 } from "./focus-stage";
 import { Icon } from "./icon";
 import { MusicButton, MusicPanel, YouTubePill } from "./music-panel";
@@ -183,7 +182,6 @@ export function ImmersiveTimer(props: ImmersiveProps) {
         />
         {!menu.open && <YouTubePill hidden={!showChrome} />}
         <Dock label="Session tools" hidden={!showChrome}>
-          <SoundButton />
           <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />
@@ -240,7 +238,6 @@ export function SessionStage(props: StageProps & { onExpand: () => void }) {
         />
         {!menu.open && <YouTubePill />}
         <Dock label="Session tools">
-          <SoundButton />
           <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />
@@ -256,18 +253,6 @@ export function SessionStage(props: StageProps & { onExpand: () => void }) {
         </div>
       )}
     </section>
-  );
-}
-
-function SoundButton() {
-  const sound = useSoundMuted();
-  return (
-    <DockButton
-      icon={sound.muted ? "mute" : "sound"}
-      label={sound.muted ? "Turn sounds on" : "Mute sounds"}
-      text="Sound"
-      onClick={sound.toggle}
-    />
   );
 }
 

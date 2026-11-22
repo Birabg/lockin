@@ -14,7 +14,6 @@ import {
 import Link from "next/link";
 import { SceneBackdrop } from "./scene-art";
 import { Icon, type IconName } from "./icon";
-import { loadSoundMuted, setSoundMuted, wakeSound } from "@/lib/dial-sound";
 import { prefersReducedMotion } from "@/lib/motion";
 import type { Scene } from "@/lib/scenes";
 
@@ -216,17 +215,6 @@ export function DockPopover({
 }
 
 /* ---- Shared behaviour ---- */
-
-export function useSoundMuted() {
-  const [muted, setMuted] = useState(false);
-  useEffect(() => setMuted(loadSoundMuted()), []);
-  function toggle() {
-    setSoundMuted(!muted);
-    setMuted(!muted);
-    wakeSound();
-  }
-  return { muted, toggle };
-}
 
 export function toggleFullscreen() {
   if (!document.fullscreenEnabled) return;
