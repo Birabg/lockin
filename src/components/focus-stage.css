@@ -245,9 +245,7 @@
     align-items: center;
     border: 1px solid var(--stage-line);
     border-radius: 26px;
-    background:
-      linear-gradient(to bottom, rgb(255 255 255 / 0.05), transparent 40%),
-      var(--stage-surface);
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0.05), transparent 40%), var(--stage-surface);
     padding: 10px 0 8px;
     box-shadow:
       var(--stage-shadow),

@@ -127,7 +127,8 @@ export function LengthTape({ goal, onGoal, locked }: { goal: number; onGoal: (mi
           onScroll();
           const el = e.currentTarget;
           const left = toLeft(toMinutes(el.scrollLeft));
-          if (!drag.current && Math.abs(el.scrollLeft - left) > 0.5) el.scrollTo({ left, behavior: prefersReducedMotion() ? "instant" : "smooth" });
+          if (!drag.current && Math.abs(el.scrollLeft - left) > 0.5)
+            el.scrollTo({ left, behavior: prefersReducedMotion() ? "instant" : "smooth" });
         }}
         onPointerDown={(e) => {
           wakeSound();
