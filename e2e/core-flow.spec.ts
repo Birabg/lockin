@@ -72,13 +72,12 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
 
   await page.goto("/dashboard/timer");
 
-  await page.getByRole("button", { name: "Custom" }).click();
-  const minutes = page.getByRole("textbox", { name: "Session length in minutes" });
-  await minutes.press("ArrowUp");
-  await expect(minutes).toHaveValue("30");
-  await minutes.fill("45");
-  await minutes.press("Enter");
-  await expect(minutes).toHaveValue("45");
+  const length = page.getByRole("slider", { name: "Session length" });
+  await length.focus();
+  await length.press("ArrowRight");
+  await expect(length).toHaveAttribute("aria-valuenow", "30");
+  await length.press("PageUp");
+  await expect(length).toHaveAttribute("aria-valuenow", "60");
   await page.getByRole("button", { name: "Set to 1h 30m" }).click();
   await expect(page.getByRole("button", { name: "Set to 1h 30m" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Set to 25 min" }).click();
