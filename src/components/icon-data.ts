@@ -191,4 +191,7 @@ export const ICONS = {
   hide: {
     line: '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 14C5 14 2 7 2 7M22 7C22 7 21.0586 9.19661 19 11.1288C18.0872 11.9856 16.9547 12.7904 15.5872 13.3287C14.5334 13.7435 13.34 14 12 14M12 14V16.5M15.5872 13.3287L17 15.5M19 11.1288L20.5 12.6288M8.41281 13.3287L7 15.5M5 11.1288L3.5 12.6288"/>',
   },
+  copy: {
+    line: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"><rect x="8.5" y="8.5" width="12" height="12" rx="3"/><path d="M15.5 8.5V6.5C15.5 4.84 14.16 3.5 12.5 3.5H6.5C4.84 3.5 3.5 4.84 3.5 6.5V12.5C3.5 14.16 4.84 15.5 6.5 15.5H8.5"/></g>',
+  },
 } satisfies Record<string, Looks>;
