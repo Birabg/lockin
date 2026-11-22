@@ -1,0 +1,82 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Avatar } from "@/components/ui";
+import { formatDuration } from "@/lib/time";
+
+type Session = {
+  label: string | null;
+  goalMin: number;
+  remaining: number;
+  user: { id: string; username: string; name: string; avatar: string | null };
+};
+
+const R = 27;
+const C = 2 * Math.PI * R;
+
+function clock(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}
+
+/** Everyone's session, counting down live from the server's snapshot until the next refresh. */
+export function FocusingGrid({ sessions, viewerId, serverNow }: { sessions: Session[]; viewerId: string | null; serverNow: number }) {
+  const [now, setNow] = useState(serverNow);
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const drift = Math.max(0, (now - serverNow) / 1000);
+
+  // you first, then in the order they started
+  const ordered = [...sessions].sort((a, b) => Number(b.user.id === viewerId) - Number(a.user.id === viewerId));
+
+  return (
+    <ul className="focus-grid" aria-label="People focusing">
+      {ordered.map((s) => {
+        const goal = s.goalMin * 60;
+        const remaining = s.remaining - drift;
+        const over = remaining <= 0;
+        const progress = Math.min(1, Math.max(0, 1 - remaining / goal));
+        const you = s.user.id === viewerId;
+        return (
+          <li key={s.user.id}>
+            <Link
+              href={`/dashboard/u/${s.user.username}`}
+              className="panel focus-card"
+              data-you={you || undefined}
+              data-over={over || undefined}
+            >
+              <span className="focus-ring">
+                <svg viewBox="0 0 60 60" aria-hidden>
+                  <circle cx="30" cy="30" r={R} className="focus-ring-track" />
+                  <circle cx="30" cy="30" r={R} className="focus-ring-fill" strokeDasharray={C} strokeDashoffset={C * (1 - progress)} />
+                </svg>
+                <Avatar name={s.user.name} src={s.user.avatar} size={44} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14.5px] font-bold">{you ? "You" : s.user.name}</span>
+                <span className="focus-label">{s.label ?? "Deep work"}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span
+                  className="focus-clock tabular"
+                  aria-label={over ? "Goal reached" : `${formatDuration(Math.ceil(remaining / 60) * 60)} left`}
+                >
+                  {over ? `+${clock(-remaining)}` : clock(remaining)}
+                </span>
+                <span className="block text-[11px] font-semibold text-subtle">
+                  {over ? "past goal" : `left of ${formatDuration(goal)}`}
+                </span>
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

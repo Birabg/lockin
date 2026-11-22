@@ -8,8 +8,16 @@ import { btnGhost, inputCls } from "@/components/ui";
 export function DeleteAccount({ hasPassword, username }: { hasPassword: boolean; username: string }) {
   const [state, action, pending] = useActionState(deleteAccount, undefined);
   return (
-    <details className="panel mt-4 p-4">
-      <summary className="cursor-pointer text-sm font-bold text-danger">Delete account</summary>
+    <details className="set-danger">
+      <summary>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-bold text-danger">Delete account</span>
+          <span className="block text-[12.5px] font-normal text-muted">Permanently remove your profile and everything you’ve posted.</span>
+        </span>
+        <span className="set-danger-chev" aria-hidden>
+          ›
+        </span>
+      </summary>
       <form action={action} className="mt-3 space-y-3">
         <p className="text-sm text-muted">
           This permanently deletes your profile, sessions, posts, comments, likes, avatar and timelapses. It can&apos;t be undone.

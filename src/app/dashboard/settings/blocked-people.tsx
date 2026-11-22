@@ -26,7 +26,7 @@ export function BlockedPeople({ blocked, muted }: { blocked: Person[]; muted: Pe
 
   const list = (kind: "block" | "mute", people: Person[], empty: string) =>
     people.length === 0 ? (
-      <p className="text-sm text-muted">{empty}</p>
+      <p className="pt-1 text-[13px] text-subtle">{empty}</p>
     ) : (
       <ul className="divide-y divide-border/60" data-list={kind}>
         {people.map((p) => (
@@ -45,15 +45,21 @@ export function BlockedPeople({ blocked, muted }: { blocked: Person[]; muted: Pe
     );
 
   return (
-    <section className="panel mb-4 p-4" aria-labelledby="blocked-title">
-      <h2 id="blocked-title" className="font-bold">
-        Blocked users
-      </h2>
-      <p className="mb-2 text-sm text-muted">You and they can’t see each other’s posts or interact. They aren’t told.</p>
-      {list("block", blocked, "You haven't blocked anyone.")}
-      <h3 className="mt-4 font-bold">Muted users</h3>
-      <p className="mb-2 text-sm text-muted">Their posts stay out of your feed. They can still see and interact with yours.</p>
-      {list("mute", muted, "You haven't muted anyone.")}
-    </section>
+    <div className="space-y-3">
+      <div className="set-group">
+        <h3 className="flex items-center gap-2 text-[14px] font-bold">
+          Blocked <span className="set-count">{blocked.length}</span>
+        </h3>
+        <p className="mb-1 text-[12.5px] text-muted">You and they can’t see each other’s posts or interact.</p>
+        {list("block", blocked, "You haven't blocked anyone.")}
+      </div>
+      <div className="set-group">
+        <h3 className="flex items-center gap-2 text-[14px] font-bold">
+          Muted <span className="set-count">{muted.length}</span>
+        </h3>
+        <p className="mb-1 text-[12.5px] text-muted">Their posts stay out of your feed. They can still see and interact with yours.</p>
+        {list("mute", muted, "You haven't muted anyone.")}
+      </div>
+    </div>
   );
 }

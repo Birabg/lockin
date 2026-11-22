@@ -1,0 +1,125 @@
+/* Focusing now: a live headline, then everyone's session ticking down. */
+
+@layer components {
+  .focus-hero {
+    margin-bottom: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--live) 14%, transparent), transparent 60%), var(--card);
+    padding: 20px;
+  }
+  .focus-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--live) 12%, transparent);
+    padding: 4px 11px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--live);
+  }
+  .focus-live[data-quiet] {
+    background: var(--inset);
+    color: var(--muted-foreground);
+  }
+  .focus-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: focus-pulse 1.8s ease-out infinite;
+  }
+  .focus-live[data-quiet] .focus-live-dot {
+    animation: none;
+  }
+  @keyframes focus-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 7px transparent;
+    }
+  }
+
+  .focus-grid {
+    display: grid;
+    gap: 10px;
+  }
+  @media (width >= 40rem) {
+    .focus-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .focus-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px 12px 12px;
+    transition: border-color 150ms;
+  }
+  .focus-card:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  }
+  .focus-card[data-you] {
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+    background: color-mix(in srgb, var(--primary) 7%, var(--card));
+  }
+  /* the avatar sits inside how far through their goal they are */
+  .focus-ring {
+    position: relative;
+    display: grid;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    place-items: center;
+  }
+  .focus-ring svg {
+    position: absolute;
+    inset: 0;
+    rotate: -90deg;
+  }
+  .focus-ring circle {
+    fill: none;
+    stroke-width: 3;
+  }
+  .focus-ring-track {
+    stroke: var(--inset);
+  }
+  .focus-ring-fill {
+    stroke: var(--live);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
+  }
+  .focus-card[data-over] .focus-ring-fill {
+    stroke: var(--streak);
+  }
+  .focus-label {
+    display: block;
+    overflow: hidden;
+    margin-top: 2px;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted-foreground);
+  }
+  .focus-clock {
+    display: block;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .focus-card[data-over] .focus-clock {
+    color: var(--streak);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .focus-live-dot {
+      animation: none;
+    }
+    .focus-ring-fill {
+      transition: none;
+    }
+  }
+}

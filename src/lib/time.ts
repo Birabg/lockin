@@ -150,3 +150,28 @@ export function timeAgo(date: Date): string {
   const d = Math.floor(h / 24);
   return `${d}d ago`;
 }
+
+/**
+ * Seconds until a leaderboard period starts over where the viewer is: the next local midnight for
+ * "today", the next local Monday midnight for "this week".
+ */
+export function secondsUntilReset(range: "today" | "week", timeZone: string, now = new Date()): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      weekday: "short",
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, p.value]),
+  );
+  const intoDay = Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second);
+  const toMidnight = 86_400 - intoDay;
+  if (range === "today") return toMidnight;
+  // Monday is 0 here, so Sunday night is the last day of the week
+  const day = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(parts.weekday);
+  return toMidnight + (6 - day) * 86_400;
+}
