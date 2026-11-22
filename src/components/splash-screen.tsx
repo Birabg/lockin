@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Wordmark, logoStyle } from "./ui";
 import { LOCK_MARK } from "@/lib/brand";
-import { loadSoundMuted, playLock, wakeSound } from "@/lib/dial-sound";
+import { playLock, wakeSound } from "@/lib/dial-sound";
 import { SNAP_IMPACT, SPLASH } from "@/lib/splash";
 
 const INTERACTED_KEY = "lockin-interacted";
@@ -85,10 +85,7 @@ export function SplashScreen() {
     function lock() {
       if (elapsed() + LOCK_MS + SPLASH.fade > SPLASH.cap) return toEnd();
       const sound = hasInteractedBefore();
-      if (sound) {
-        loadSoundMuted();
-        wakeSound();
-      }
+      if (sound) wakeSound();
       root.dataset.splashPhase = "lock";
       later(() => playLock(10, sound), SPLASH.form + SPLASH.snap * SNAP_IMPACT);
       later(reveal, LOCK_MS);
