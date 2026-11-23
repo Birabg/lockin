@@ -1,0 +1,445 @@
+/* The floating timer window, in three fixed sizes (see floating-timer.tsx). Every size is laid out in
+   pixels for its window, so nothing stretches if the window is dragged before it springs back. */
+
+@layer components {
+  .float-body {
+    display: grid;
+    min-height: 100vh;
+    margin: 0;
+    place-items: center;
+    overflow: hidden;
+    background: #0b0b0d;
+    color: #f5f5f7;
+    color-scheme: dark;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .float {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    color: #f5f5f7;
+  }
+
+  /* the session's own background, blurred behind the small sizes and clear behind the full one */
+  .float-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: #0d0d10;
+  }
+  .float:not([data-mode="full"]) .float-backdrop {
+    filter: blur(10px) saturate(1.25);
+    transform: scale(1.2);
+  }
+  .float-veil {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(60% 140% at 0% 50%, color-mix(in srgb, var(--float-accent) 30%, transparent), transparent 70%),
+      linear-gradient(90deg, rgb(10 10 12 / 0.72), rgb(10 10 12 / 0.6));
+  }
+  .float[data-mode="full"] .float-veil {
+    background:
+      radial-gradient(90% 50% at 50% 108%, color-mix(in srgb, var(--float-accent) 30%, transparent), transparent 70%),
+      radial-gradient(80% 60% at 50% 42%, rgb(12 12 14 / 0.38), rgb(12 12 14 / 0.74)),
+      linear-gradient(to bottom, rgb(12 12 14 / 0.6), rgb(12 12 14 / 0.45) 45%, rgb(12 12 14 / 0.82));
+  }
+
+  /* ---- the padlock and its ring ---- */
+
+  .float-lock {
+    --lock: 48px;
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    width: var(--lock);
+    height: var(--lock);
+    flex-shrink: 0;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    padding: 0;
+    color: var(--float-accent);
+    cursor: pointer;
+    transition: transform 160ms ease;
+  }
+  .float-lock:hover {
+    transform: scale(1.05);
+  }
+  .float-lock:active {
+    transform: scale(0.95);
+  }
+  .float-lock:disabled {
+    cursor: default;
+  }
+  /* a soft glow that breathes while you focus */
+  .float-lock::before {
+    content: "";
+    position: absolute;
+    inset: 16%;
+    z-index: -1;
+    border-radius: 999px;
+    background: var(--float-accent);
+    opacity: 0;
+    filter: blur(12px);
+  }
+  .float[data-running] .float-lock::before {
+    animation: float-breathe 4.2s ease-in-out infinite;
+  }
+
+  .float-lock-ring {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+  }
+  .float-lock-ring circle {
+    fill: none;
+  }
+  .float-track {
+    stroke: rgb(255 255 255 / 0.13);
+    stroke-width: 3;
+  }
+  .float-fill {
+    stroke: var(--float-accent);
+    stroke-width: 3.4;
+    stroke-linecap: round;
+    stroke-dasharray: 1 1;
+    transition:
+      stroke-dashoffset 1s linear,
+      opacity 300ms ease;
+  }
+  .float[data-paused] .float-fill {
+    opacity: 0.45;
+  }
+
+  .float-padlock {
+    width: 46%;
+    height: 46%;
+    overflow: visible;
+  }
+  .float-shackle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.2;
+    stroke-linecap: round;
+    transform-box: fill-box;
+    transform-origin: 0% 100%;
+    transition: transform 420ms cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  /* paused: the shackle springs up and swings open */
+  .float[data-paused] .float-shackle {
+    transform: translateY(-3px) rotate(-20deg);
+  }
+  .float-keyhole {
+    fill: rgb(0 0 0 / 0.42);
+  }
+
+  /* ---- the time: whichever clock style is picked on the focus screen ---- */
+
+  /* the box is the space the clock may fill; the face inside is scaled to it (see FitClock) */
+  .float-clock {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    place-items: center;
+    overflow: hidden;
+  }
+  .float-clock-face {
+    display: block;
+    width: max-content;
+    max-width: none;
+    transform-origin: center;
+  }
+  .float-clock-face .clock {
+    max-width: none;
+  }
+
+  .float-head {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .float-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .float-phase {
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.1);
+    padding: 2px 8px;
+    font-size: 11px;
+    color: rgb(255 255 255 / 0.72);
+  }
+  .float[data-paused] .float-phase {
+    background: rgb(245 184 74 / 0.2);
+    color: #f7c873;
+  }
+  .float[data-over] .float-phase {
+    background: color-mix(in srgb, var(--float-accent) 26%, transparent);
+    color: #fff;
+  }
+
+  /* ---- the size switch: three little windows ---- */
+
+  .float-switch {
+    display: flex;
+    flex-shrink: 0;
+    gap: 2px;
+    border-radius: 999px;
+    background: rgb(20 20 24 / 0.55);
+    padding: 3px;
+    backdrop-filter: blur(10px);
+  }
+  .float-switch > button {
+    display: grid;
+    width: 26px;
+    height: 22px;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    padding: 0;
+    color: rgb(255 255 255 / 0.5);
+    cursor: pointer;
+    transition:
+      background 150ms ease,
+      color 150ms ease;
+  }
+  .float-switch > button:hover {
+    color: #fff;
+  }
+  .float-switch > button[aria-checked="true"] {
+    background: rgb(255 255 255 / 0.16);
+    color: #fff;
+  }
+  .float-switch svg {
+    width: 16px;
+    height: 16px;
+  }
+  .float-switch rect {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+  }
+  .float-switch [aria-checked="true"] rect {
+    fill: color-mix(in srgb, currentColor 28%, transparent);
+  }
+
+  /* the switch waits out of sight in the small sizes until the pointer is over the window */
+  .float-hover {
+    opacity: 0;
+    transition: opacity 180ms ease;
+  }
+  .float:hover .float-hover,
+  .float-hover:focus-within {
+    opacity: 1;
+  }
+
+  /* ---- buttons ---- */
+
+  .float-round,
+  .float-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition:
+      background 150ms ease,
+      transform 120ms ease,
+      filter 150ms ease;
+  }
+  .float-round:hover,
+  .float-pill:hover {
+    background: rgb(255 255 255 / 0.17);
+  }
+  .float-round:active,
+  .float-pill:active {
+    transform: scale(0.95);
+  }
+  .float-round[data-main],
+  .float-pill[data-main] {
+    border-color: transparent;
+    background: var(--float-accent);
+    color: var(--stage-on-active);
+  }
+  .float-round[data-main]:hover,
+  .float-pill[data-main]:hover {
+    filter: brightness(1.08);
+  }
+  .float-round:disabled,
+  .float-pill:disabled {
+    opacity: 0.5;
+  }
+  .float-round {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .float-pill {
+    height: 40px;
+    flex: 1;
+    gap: 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  /* ---- compact: the lock and the time, nothing else ---- */
+
+  .float-mini {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px 0 12px;
+  }
+  .float-mini .float-clock {
+    flex: 1;
+    align-self: stretch;
+    justify-items: start;
+    padding: 7px 4px 7px 0;
+  }
+  .float-mini .float-clock-face,
+  .float-normal .float-clock-face {
+    transform-origin: left center;
+  }
+  .float-mini .float-hover {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    translate: 0 -50%;
+  }
+
+  /* ---- normal: lock, what you're on, the time, pause and end ---- */
+
+  .float-normal {
+    display: grid;
+    height: 100%;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 12px 12px 14px;
+  }
+  .float-normal .float-lock {
+    --lock: 76px;
+  }
+  .float-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .float-normal .float-clock {
+    height: 70px;
+    padding: 3px 4px 3px 0;
+    justify-items: start;
+  }
+  .float-side {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .float-buttons {
+    display: flex;
+    gap: 6px;
+  }
+
+  /* ---- full: the focus screen in miniature ---- */
+
+  .float-full {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 16px;
+  }
+  .float-full-top {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .float-dial {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .float-dial .float-lock {
+    --lock: 36px;
+  }
+  .float-full .float-clock {
+    width: 100%;
+    flex: 1;
+    padding: 6px 8px;
+  }
+  .float-caption {
+    margin: 4px 0 0;
+    max-width: 100%;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgb(255 255 255 / 0.62);
+    text-align: center;
+  }
+  .float-streak {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgb(255 255 255 / 0.72);
+  }
+  .float-full-actions {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    margin-top: auto;
+  }
+}
+
+@keyframes float-breathe {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float[data-running] .float-lock::before {
+    animation: none;
+  }
+  .float-shackle,
+  .float-fill {
+    transition: none;
+  }
+}

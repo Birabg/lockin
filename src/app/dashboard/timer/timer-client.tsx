@@ -12,6 +12,7 @@ import { notifyFocusChange } from "@/components/focus-heartbeat";
 import { YouTubeAudio, useAmbienceOnPage } from "@/components/music-panel";
 import { toast } from "@/components/toaster";
 import { Icon } from "@/components/icon";
+import { FloatingTimer, useFloatingWindow } from "@/components/floating-timer";
 import { DEFAULT_CLOCK_STYLE, clockText, isClockStyle, resolveClockStyle, type ClockStyle } from "@/lib/clock-styles";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
@@ -122,6 +123,7 @@ export function TimerClient(props: Props) {
   const lastView = useRef({ ...view, label: session?.label ?? null });
   if (session) lastView.current = { ...view, label: session.label };
 
+  const float = useFloatingWindow();
   useWakeLock(!!session);
   useAmbienceOnPage();
   useEffect(() => setMounted(true), []);
@@ -129,6 +131,12 @@ export function TimerClient(props: Props) {
   useEffect(() => {
     if (!session) setMinimized(false);
   }, [session]);
+
+  // the floating window only ever shows a running session
+  const closeFloat = float.close;
+  useEffect(() => {
+    if (!session) closeFloat();
+  }, [session, closeFloat]);
 
   // the nav is hidden from CSS, so nothing on the page loses its state
   useEffect(() => {
@@ -442,11 +450,34 @@ export function TimerClient(props: Props) {
     onDiscard,
     onPickScene,
     onPickClock,
+    floating: float.can ? { open: !!float.win, onToggle: float.toggle } : null,
   };
 
   return (
     <>
       <YouTubeAudio />
+      {float.win && session && (
+        <FloatingTimer
+          win={float.win}
+          mode={float.mode}
+          onMode={float.setMode}
+          scene={scene}
+          clockStyle={clockStyle}
+          clock={clock}
+          label={session.label}
+          phase={phase}
+          caption={caption}
+          streak={streak}
+          remainingSec={shownRemaining}
+          totalSec={goalSec}
+          running={running}
+          paused={paused}
+          overtime={overtime}
+          pending={pending}
+          onTogglePause={onTogglePause}
+          onFinish={() => setFinishing(true)}
+        />
+      )}
       {showOverlay &&
         (mounted ? (
           <ImmersiveTimer
