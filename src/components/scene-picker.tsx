@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, type KeyboardEvent } from "react";
 import { Icon } from "./icon";
 import { SceneBackdrop } from "./scene-art";
-import { pickerScenes, toggleRainId, type Scene } from "@/lib/scenes";
+import { categoryOf, pickerScenes, sceneCategories, toggleRainId, type Scene, type SceneCategoryId } from "@/lib/scenes";
 
 function Thumb({ scene, selected, onPick }: { scene: Scene; selected: boolean; onPick: () => void }) {
   return (
@@ -28,7 +29,7 @@ function Thumb({ scene, selected, onPick }: { scene: Scene; selected: boolean; o
 }
 
 /**
- * The backgrounds, as a grid of thumbnails, with a switch that puts rain over whichever one is
+ * The backgrounds in tabs by category, opening on the chosen one's, each a grid of thumbnails, with a switch that puts rain over whichever one is
  * chosen. Lives in a dock popover on the focus screens.
  */
 export function SceneGrid({ current, onPick }: { current: Scene; onPick: (id: string) => void }) {
@@ -36,6 +37,19 @@ export function SceneGrid({ current, onPick }: { current: Scene; onPick: (id: st
   const raining = !!current.rain;
   // a rainy scene that isn't in the grid, like a photo with rain, still shows its dry tile as chosen
   const shown = pickerScenes.some((s) => s.id === current.id) ? current.id : current.id.replace(/\+rain$/, "");
+  const [tab, setTab] = useState<SceneCategoryId>(() => categoryOf(current));
+  const category = sceneCategories.find((c) => c.id === tab) ?? sceneCategories[0];
+
+  // arrow keys move along the tabs, like any tab list
+  function onTabKey(e: KeyboardEvent<HTMLDivElement>) {
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const at = sceneCategories.findIndex((c) => c.id === tab);
+    const next = sceneCategories[(at + step + sceneCategories.length) % sceneCategories.length].id;
+    setTab(next);
+    e.currentTarget.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)?.focus();
+  }
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -65,8 +79,31 @@ export function SceneGrid({ current, onPick }: { current: Scene; onPick: (id: st
           />
         </span>
       </button>
-      <div role="group" aria-label="Backgrounds" className="grid grid-cols-3 gap-2">
-        {pickerScenes.map((s) => (
+      <div role="tablist" aria-label="Background categories" className="scene-tabs" onKeyDown={onTabKey}>
+        {sceneCategories.map((c) => {
+          const on = c.id === tab;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              id={`scene-tab-${c.id}`}
+              aria-selected={on}
+              aria-controls="scene-tab-panel"
+              tabIndex={on ? 0 : -1}
+              data-tab={c.id}
+              onClick={() => setTab(c.id)}
+              className="scene-tab"
+            >
+              {c.name}
+              {/* marks the group your background is in, from any tab */}
+              {c.scenes.some((s) => s.id === shown) && <span className="scene-tab-dot" aria-hidden />}
+            </button>
+          );
+        })}
+      </div>
+      <div id="scene-tab-panel" role="tabpanel" aria-labelledby={`scene-tab-${category.id}`} className="grid grid-cols-3 gap-2">
+        {category.scenes.map((s) => (
           <Thumb key={s.id} scene={s} selected={s.id === shown} onPick={() => onPick(s.id)} />
         ))}
       </div>

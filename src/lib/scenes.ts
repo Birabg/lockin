@@ -43,6 +43,20 @@ export const imageScenes: ImageScene[] = [
   photo("candlelit-desk", "Candlelit desk", "#e6c88a"),
   photo("rainy-city-window", "City window", "#8ec5e8"),
   photo("cozy-reading-nook", "Reading nook", "#a9cc9c"),
+  photo("golden-radio", "Old radio", "#f0b46c"),
+  photo("sunlit-desk", "Sunlit desk", "#f5c27a"),
+  photo("sunset-lake", "Sunset lake", "#ffad5c"),
+  photo("golden-field", "Golden field", "#f2c27a"),
+  photo("summer-sky", "Summer sky", "#8fd3e6"),
+  photo("flower-street", "Flower street", "#ffa766"),
+  photo("willow-pond", "Willow pond", "#b5d98a"),
+  photo("misty-pines", "Misty pines", "#a8d5b0"),
+  photo("night-meadow", "Night meadow", "#b9d6c2"),
+  photo("mountain-stars", "Mountain stars", "#ffb36b"),
+  photo("violet-sky", "Violet sky", "#d0a8ff"),
+  photo("milky-way", "Milky Way", "#f0b27a"),
+  photo("starry-trees", "Starry trees", "#e8c08f"),
+  photo("earth-orbit", "Orbit", "#8fc2ff"),
 ];
 
 /** Need no files, so the timer still has backgrounds if the images are removed. */
@@ -132,9 +146,41 @@ export function resolveScene(id: string | null | undefined): Scene {
   return scenes[0];
 }
 
-/** The order of the picker: the moods first, with the rainy ones next to their dry twins, then the photos and themes. */
-export const pickerScenes: Scene[] = [
-  ...["rain", "beach", "city", "city+rain", "library", "library+rain", "window", "window+rain"].map((id) => resolveScene(id)),
-  ...imageScenes,
-  ...drawnScenes,
-];
+/** The picker's groups. Every background is in exactly one; rain goes over any of them with the switch. */
+export const SCENE_CATEGORIES = [
+  {
+    id: "cozy",
+    name: "Cozy",
+    ids: [
+      "rainy-night-cafe",
+      "amber-bookshelves",
+      "candlelit-desk",
+      "cozy-reading-nook",
+      "golden-radio",
+      "sunlit-desk",
+      "library",
+      "window",
+    ],
+  },
+  { id: "golden", name: "Golden hour", ids: ["sunset-lake", "golden-field", "summer-sky", "flower-street", "beach", "ember", "dusk"] },
+  { id: "nature", name: "Nature", ids: ["willow-pond", "misty-pines", "night-meadow", "forest"] },
+  { id: "night", name: "Night sky", ids: ["mountain-stars", "violet-sky", "milky-way", "starry-trees", "earth-orbit", "night"] },
+  { id: "rain", name: "Rain & city", ids: ["rain", "city", "rainy-city-window"] },
+] as const;
+
+export type SceneCategoryId = (typeof SCENE_CATEGORIES)[number]["id"];
+
+export const sceneCategories: { id: SceneCategoryId; name: string; scenes: Scene[] }[] = SCENE_CATEGORIES.map((c) => ({
+  id: c.id,
+  name: c.name,
+  scenes: c.ids.map((id) => resolveScene(id)),
+}));
+
+/** The group a scene is in, going by its dry twin for a rainy one. */
+export function categoryOf(scene: Scene): SceneCategoryId {
+  const dry = scene.id.endsWith(RAIN) ? scene.id.slice(0, -RAIN.length) : scene.id;
+  return sceneCategories.find((c) => c.scenes.some((s) => s.id === dry))?.id ?? sceneCategories[0].id;
+}
+
+/** Every background in picker order. */
+export const pickerScenes: Scene[] = sceneCategories.flatMap((c) => c.scenes);
