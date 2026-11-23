@@ -1,12 +1,25 @@
-import { describe, expect, it } from "vitest";
-import { AMBIENCES, DEFAULT_PREFS, LOFI_CHORDS, LOFI_SCALE, clampVolume, isAmbienceId, lofiBeat, midiHz, parsePrefs } from "./ambience";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  AMBIENCES,
+  DEFAULT_PREFS,
+  FOCUS_TRACK,
+  LOFI_CHORDS,
+  LOFI_SCALE,
+  clampVolume,
+  isAmbienceId,
+  lofiBeat,
+  midiHz,
+  parsePrefs,
+} from "./ambience";
 
 describe("saved music choice", () => {
   it("reads back what was saved", () => {
     expect(parsePrefs(JSON.stringify({ sound: "rain", volume: 0.3 }))).toEqual({ sound: "rain", volume: 0.3, youtube: null });
   });
 
-  it("falls back to nothing playing at the default volume", () => {
+  it("falls back to the focus track at the default volume", () => {
     expect(parsePrefs(null)).toEqual(DEFAULT_PREFS);
     expect(parsePrefs("not json")).toEqual(DEFAULT_PREFS);
     expect(parsePrefs("null")).toEqual(DEFAULT_PREFS);
@@ -22,7 +35,11 @@ describe("saved music choice", () => {
   it("remembers a YouTube link, and drops the choice if the link is broken", () => {
     const youtube = { video: "jfKfPfyJRdk", list: null };
     expect(parsePrefs(JSON.stringify({ sound: "youtube", volume: 0.5, youtube }))).toEqual({ sound: "youtube", volume: 0.5, youtube });
-    expect(parsePrefs(JSON.stringify({ sound: "youtube", youtube: { video: "bad" } }))).toEqual({ ...DEFAULT_PREFS });
+    expect(parsePrefs(JSON.stringify({ sound: "youtube", youtube: { video: "bad" } }))).toEqual({
+      sound: null,
+      volume: 0.6,
+      youtube: null,
+    });
   });
 
   it("knows every listed sound", () => {
@@ -66,5 +83,127 @@ describe("the lo-fi loop", () => {
       expect(midiHz(n)).toBeGreaterThan(80);
       expect(midiHz(n)).toBeLessThan(1000);
     }
+  });
+});
+
+describe("the focus track", () => {
+  /** Stands in for the browser's audio element, counting what the player asked of it. */
+  class FakeAudio {
+    static last: FakeAudio | null = null;
+    paused = true;
+    volume = 1;
+    loop = false;
+    preload = "";
+    plays = 0;
+    constructor(public src: string) {
+      FakeAudio.last = this;
+    }
+    play() {
+      this.plays++;
+      this.paused = false;
+      return Promise.resolve();
+    }
+    pause() {
+      this.paused = true;
+    }
+  }
+
+  // the player keeps module state, so each case gets a fresh copy with its own saved choice
+  async function freshPlayer(saved: string | null) {
+    vi.resetModules();
+    FakeAudio.last = null;
+    const g = globalThis as Record<string, unknown>;
+    g.localStorage = { getItem: () => saved, setItem: () => {}, removeItem: () => {} };
+    g.Audio = FakeAudio;
+    return import("./ambience");
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (globalThis as Record<string, unknown>).localStorage;
+    delete (globalThis as Record<string, unknown>).Audio;
+  });
+
+  it("ships with the app", () => {
+    expect(existsSync(join("public", FOCUS_TRACK.src))).toBe(true);
+  });
+
+  it("is the choice for someone who has never picked a sound", () => {
+    expect(DEFAULT_PREFS.sound).toBe("track");
+    expect(parsePrefs(JSON.stringify({ sound: "track", volume: 0.4 })).sound).toBe("track");
+  });
+
+  it("waits for a session: opening the page or picking it plays nothing", async () => {
+    const a = await freshPlayer(null);
+    a.resumeAmbience();
+    a.playAmbience("track");
+    expect(FakeAudio.last?.plays ?? 0).toBe(0);
+    expect(a.getAmbience()).toMatchObject({ sound: "track", playing: false });
+  });
+
+  it("starts when a session locks in, looping", async () => {
+    const a = await freshPlayer(null);
+    a.startFocusMusic();
+    expect(FakeAudio.last).toMatchObject({ src: FOCUS_TRACK.src, loop: true, plays: 1, paused: false });
+    expect(a.getAmbience()).toMatchObject({ playing: true, paused: false });
+  });
+
+  it("stops with the stop button, and comes back with the next session", async () => {
+    vi.useFakeTimers();
+    const a = await freshPlayer(null);
+    a.startFocusMusic();
+    a.stopAmbience();
+    vi.runAllTimers();
+    expect(FakeAudio.last?.paused).toBe(true);
+    expect(a.getAmbience()).toMatchObject({ sound: "track", playing: false });
+
+    a.holdFocusMusic(true);
+    a.holdFocusMusic(false);
+    expect(FakeAudio.last?.plays).toBe(1); // stopped means stopped, for the rest of this session
+
+    a.endFocusMusic();
+    a.startFocusMusic();
+    expect(FakeAudio.last?.plays).toBe(2);
+  });
+
+  it("pauses with the session and picks up when it resumes", async () => {
+    vi.useFakeTimers();
+    const a = await freshPlayer(null);
+    a.startFocusMusic();
+    a.holdFocusMusic(true);
+    vi.runAllTimers();
+    expect(FakeAudio.last?.paused).toBe(true);
+    expect(a.getAmbience()).toMatchObject({ playing: true, paused: true });
+    a.holdFocusMusic(false);
+    expect(a.getAmbience().paused).toBe(false);
+    expect(FakeAudio.last?.plays).toBe(2);
+  });
+
+  it("stays paused when you paused it yourself, whatever the session does", async () => {
+    const a = await freshPlayer(null);
+    a.startFocusMusic();
+    a.toggleFocusTrack();
+    a.holdFocusMusic(true);
+    a.holdFocusMusic(false);
+    expect(a.getAmbience().paused).toBe(true);
+    a.toggleFocusTrack();
+    expect(a.getAmbience().paused).toBe(false);
+  });
+
+  it("ends with the session", async () => {
+    vi.useFakeTimers();
+    const a = await freshPlayer(null);
+    a.startFocusMusic();
+    a.endFocusMusic();
+    vi.runAllTimers();
+    expect(FakeAudio.last?.paused).toBe(true);
+    expect(a.getAmbience().playing).toBe(false);
+  });
+
+  it("leaves a saved choice alone, silence included", async () => {
+    const silent = await freshPlayer(JSON.stringify({ sound: null, volume: 0.6 }));
+    silent.startFocusMusic();
+    expect(silent.getAmbience()).toMatchObject({ sound: null, playing: false });
+    expect(FakeAudio.last).toBeNull();
   });
 });
