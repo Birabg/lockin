@@ -1,8 +1,8 @@
 /**
  * Background sound for the focus screens. The instruments and nature sounds are made in the browser
  * with Web Audio: nothing to download, nothing to license, and they work offline. A pasted YouTube
- * link plays in YouTube's own player instead (see music-panel.tsx). One thing plays at a time, and it
- * keeps going from the setup screen into the session and back.
+ * link plays in YouTube's own player instead (see music-panel.tsx), and the focus track is an audio
+ * file that only starts when a session locks in. One thing plays at a time.
  */
 import { PIECES, pieceBeat, type Lead, type Piece, type PieceId } from "./music-pieces";
 import { cleanYouTube, type YouTubeLink } from "./youtube";
@@ -24,11 +24,15 @@ export const AMBIENCES = [
 export type AmbienceId = (typeof AMBIENCES)[number]["id"];
 export const isAmbienceId = (v: unknown): v is AmbienceId => AMBIENCES.some((a) => a.id === v);
 
-/** A generated sound, or the YouTube link. */
-export type Choice = AmbienceId | "youtube";
+/** A generated sound, the YouTube link, or the focus track. */
+export type Choice = AmbienceId | "youtube" | "track";
+
+/** The recording that plays from lock-in by default. It loops, and starts only when a session begins. */
+export const FOCUS_TRACK = { src: "/audio/rainy-piano.m4a", title: "Rainy piano", by: "Gibran Alcocer" } as const;
 
 export type AmbiencePrefs = { sound: Choice | null; volume: number; youtube: YouTubeLink | null };
-export const DEFAULT_PREFS: AmbiencePrefs = { sound: null, volume: 0.6, youtube: null };
+/** Someone who has never chosen gets the focus track; picking Off is what turns it off. */
+export const DEFAULT_PREFS: AmbiencePrefs = { sound: "track", volume: 0.6, youtube: null };
 
 export const clampVolume = (v: unknown) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : DEFAULT_PREFS.volume;
@@ -38,8 +42,9 @@ export function parsePrefs(raw: string | null): AmbiencePrefs {
   if (!raw) return DEFAULT_PREFS;
   try {
     const v = JSON.parse(raw) as Partial<AmbiencePrefs> | null;
+    if (!v || typeof v !== "object") return DEFAULT_PREFS;
     const youtube = cleanYouTube(v?.youtube);
-    const sound = isAmbienceId(v?.sound) ? v.sound : v?.sound === "youtube" && youtube ? "youtube" : null;
+    const sound = isAmbienceId(v?.sound) || v?.sound === "track" ? v.sound : v?.sound === "youtube" && youtube ? "youtube" : null;
     return { sound, volume: clampVolume(v?.volume), youtube };
   } catch {
     return DEFAULT_PREFS;
@@ -94,13 +99,14 @@ const LOOKAHEAD = 1.5; // seconds scheduled ahead; background tabs only get a ti
 const TICK_MS = 250;
 
 type Playing = { id: AmbienceId; out: GainNode; stop: () => void };
-export type AmbienceState = AmbiencePrefs & { playing: boolean };
+/** `paused` is the focus track held mid-play, by its pause button or by the session pausing. */
+export type AmbienceState = AmbiencePrefs & { playing: boolean; paused: boolean };
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let current: Playing | null = null;
 const buffers: Partial<Record<"white" | "pink" | "brown" | "crackle", AudioBuffer>> = {};
-let state: AmbienceState = { ...DEFAULT_PREFS, playing: false };
+let state: AmbienceState = { ...DEFAULT_PREFS, playing: false, paused: false };
 let loaded = false;
 const listeners = new Set<() => void>();
 
@@ -115,7 +121,7 @@ export function subscribeAmbience(listener: () => void) {
 }
 
 export const getAmbience = () => state;
-const SERVER_STATE: AmbienceState = { ...DEFAULT_PREFS, playing: false };
+const SERVER_STATE: AmbienceState = { ...DEFAULT_PREFS, playing: false, paused: false };
 export const getServerAmbience = () => SERVER_STATE;
 
 /** Reads the saved choice once. Nothing plays until someone presses something. */
@@ -610,11 +616,75 @@ function fadeOut(p: Playing, c: AudioContext) {
   );
 }
 
+/* ---- The focus track: an audio element, so an hour of music streams instead of loading into memory ---- */
+
+let trackEl: HTMLAudioElement | null = null;
+let trackFade: ReturnType<typeof setInterval> | undefined;
+/** Bumped on every start and stop, so a fade that finishes late can't undo what came after it. */
+let trackTurn = 0;
+/** The session paused the track, so the session resuming may start it again. */
+let heldBySession = false;
+/** A session is on. Outside one, picking the track only chooses it; it waits for the next lock-in. */
+let focusing = false;
+
+const trackLevel = () => state.volume * state.volume;
+
+function trackAudio() {
+  if (!trackEl && typeof Audio !== "undefined") {
+    trackEl = new Audio(FOCUS_TRACK.src);
+    trackEl.loop = true;
+    trackEl.preload = "auto";
+  }
+  return trackEl;
+}
+
+function fadeTrack(el: HTMLAudioElement, to: number, ms: number, done?: () => void) {
+  clearInterval(trackFade);
+  const from = el.volume;
+  const began = Date.now();
+  trackFade = setInterval(() => {
+    const t = Math.min(1, (Date.now() - began) / ms);
+    el.volume = Math.min(1, Math.max(0, from + (to - from) * t));
+    if (t < 1) return;
+    clearInterval(trackFade);
+    done?.();
+  }, 40);
+}
+
+function startTrack() {
+  const el = trackAudio();
+  if (!el) return;
+  if (current && ctx) fadeOut(current, ctx);
+  current = null;
+  heldBySession = false;
+  const turn = ++trackTurn;
+  if (el.paused) el.volume = 0;
+  set({ playing: true, paused: false });
+  el.play()
+    .then(() => {
+      if (turn === trackTurn) fadeTrack(el, trackLevel(), FADE_IN * 1000);
+    })
+    .catch(() => {
+      if (turn === trackTurn) set({ playing: false });
+    });
+}
+
+/** Fades the track out and pauses it, keeping its place for next time. */
+function quietTrack() {
+  const el = trackEl;
+  if (!el) return;
+  const turn = ++trackTurn;
+  fadeTrack(el, 0, FADE_OUT * 1000, () => {
+    if (turn === trackTurn) el.pause();
+  });
+}
+
 function startSound(id: AmbienceId) {
   const c = audio();
   if (!c || !master) return;
   if (current?.id === id) return;
   if (current) fadeOut(current, c);
+  quietTrack();
   const out = c.createGain();
   out.gain.setValueAtTime(0, c.currentTime);
   out.gain.linearRampToValueAtTime(1, c.currentTime + FADE_IN);
@@ -630,6 +700,7 @@ function startSound(id: AmbienceId) {
 
 /** Stops the generated sound and lets the YouTube player (rendered by the page) take over. */
 function startYouTube() {
+  quietTrack();
   if (current && ctx) fadeOut(current, ctx);
   current = null;
   set({ playing: true });
@@ -642,7 +713,10 @@ export function playAmbience(id: Choice | null) {
   set({ sound: id });
   save();
   if (id === "youtube") startYouTube();
-  else if (id) startSound(id);
+  else if (id === "track") {
+    if (focusing) startTrack();
+    else stopAmbience();
+  } else if (id) startSound(id);
   else stopAmbience();
 }
 
@@ -660,11 +734,16 @@ export function setAmbienceVolume(volume: number) {
   set({ volume: v });
   save();
   if (ctx && master) master.gain.setTargetAtTime(loudness(v), ctx.currentTime, 0.05);
+  if (trackEl && !trackEl.paused && !state.paused) {
+    clearInterval(trackFade);
+    trackEl.volume = trackLevel();
+  }
 }
 
-/** Starts the remembered sound again, if there is one. Also needs to come from a press. */
+/** Starts the remembered sound again, if there is one. Also needs to come from a press. The focus track waits for a session. */
 export function resumeAmbience() {
   const { sound, playing } = loadAmbience();
+  if (sound === "track") return;
   if (sound === "youtube") {
     if (!playing) startYouTube();
   } else if (sound && !current) startSound(sound);
@@ -674,5 +753,50 @@ export function resumeAmbience() {
 export function stopAmbience() {
   if (current && ctx) fadeOut(current, ctx);
   current = null;
-  set({ playing: false });
+  quietTrack();
+  heldBySession = false;
+  set({ playing: false, paused: false });
+}
+
+/* ---- The focus session drives the focus track ---- */
+
+/** A session just locked in: the focus track starts, if that's the choice. Call it from the press. */
+export function startFocusMusic() {
+  focusing = true;
+  const { sound, playing, paused } = loadAmbience();
+  if (sound === "track") {
+    if (!playing || paused) startTrack();
+  } else resumeAmbience();
+}
+
+/** The session paused or resumed. The track follows, but only back on if it was the session that paused it. */
+export function holdFocusMusic(hold: boolean) {
+  if (state.sound !== "track") return;
+  // the page was opened on a paused session, so nothing has started the music yet
+  if (!hold && !focusing) return startFocusMusic();
+  if (!trackEl) return;
+  if (hold) {
+    if (!state.playing || state.paused) return;
+    quietTrack();
+    heldBySession = true;
+    set({ paused: true });
+  } else if (heldBySession && state.playing) startTrack();
+}
+
+/** The session ended: the focus track fades out. Other sounds keep going, as they always have. */
+export function endFocusMusic() {
+  focusing = false;
+  if (state.sound !== "track" || !state.playing) return;
+  quietTrack();
+  heldBySession = false;
+  set({ playing: false, paused: false });
+}
+
+/** The pause button on the track's pill. */
+export function toggleFocusTrack() {
+  if (state.sound !== "track" || !state.playing) return;
+  if (state.paused) return startTrack();
+  quietTrack();
+  heldBySession = false;
+  set({ paused: true });
 }

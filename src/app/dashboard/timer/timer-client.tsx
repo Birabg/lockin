@@ -10,6 +10,7 @@ import { StageBackdrop, StagePill, captureHandoff, stageStyle } from "@/componen
 import { ImmersiveTimer, SessionStage } from "@/components/immersive-timer";
 import { notifyFocusChange } from "@/components/focus-heartbeat";
 import { YouTubeAudio, useAmbienceOnPage } from "@/components/music-panel";
+import { endFocusMusic, holdFocusMusic, startFocusMusic } from "@/lib/ambience";
 import { toast } from "@/components/toaster";
 import { Icon } from "@/components/icon";
 import { FloatingTimer, useFloatingWindow } from "@/components/floating-timer";
@@ -125,7 +126,7 @@ export function TimerClient(props: Props) {
 
   const float = useFloatingWindow();
   useWakeLock(!!session);
-  useAmbienceOnPage();
+  useAmbienceOnPage(() => !!session && !session.pausedAt);
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -269,6 +270,10 @@ export function TimerClient(props: Props) {
   }, [serverState]);
 
   const hasSession = !!session;
+  // the session ended, however it ended: the focus track goes with it
+  useEffect(() => {
+    if (!hasSession) endFocusMusic();
+  }, [hasSession]);
   useEffect(() => {
     const time = !hasSession ? "Focus" : overtime ? clock : reached ? "Goal reached" : `${clock} left`;
     document.title = `${time} · ${brand.name}`;
@@ -278,6 +283,7 @@ export function TimerClient(props: Props) {
     setError(null);
     setFadeIn(true);
     if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+    startFocusMusic(); // the hold just finished, still inside the press, so the browser lets it play
     start(async () => {
       try {
         if (record) {
@@ -292,6 +298,7 @@ export function TimerClient(props: Props) {
         setDone(null);
         notifyFocusChange();
       } catch (e) {
+        endFocusMusic();
         setError(e instanceof Error ? e.message : "Couldn't start");
       }
     });
@@ -335,6 +342,7 @@ export function TimerClient(props: Props) {
   function onTogglePause() {
     if (!session) return;
     setError(null);
+    holdFocusMusic(!paused); // in the press, so resuming may play again
     start(async () => {
       try {
         const next = await (paused ? resumeFocus(session.id) : pauseFocus(session.id));

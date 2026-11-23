@@ -21,7 +21,7 @@ import {
   useHandoff,
 } from "./focus-stage";
 import { Icon } from "./icon";
-import { MusicButton, MusicPanel, YouTubePill } from "./music-panel";
+import { MusicButton, MusicPanel, TrackPill, YouTubePill } from "./music-panel";
 import { SceneGrid } from "./scene-picker";
 import { brand } from "@/lib/brand";
 import type { ClockStyle } from "@/lib/clock-styles";
@@ -183,6 +183,7 @@ export function ImmersiveTimer(props: ImmersiveProps) {
           onPickClock={props.onPickClock}
         />
         {!menu.open && <YouTubePill hidden={!showChrome} />}
+        {!menu.open && <TrackPill hidden={!showChrome} />}
         <Dock label="Session tools" hidden={!showChrome}>
           <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />
@@ -240,6 +241,7 @@ export function SessionStage(props: StageProps & { onExpand: () => void }) {
           onPickClock={props.onPickClock}
         />
         {!menu.open && <YouTubePill />}
+        {!menu.open && <TrackPill />}
         <Dock label="Session tools">
           <MusicButton {...menu.triggerProps("music")} />
           <DockDivider />

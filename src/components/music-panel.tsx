@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { DockButton } from "./focus-stage";
 import { Icon } from "./icon";
 import {
   AMBIENCES,
+  FOCUS_TRACK,
   getAmbience,
   getServerAmbience,
   loadAmbience,
@@ -13,6 +14,8 @@ import {
   playYouTube,
   resumeAmbience,
   setAmbienceVolume,
+  startFocusMusic,
+  toggleFocusTrack,
   stopAmbience,
   subscribeAmbience,
 } from "@/lib/ambience";
@@ -24,10 +27,13 @@ export const useAmbience = () => useSyncExternalStore(subscribeAmbience, getAmbi
  * For the timer page: the sound picked last time comes back on the first press (browsers won't
  * play before one), and it fades out when you leave the page.
  */
-export function useAmbienceOnPage() {
+export function useAmbienceOnPage(focusing?: () => boolean) {
+  const focusingRef = useRef(focusing);
+  focusingRef.current = focusing;
   useEffect(() => {
     loadAmbience();
-    const wake = () => resumeAmbience();
+    // a session already running (the page was refreshed) brings the focus track back on the first press
+    const wake = () => (focusingRef.current?.() ? startFocusMusic() : resumeAmbience());
     window.addEventListener("pointerdown", wake, { once: true, capture: true });
     window.addEventListener("keydown", wake, { once: true, capture: true });
     return () => {
@@ -142,6 +148,16 @@ export function MusicPanel() {
             A video or a playlist. Just the sound plays, with a now-playing pill above the dock. YouTube’s ads may play too.
           </p>
         )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className={heading}>Focus music</h3>
+        <Choice
+          on={sound === "track"}
+          title={FOCUS_TRACK.title}
+          hint={`${FOCUS_TRACK.by} · starts when you lock in`}
+          onPick={() => playAmbience("track")}
+        />
       </section>
 
       {group("music", "Instruments")}
@@ -296,6 +312,50 @@ export function YouTubeAudio() {
  * What's playing from YouTube, as a pill just above the dock: title, play/pause, a link out, and
  * stop. Goes inside each screen's .stage-dock-wrap. `hidden` fades it with the dock.
  */
+/** Above the dock while the focus track plays: what it is, pause, and stop. Stop is for this session; it starts again with the next one. */
+export function TrackPill({ hidden = false }: { hidden?: boolean }) {
+  const { sound, playing, paused } = useAmbience();
+  if (sound !== "track" || !playing) return null;
+  return (
+    <div data-track-player role="region" aria-label="Focus music" className={`stage-track-pill ${hidden ? "stage-hidden" : ""}`}>
+      <span aria-hidden className="stage-track-eq" data-paused={paused || undefined}>
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-semibold">{FOCUS_TRACK.title}</span>
+        <span className="block truncate text-[11px] text-[var(--stage-muted)]">{paused ? "Paused" : FOCUS_TRACK.by}</span>
+      </span>
+      <button
+        type="button"
+        aria-label={paused ? "Play music" : "Pause music"}
+        onClick={toggleFocusTrack}
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--stage-fill-active)] text-[var(--stage-on-active)] hover:opacity-90"
+      >
+        {paused ? <PlayGlyph /> : <PauseGlyph />}
+      </button>
+      <button
+        type="button"
+        aria-label="Stop music"
+        title="Stop music"
+        onClick={stopAmbience}
+        className="grid size-8 shrink-0 place-items-center rounded-full text-[var(--stage-muted)] hover:bg-[var(--stage-line)] hover:text-[var(--stage-text)]"
+      >
+        <StopGlyph />
+      </button>
+    </div>
+  );
+}
+
+function StopGlyph() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+      <rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function YouTubePill({ hidden = false }: { hidden?: boolean }) {
   const { sound, playing, youtube } = useAmbience();
   const info = useSyncExternalStore(subscribeYt, getYt, getYt);
