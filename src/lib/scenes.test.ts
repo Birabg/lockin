@@ -34,6 +34,8 @@ describe("scenes", () => {
     expect(categoryOf(resolveScene("milky-way"))).toBe("night");
     expect(categoryOf(resolveScene("willow-pond+rain"))).toBe("nature");
     expect(categoryOf(resolveScene("rain"))).toBe("rain");
+    expect(categoryOf(resolveScene("black-hole"))).toBe("space");
+    expect(categoryOf(resolveScene("golden-retriever"))).toBe("pets");
   });
 
   it("has a file and a thumbnail for every photo", () => {
