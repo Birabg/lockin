@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { drawnScenes, isSceneId, pickerScenes, resolveScene, scenes, toggleRainId } from "./scenes";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import {
+  categoryOf,
+  drawnScenes,
+  imageScenes,
+  isSceneId,
+  pickerScenes,
+  resolveScene,
+  sceneCategories,
+  scenes,
+  toggleRainId,
+} from "./scenes";
 
 describe("scenes", () => {
   it("has unique ids", () => {
@@ -11,17 +23,24 @@ describe("scenes", () => {
     expect(drawnScenes.map((s) => s.id)).toEqual(["ember", "dusk", "forest", "night"]);
   });
 
-  it("offers the new moods, rainy twins included", () => {
-    expect(pickerScenes.slice(0, 8).map((s) => s.title)).toEqual([
-      "Rain",
-      "Beach",
-      "City",
-      "City + rain",
-      "Library",
-      "Library + rain",
-      "Window view",
-      "Window view + rain",
-    ]);
+  it("puts every background in exactly one category", () => {
+    const grouped = sceneCategories.flatMap((c) => c.scenes.map((s) => s.id));
+    expect(new Set(grouped).size).toBe(grouped.length);
+    expect([...grouped].sort()).toEqual(scenes.map((s) => s.id).sort());
+    expect(sceneCategories.every((c) => c.scenes.length > 0)).toBe(true);
+  });
+
+  it("knows a scene's category, rainy twins included", () => {
+    expect(categoryOf(resolveScene("milky-way"))).toBe("night");
+    expect(categoryOf(resolveScene("willow-pond+rain"))).toBe("nature");
+    expect(categoryOf(resolveScene("rain"))).toBe("rain");
+  });
+
+  it("has a file and a thumbnail for every photo", () => {
+    for (const s of imageScenes) {
+      expect(existsSync(join("public", s.image)), s.image).toBe(true);
+      expect(existsSync(join("public", s.thumb)), s.thumb).toBe(true);
+    }
   });
 
   it("finds a saved scene", () => {
