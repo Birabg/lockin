@@ -26,6 +26,13 @@ const PREVIEW_SIZES: Record<ClockStyle, CSSProperties> = {
   bold: { "--clock-size": "26px" } as CSSProperties,
 };
 
+/** A clock face sized for a small space: the preview card's size, times `scale`. Used by the floating timer too. */
+export function clockSizeStyle(style: ClockStyle, scale = 1): CSSProperties {
+  const sized: Record<string, string> = {};
+  for (const [k, v] of Object.entries(PREVIEW_SIZES[style] as Record<string, string>)) sized[k] = `${parseFloat(v) * scale}px`;
+  return sized as CSSProperties;
+}
+
 type Props = { current: ClockStyle; accent: string; onPick: (style: ClockStyle) => void };
 
 /** Small cards that each run their own clock, for choosing one. */
@@ -49,7 +56,7 @@ export function ClockPicker({ current, accent, onPick }: Props) {
             id === current ? "ring-2 ring-[var(--stage-text)]" : "ring-[var(--stage-line)] hover:ring-[var(--stage-muted)]"
           }`}
         >
-          <span aria-hidden className="clock-preview relative grid h-[70px] place-items-center overflow-hidden" style={PREVIEW_SIZES[id]}>
+          <span aria-hidden className="clock-preview relative grid h-[70px] place-items-center overflow-hidden" style={clockSizeStyle(id)}>
             <Clock clockStyle={id} remainingSec={remaining} totalSec={1500} running paused={false} overtime={false} accent={accent} />
           </span>
           <span className="flex items-center justify-between px-2 pb-1.5 text-xs font-semibold text-[var(--stage-text)]">

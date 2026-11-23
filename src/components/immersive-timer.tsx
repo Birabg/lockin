@@ -95,6 +95,8 @@ type StageProps = {
   onDiscard: () => void;
   onPickScene: (id: string) => void;
   onPickClock: (style: ClockStyle) => void;
+  /** The floating timer: null where the browser can't open one. */
+  floating: { open: boolean; onToggle: () => void } | null;
 };
 
 type ImmersiveProps = StageProps & {
@@ -194,6 +196,7 @@ export function ImmersiveTimer(props: ImmersiveProps) {
               onClick={toggleFullscreen}
             />
           )}
+          {props.floating && <FloatingButton {...props.floating} />}
           <DockButton icon="minimize" label="Minimize" onClick={props.onMinimize} />
         </Dock>
       </div>
@@ -243,6 +246,7 @@ export function SessionStage(props: StageProps & { onExpand: () => void }) {
           <DockButton icon="image" label="Background" {...menu.triggerProps("scene")} />
           <DockButton icon="clockStyle" label="Clock style" {...menu.triggerProps("clock")} />
           <DockDivider />
+          {props.floating && <FloatingButton {...props.floating} />}
           <DockButton icon="fullscreen" label="Back to the full screen view" text="Expand" onClick={props.onExpand} />
         </Dock>
       </div>
@@ -253,6 +257,19 @@ export function SessionStage(props: StageProps & { onExpand: () => void }) {
         </div>
       )}
     </section>
+  );
+}
+
+/** Pops the time out into a small window that stays on top of other apps. */
+function FloatingButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <DockButton
+      icon="popOut"
+      label={open ? "Close the floating timer" : "Pop out a floating timer that stays on top of other apps"}
+      text={open ? "Close float" : "Float"}
+      aria-pressed={open}
+      onClick={onToggle}
+    />
   );
 }
 
