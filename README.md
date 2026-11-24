@@ -56,7 +56,7 @@ The e2e test needs a migrated database in `DATABASE_URL` and writes to it, so us
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/dashboard`                              | Feed (Global / Following / Timelapses tabs, grouped by day), composer, right rail with streak card + week strip, Focusing now, today's top 3 |
 | `/dashboard/timer`                        | Focus timer with goal presets, label, live ring, heartbeat every 30s, finish → note + share to feed, discard                                 |
-| `/dashboard/focusing`                     | Everyone with a live session                                                                                                                 |
+| `/dashboard/locked-in`                    | Everyone with a live session                                                                                                                 |
 | `/dashboard/stats`                        | Today / week / streak / all-time tiles, weekly recap, 30-day bars against your goal, time by label                                           |
 | `/dashboard/leaderboard`                  | Today / week / all-time rankings with follow buttons                                                                                         |
 | `/dashboard/people`                       | Search users and follow                                                                                                                      |

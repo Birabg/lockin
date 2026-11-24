@@ -38,7 +38,7 @@ const TITLES: [prefix: string, title: string][] = [
   ["/dashboard/buddies", "Focus buddies"],
   ["/dashboard/rooms", "Live rooms"],
   ["/dashboard/notifications", "Notifications"],
-  ["/dashboard/focusing", "Focusing now"],
+  ["/dashboard/locked-in", "Locked In"],
   ["/dashboard/settings", "Settings"],
   ["/dashboard/quests", "Quests"],
   ["/dashboard/wall", "The wall"],
@@ -158,7 +158,7 @@ function TopBar({ data, path }: { data: ChromeData; path: string }) {
               <MenuLink href="/dashboard/wall" icon="comment" label="Wall" path={path} />
               <MenuLink href="/dashboard/quests" icon="target" label="Quests" path={path} />
               <MenuLink href="/dashboard/people" icon="search" label="Find people" path={path} />
-              <MenuLink href="/dashboard/focusing" icon="focusingNow" label="Focusing now" path={path} />
+              <MenuLink href="/dashboard/locked-in" icon="focusingNow" label="Locked In" path={path} />
               <MenuLink href="/dashboard/buddies" icon="buddies" label="Buddies" path={path} badge={data.activity.buddies} />
               <MenuLink href="/dashboard/rooms" icon="liveRooms" label="Live rooms" path={path} badge={data.activity.rooms} />
             </div>

@@ -7,7 +7,7 @@ const EVERY_MS = 20_000;
 
 /**
  * Re-fetches the current page's server data on a timer while the tab is visible. That one call keeps
- * "Focusing now", the leaderboard, the feed and the unread badge fresh, and React keeps typed text and scroll.
+ * "Locked In", the leaderboard, the feed and the unread badge fresh, and React keeps typed text and scroll.
  */
 export function LiveRefresh() {
   const router = useRouter();

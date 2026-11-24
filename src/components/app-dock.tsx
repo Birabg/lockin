@@ -11,7 +11,7 @@ import { formatDuration } from "@/lib/time";
 type Pop = "streak" | "more" | "live" | "rank";
 
 const MORE = [
-  { href: "/dashboard/focusing", label: "Focusing now", icon: "focusingNow" },
+  { href: "/dashboard/locked-in", label: "Locked In", icon: "focusingNow" },
   { href: "/dashboard/leaderboard", label: "Leaderboard", icon: "leaderboard" },
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ] as const;
@@ -132,8 +132,8 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
 
         <button
           {...trigger("live")}
-          aria-label={`${live.count} focusing right now`}
-          data-tip="Focusing now"
+          aria-label={`${live.count} locked in right now`}
+          data-tip="Locked In"
           className="app-dock-btn"
           data-text
         >
@@ -160,7 +160,7 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
           dock={bar}
           onPointerEnter={() => clearTimeout(timer.current)}
           onPointerLeave={(e) => e.pointerType === "mouse" && hover(null)}
-          label={{ streak: "Your streak", more: "More pages", live: "Focusing now", rank: "Today's leaderboard" }[pop.open]}
+          label={{ streak: "Your streak", more: "More pages", live: "Locked In", rank: "Today's leaderboard" }[pop.open]}
         >
           {pop.open === "streak" && (
             <StreakCard streak={data.streak} todaySec={data.todaySec} goalMin={data.goalMin} week={data.week} bare />
@@ -223,7 +223,7 @@ function LiveList({ data }: { data: ChromeData }) {
   const { count, sessions } = data.live;
   return (
     <div className="p-3.5">
-      <p className="text-[14.5px] font-semibold tracking-[-0.025em]">Focusing now</p>
+      <p className="text-[14.5px] font-semibold tracking-[-0.025em]">Locked In</p>
       <p className="text-[12.5px] text-muted">
         {count === 0 ? "Nobody yet. Be the first." : `${count} ${count === 1 ? "person" : "people"} in a session`}
       </p>
@@ -240,8 +240,11 @@ function LiveList({ data }: { data: ChromeData }) {
           ))}
         </ul>
       )}
-      <Link href="/dashboard/focusing" className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-primary-text hover:underline">
-        See everyone focusing <Icon name="chevron" size={14} />
+      <Link
+        href="/dashboard/locked-in"
+        className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-primary-text hover:underline"
+      >
+        See everyone locked in <Icon name="chevron" size={14} />
       </Link>
     </div>
   );

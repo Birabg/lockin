@@ -1,4 +1,4 @@
-/* The People page: search and tabs, who's focusing now, and the list of people. */
+/* The People page: search and tabs, who's locked in, and the list of people. */
 
 @layer components {
   .people-controls {
@@ -103,7 +103,7 @@
     color: var(--primary-text);
   }
 
-  /* ---- Focusing now ---- */
+  /* ---- Locked In ---- */
   .people-live {
     margin-bottom: 14px;
     padding: 16px 16px 12px;

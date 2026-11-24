@@ -42,10 +42,10 @@ export function RoomGrid({ members, serverNow, viewerId }: { members: Member[]; 
           <span className="room-quiet-icon">
             <Icon name="time" size={22} />
           </span>
-          <p className="text-[15px] font-bold">Nobody’s focusing yet</p>
+          <p className="text-[15px] font-bold">Nobody’s locked in yet</p>
           <p className="max-w-[320px] text-[13px] text-muted">Start a session and it shows up here for everyone in the room.</p>
           <Link href="/dashboard/timer" className={`${btnPrimary} mt-2 h-10 text-sm`}>
-            <Icon name="startFocus" size={16} solid /> Start focusing
+            <Icon name="startFocus" size={16} solid /> Lock in
           </Link>
         </section>
       ) : (
@@ -93,7 +93,7 @@ export function RoomGrid({ members, serverNow, viewerId }: { members: Member[]; 
       {idle.length > 0 && (
         <section className="mt-5">
           <h2 className="mb-2.5 px-1 text-[13px] font-bold text-muted">
-            Not focusing <span className="text-subtle tabular">· {idle.length}</span>
+            Not locked in <span className="text-subtle tabular">· {idle.length}</span>
           </h2>
           <ul className="room-idle">
             {idle.map(({ user }) => (
@@ -108,7 +108,7 @@ export function RoomGrid({ members, serverNow, viewerId }: { members: Member[]; 
           </ul>
           {viewerIdle && active.length > 0 && (
             <Link href="/dashboard/timer" className={`${btnPrimary} mt-4 h-11 w-full text-sm sm:w-auto`}>
-              <Icon name="startFocus" size={16} solid /> Join in, start focusing
+              <Icon name="startFocus" size={16} solid /> Join in and lock in
             </Link>
           )}
         </section>

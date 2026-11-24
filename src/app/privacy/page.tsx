@@ -10,7 +10,7 @@ const SECTIONS = [
   ],
   [
     "What others can see",
-    "Your profile, streak, total focus time, posts and comments are public, including to people without an account. So is whether you're focusing right now.",
+    "Your profile, streak, total focus time, posts and comments are public, including to people without an account. So is whether you're locked in right now.",
   ],
   [
     "Photos and timelapses",

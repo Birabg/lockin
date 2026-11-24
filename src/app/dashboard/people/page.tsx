@@ -78,9 +78,9 @@ export default async function PeoplePage({
         <section className="panel people-live" aria-labelledby="people-live-title">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 id="people-live-title" className="flex items-center gap-2 text-[14px] font-bold">
-              <span className="people-live-dot" aria-hidden /> Focusing now
+              <span className="people-live-dot" aria-hidden /> Locked In
             </h2>
-            <Link href="/dashboard/focusing" className="text-[12.5px] font-bold text-primary">
+            <Link href="/dashboard/locked-in" className="text-[12.5px] font-bold text-primary">
               See all {live.count}
             </Link>
           </div>
@@ -133,7 +133,7 @@ function PersonItem({ p, q, viewerId }: { p: PersonRow; q: string; viewerId: str
       <Link href={profile} className="people-row-link" aria-label={`${p.name}, @${p.username}`} />
       <span className="people-avatar">
         <Avatar name={p.name} src={p.avatar} size={46} />
-        {p.live && <span className="people-avatar-live" title="Focusing now" />}
+        {p.live && <span className="people-avatar-live" title="Locked In" />}
       </span>
 
       <span className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ function PersonItem({ p, q, viewerId }: { p: PersonRow; q: string; viewerId: str
           {p.bio && <span className="text-subtle"> · {p.bio}</span>}
         </span>
         <span className="people-meta">
-          {p.live ? <span className="font-bold text-live">Focusing now{p.live.label ? ` · ${p.live.label}` : ""}</span> : null}
+          {p.live ? <span className="font-bold text-live">Locked In{p.live.label ? ` · ${p.live.label}` : ""}</span> : null}
           {!p.live && p.streak > 0 && (
             <span className="flex items-center gap-1 text-streak">
               <Icon name="streak" size={13} solid /> {p.streak} {p.streak === 1 ? "day" : "days"}

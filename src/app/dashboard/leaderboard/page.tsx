@@ -93,7 +93,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <p className="text-[15px] font-bold">The board is empty {range.period === "all time" ? "" : range.period}</p>
           <p className="max-w-[320px] text-[13px] text-muted">Start a session and you’ll be first on it.</p>
           <Link href="/dashboard/timer" className={`${btnPrimary} mt-2 h-10 text-sm`}>
-            <Icon name="startFocus" size={16} solid /> Start focusing
+            <Icon name="startFocus" size={16} solid /> Lock in
           </Link>
         </section>
       ) : (
