@@ -1,6 +1,8 @@
 import { ClockDigits } from "../ui";
 import type { ClockProps } from "./clock";
 import { thinDigits } from "./fonts";
+import { useId } from "react";
+import { GLASS, bottomSandPath, bulbPath, glassPath, glintPath, sandAt, topSandPath } from "@/lib/hourglass";
 import { clockParts, clockText, clockWords, shareLeft, twoDigits } from "@/lib/clock-styles";
 
 /*
@@ -107,34 +109,112 @@ export function PieClock({ remainingSec, totalSec, overtime }: ClockProps) {
   );
 }
 
-/* ---- Hourglass: the sand runs down as the session does ---- */
+/* ---- Hourglass: a real one, glass in a wooden frame, the sand running down as the session does ---- */
+
+const GLASS_OUTLINE = glassPath();
+const TOP_BULB = bulbPath(1);
+const BOTTOM_BULB = bulbPath(-1);
+const GLINTS = [glintPath(1, -1, 0.06, 0.62, 0.74), glintPath(-1, -1, 0.06, 0.62, 0.74)];
+const SHEENS = [glintPath(1, 1, 0.12, 0.42, 0.8), glintPath(-1, 1, 0.12, 0.42, 0.8)];
+
+/** A turned wooden post: a rod with a bead at each end and one at the waist. */
+function Post({ x, wood }: { x: number; wood: string }) {
+  return (
+    <g fill={wood}>
+      <rect x={x - 2.2} y={GLASS.top} width={4.4} height={GLASS.bottom - GLASS.top} rx={1.5} />
+      {[GLASS.top + 5, GLASS.neck, GLASS.bottom - 5].map((y) => (
+        <ellipse key={y} cx={x} cy={y} rx={4} ry={y === GLASS.neck ? 3.4 : 2.6} />
+      ))}
+    </g>
+  );
+}
+
+/** A cap or base: a wide plate with a narrower step towards the glass. */
+function Plate({ top, wood, edge }: { top: boolean; wood: string; edge: string }) {
+  const plateY = top ? 3 : 161;
+  const stepY = top ? 10.5 : 156.5;
+  return (
+    <g>
+      <rect x={2} y={plateY} width={116} height={8} rx={2.5} fill={wood} />
+      <rect x={9} y={stepY} width={102} height={5} rx={1.5} fill={wood} />
+      <rect x={4} y={plateY + 0.6} width={112} height={1.1} rx={0.5} fill={edge} />
+    </g>
+  );
+}
 
 export function HourglassClock({ remainingSec, totalSec, running, paused, overtime }: ClockProps) {
   const share = shareLeft(remainingSec, totalSec);
   const flowing = running && !paused && !overtime && share > 0;
-  // the top bulb holds what's left, settled at the neck; the bottom fills from the floor
-  const topY = 80 - share * 62;
-  const bottomY = 152 - (1 - share) * 62;
+  const sand = sandAt(share);
+  // ids are per clock, since the picker shows several faces on one page
+  const id = useId().replace(/:/g, "");
+  const ref = (name: string) => `url(#${id}-${name})`;
+  const streamEnd = sand.bottom ? sand.bottom.peak : GLASS.bottom - 1;
   return (
     <div className={`clock-hourglass ${thinDigits.className}`}>
-      <svg viewBox="0 0 120 172" className="glass-svg">
+      <svg viewBox="0 0 120 172" className="glass-svg" aria-hidden>
         <defs>
-          <clipPath id="glass-top">
-            <path d="M18 16 H102 C102 52 70 64 62 82 H58 C50 64 18 52 18 16Z" />
+          <clipPath id={`${id}-top`}>
+            <path d={TOP_BULB} />
           </clipPath>
-          <clipPath id="glass-bottom">
-            <path d="M58 90 H62 C70 108 102 120 102 156 H18 C18 120 50 108 58 90Z" />
+          <clipPath id={`${id}-bottom`}>
+            <path d={BOTTOM_BULB} />
           </clipPath>
+          <linearGradient id={`${id}-wood`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#3a2213" />
+            <stop offset="0.3" stopColor="#7d4b26" />
+            <stop offset="0.48" stopColor="#a5703f" />
+            <stop offset="0.75" stopColor="#6a3d1e" />
+            <stop offset="1" stopColor="#2b190c" />
+          </linearGradient>
+          <linearGradient id={`${id}-post`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#3a2213" />
+            <stop offset="0.45" stopColor="#a5703f" />
+            <stop offset="1" stopColor="#2b190c" />
+          </linearGradient>
+          <linearGradient id={`${id}-sand`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#f2d9a2" />
+            <stop offset="1" stopColor="#c8954f" />
+          </linearGradient>
+          <linearGradient id={`${id}-glass`} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#fff" stopOpacity="0.13" />
+            <stop offset="0.35" stopColor="#fff" stopOpacity="0.03" />
+            <stop offset="0.8" stopColor="#fff" stopOpacity="0.05" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0.12" />
+          </linearGradient>
+          {/* a fine speckle, so the sand reads as grains rather than paint */}
+          <filter id={`${id}-grain`} x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="4" result="noise" />
+            <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.35  0 0 0 0 0.22  0 0 0 0 0.08  0 0 0 0.9 -0.35" result="specks" />
+            <feComposite in="specks" in2="SourceGraphic" operator="in" result="grains" />
+            <feMerge>
+              <feMergeNode in="SourceGraphic" />
+              <feMergeNode in="grains" />
+            </feMerge>
+          </filter>
         </defs>
-        <rect x="18" y={topY} width="84" height={82 - topY} className="glass-sand" clipPath="url(#glass-top)" />
-        <rect x="18" y={bottomY} width="84" height={156 - bottomY} className="glass-sand" clipPath="url(#glass-bottom)" />
-        {flowing && <line x1="60" y1="82" x2="60" y2={bottomY} className="glass-stream" />}
-        <path
-          d="M18 16 C18 52 50 64 58 86 C50 108 18 120 18 156 M102 16 C102 52 70 64 62 86 C70 108 102 120 102 156"
-          className="glass-outline"
-        />
-        <rect x="8" y="6" width="104" height="10" rx="4" className="glass-cap" />
-        <rect x="8" y="156" width="104" height="10" rx="4" className="glass-cap" />
+
+        <ellipse cx="60" cy="170" rx="56" ry="2.4" className="glass-shadow" />
+        <Post x={6} wood={ref("post")} />
+
+        <path d={TOP_BULB} fill={ref("glass")} />
+        <path d={BOTTOM_BULB} fill={ref("glass")} />
+        <g filter={ref("grain")}>
+          {sand.top && <path d={topSandPath(sand.top)} fill={ref("sand")} clipPath={ref("top")} />}
+          {sand.bottom && <path d={bottomSandPath(sand.bottom)} fill={ref("sand")} clipPath={ref("bottom")} />}
+        </g>
+        {flowing && <line x1={GLASS.centre} y1={GLASS.neck - 2} x2={GLASS.centre} y2={streamEnd} className="glass-stream" />}
+        <path d={GLASS_OUTLINE} className="glass-outline" />
+        {GLINTS.map((d) => (
+          <path key={d} d={d} className="glass-glint" />
+        ))}
+        {SHEENS.map((d) => (
+          <path key={d} d={d} className="glass-sheen" />
+        ))}
+
+        <Post x={114} wood={ref("post")} />
+        <Plate top wood={ref("wood")} edge="rgb(255 222 180 / 0.35)" />
+        <Plate top={false} wood={ref("wood")} edge="rgb(255 222 180 / 0.25)" />
       </svg>
       <p className="glass-time">
         <ClockDigits value={clockText(remainingSec, overtime)} />
