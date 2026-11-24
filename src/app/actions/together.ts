@@ -3,14 +3,18 @@
 import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { isBlockedBetween } from "@/lib/blocks";
+import { canSendEmail, sendEmail } from "@/lib/email";
+import { nudgeEmail } from "@/lib/email-templates";
 import { notify } from "@/lib/notifications";
 import { BLOCKED_MESSAGE } from "@/lib/safety";
 import { allow, limits } from "@/lib/rate-limit";
+import { siteUrl } from "@/lib/site";
 
 async function me() {
   const user = await getCurrentUser();
@@ -93,9 +97,24 @@ export async function nudgeBuddy(targetId: string): Promise<Result> {
   });
   if (!pair) return { error: "You can only nudge your buddies" };
   if (await isBlockedBetween(user.id, id)) return { error: BLOCKED_MESSAGE };
-  if (!(await allow(`nudge:${user.id}:${id}`, limits.nudge))) return { error: "You already nudged them this hour" };
+  if (!(await allow(`nudge:${user.id}:${id}`, limits.nudge))) return { error: "You already nudged them today. Try again tomorrow." };
   await notify({ userId: id, actorId: user.id, type: "NUDGE" });
+  // the email goes after the reply, so the button doesn't wait on the mail server
+  after(() => emailNudge(id, user.name));
   return {};
+}
+
+/** Only to a confirmed address: an unconfirmed one might belong to someone else. A failed send never undoes the nudge. */
+async function emailNudge(targetId: string, actorName: string) {
+  if (!canSendEmail()) return;
+  const target = await db.user.findUnique({ where: { id: targetId }, select: { name: true, email: true, emailVerifiedAt: true } });
+  if (!target?.emailVerifiedAt) return;
+  const site = siteUrl();
+  try {
+    await sendEmail({ to: target.email, ...nudgeEmail({ name: target.name, actorName, url: `${site}/dashboard/timer`, siteUrl: site }) });
+  } catch (e) {
+    console.error("Nudge email failed", e);
+  }
 }
 
 // no 0/O or 1/I, so codes survive being read out loud
