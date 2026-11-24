@@ -40,7 +40,7 @@ export default async function RoomsPage() {
         </h2>
         {liveTotal > 0 && (
           <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-live">
-            <span className="rooms-live-dot" aria-hidden /> {liveTotal} focusing now
+            <span className="rooms-live-dot" aria-hidden /> {liveTotal} locked in now
           </span>
         )}
       </div>
@@ -75,7 +75,7 @@ export default async function RoomsPage() {
                   </p>
                   <p className={`mt-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold ${r.live ? "text-live" : "text-subtle"}`}>
                     {r.live > 0 && <span className="rooms-live-dot" aria-hidden />}
-                    {r.live > 0 ? `${r.live} focusing now` : "Quiet right now"}
+                    {r.live > 0 ? `${r.live} locked in now` : "Quiet right now"}
                     <span className="text-subtle">
                       · {r.size} {r.size === 1 ? "member" : "members"}
                     </span>

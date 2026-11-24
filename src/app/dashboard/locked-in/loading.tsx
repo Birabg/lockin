@@ -1,4 +1,4 @@
-/** Shaped like Focusing now: the live headline, then session cards. */
+/** Shaped like Locked In: the live headline, then session cards. */
 export default function Loading() {
   return (
     <div className="mx-auto max-w-[760px] animate-pulse" role="status" aria-label="Loading">

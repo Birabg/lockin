@@ -120,7 +120,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
           {live && (
             <p className="profile-live">
-              <span className="profile-live-dot" aria-hidden /> Focusing now{live.label ? ` · ${live.label}` : ""}
+              <span className="profile-live-dot" aria-hidden /> Locked In{live.label ? ` · ${live.label}` : ""}
             </p>
           )}
 

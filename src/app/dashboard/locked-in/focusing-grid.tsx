@@ -36,7 +36,7 @@ export function FocusingGrid({ sessions, viewerId, serverNow }: { sessions: Sess
   const ordered = [...sessions].sort((a, b) => Number(b.user.id === viewerId) - Number(a.user.id === viewerId));
 
   return (
-    <ul className="focus-grid" aria-label="People focusing">
+    <ul className="focus-grid" aria-label="People locked in">
       {ordered.map((s) => {
         const goal = s.goalMin * 60;
         const remaining = s.remaining - drift;

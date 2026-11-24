@@ -39,7 +39,7 @@ export default async function RoomPage({ params }: { params: Promise<{ code: str
           <p className={`mt-1 flex items-center gap-1.5 text-[13px] font-semibold ${focusing ? "text-live" : "text-muted"}`}>
             {focusing > 0 && <span className="rooms-live-dot" aria-hidden />}
             {focusing > 0
-              ? `${focusing} of ${room.members.length} focusing`
+              ? `${focusing} of ${room.members.length} locked in`
               : room.members.length === 1
                 ? "Just you so far. Invite a friend to focus with."
                 : `${room.members.length} in the room, all quiet`}

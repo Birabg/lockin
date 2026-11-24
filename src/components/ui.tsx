@@ -84,7 +84,7 @@ export function Avatar({ name, src, size = 36, cssSize, live = false }: AvatarPr
         </span>
       )}
       {live && (
-        <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-card bg-live" aria-label="focusing now" />
+        <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-card bg-live" aria-label="locked in now" />
       )}
     </span>
   );

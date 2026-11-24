@@ -8,7 +8,7 @@ import { Icon } from "@/components/icon";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { FocusingGrid } from "./focusing-grid";
 
-export const metadata = { title: "Focusing now" };
+export const metadata = { title: "Locked In" };
 export const dynamic = "force-dynamic";
 
 export default async function FocusingPage() {
@@ -20,7 +20,7 @@ export default async function FocusingPage() {
 
   return (
     <div className="mx-auto max-w-[760px]">
-      <PageHeader title="Focusing now" />
+      <PageHeader title="Locked In" />
       <AutoRefresh seconds={20} />
 
       <header className="focus-hero">
@@ -30,7 +30,7 @@ export default async function FocusingPage() {
         </span>
         <h1 className="mt-3 text-[26px] leading-tight font-extrabold tracking-tight">
           {count === 0 ? (
-            "Nobody is focusing yet"
+            "Nobody is locked in yet"
           ) : (
             <>
               <span className="tabular">{count}</span> {count === 1 ? "person is" : "people are"} locked in
@@ -44,7 +44,7 @@ export default async function FocusingPage() {
         </p>
         {!youIn && (
           <Link href="/dashboard/timer" className={`${btnPrimary} mt-4 h-10 text-sm`}>
-            <Icon name="startFocus" size={15} solid /> {count === 0 ? "Start focusing" : "Join them"}
+            <Icon name="startFocus" size={15} solid /> {count === 0 ? "Lock in" : "Join them"}
           </Link>
         )}
       </header>

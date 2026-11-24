@@ -75,7 +75,7 @@ type StageProps = {
   running: boolean;
   overtime: boolean;
   paused: boolean;
-  /** The short state in the pill: Focusing, Paused, Overtime, Goal reached. */
+  /** The short state in the pill: Locked In, Paused, Overtime, Goal reached. */
   phase: string;
   /** The line under the time. */
   caption: string;

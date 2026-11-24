@@ -32,7 +32,7 @@ export function BuddyAction({ kind, id, label, disabled }: Props) {
 
 /**
  * Nudge a buddy to lock in. Once sent it stays as "Nudged" so you don't wonder whether it went;
- * while they're already focusing there's nothing to nudge, so it says that instead.
+ * while they're already locked in there's nothing to nudge, so it says that instead.
  */
 export function NudgeButton({ userId, name, live }: { userId: string; name: string; live: boolean }) {
   const [pending, start] = useTransition();
@@ -40,7 +40,7 @@ export function NudgeButton({ userId, name, live }: { userId: string; name: stri
   if (live)
     return (
       <span className={`${pill} bg-live/12 text-live`}>
-        <Icon name="time" size={15} /> Focusing
+        <Icon name="time" size={15} /> Locked In
       </span>
     );
   return (
@@ -54,7 +54,7 @@ export function NudgeButton({ userId, name, live }: { userId: string; name: stri
         })
       }
       disabled={pending || sent}
-      aria-label={sent ? `Nudged ${name}` : `Nudge ${name} to start focusing`}
+      aria-label={sent ? `Nudged ${name}` : `Nudge ${name} to lock in`}
       className={sent ? `${ghost} disabled:opacity-100` : solid}
     >
       <Icon name={sent ? "check" : "notifications"} size={15} /> {sent ? "Nudged" : pending ? "Sending…" : "Nudge"}

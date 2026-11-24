@@ -78,7 +78,7 @@ export async function startFocus(goalMin: number, label: string): Promise<Active
 }
 
 /**
- * Called every ~30s from any dashboard page so others see you in "Focusing now".
+ * Called every ~30s from any dashboard page so others see you in "Locked In".
  * alive: false tells the client the session is over. An expired session can't be revived,
  * otherwise a laptop waking up would add the whole night to it.
  */

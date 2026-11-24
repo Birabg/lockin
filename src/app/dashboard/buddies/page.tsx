@@ -35,7 +35,7 @@ export default async function BuddiesPage() {
           {buddies.length > 0 && (
             <p className={`flex items-center gap-1.5 text-[13px] font-bold ${live ? "text-live" : "text-subtle"}`}>
               {live > 0 && <span className="buddies-live-dot" aria-hidden />}
-              {live > 0 ? `${live} of ${buddies.length} focusing now` : `${buddies.length} ${buddies.length === 1 ? "buddy" : "buddies"}`}
+              {live > 0 ? `${live} of ${buddies.length} locked in now` : `${buddies.length} ${buddies.length === 1 ? "buddy" : "buddies"}`}
             </p>
           )}
         </header>
@@ -105,7 +105,7 @@ export default async function BuddiesPage() {
                       {b.user.name}
                     </Link>
                     <p className={`truncate text-[12.5px] font-semibold ${b.live ? "text-live" : "text-subtle"}`}>
-                      {b.live ? `Focusing now${b.label ? ` · ${b.label}` : ""}` : `@${b.user.username}`}
+                      {b.live ? `Locked In${b.label ? ` · ${b.label}` : ""}` : `@${b.user.username}`}
                     </p>
                   </div>
                   <BuddyMenu id={b.id} name={b.user.name} username={b.user.username} />

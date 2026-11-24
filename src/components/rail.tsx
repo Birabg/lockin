@@ -58,13 +58,13 @@ type LiveSession = { label: string | null; user: { id: string; username: string;
 
 export function FocusingNowCard({ count, sessions }: { count: number; sessions: LiveSession[] }) {
   return (
-    <Link href="/dashboard/focusing" className="panel block p-4 transition-colors hover:border-primary/40">
+    <Link href="/dashboard/locked-in" className="panel block p-4 transition-colors hover:border-primary/40">
       <div className="flex items-center gap-3">
         <span className="grid size-9 place-items-center rounded-xl bg-inset text-live">
           <Icon name="focusingNow" size={20} />
         </span>
         <div className="flex-1">
-          <p className={railTitle}>Focusing now</p>
+          <p className={railTitle}>Locked In</p>
           <p className="text-[12.5px] leading-[18.75px] text-muted">
             {count === 0 ? "Nobody yet — be the first" : `${count} ${count === 1 ? "person" : "people"} in a session`}
           </p>

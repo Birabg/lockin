@@ -47,18 +47,18 @@ export function HomeLink() {
   );
 }
 
-/** "● 3 focusing right now". A link while setting up, plain text during a session so it can't navigate away. */
+/** "● 3 locked in right now". A link while setting up, plain text during a session so it can't navigate away. */
 export function LivePill({ count, link = false }: { count: number; link?: boolean }) {
   const body = (
     <>
       <span className="stage-dot animate-live" data-tone="live" aria-hidden />
       <span>
-        <span className="tabular">{count}</span> focusing<span className="max-sm:hidden"> right now</span>
+        <span className="tabular">{count}</span> locked in<span className="max-sm:hidden"> right now</span>
       </span>
     </>
   );
   return link ? (
-    <Link href="/dashboard/focusing" className="stage-pill">
+    <Link href="/dashboard/locked-in" className="stage-pill">
       {body}
     </Link>
   ) : (

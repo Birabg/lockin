@@ -111,7 +111,7 @@ export function TimerClient(props: Props) {
   const shownRemaining = overtime ? remaining : Math.max(0, remaining);
   const running = !!session && !paused && (!reached || overtime);
   const endsAt = session ? formatClock(goalEndsAt(sessionTiming(session)), timeZone) : "";
-  const phase = paused ? "Paused" : overtime ? "Overtime" : reached ? "Goal reached" : "Focusing";
+  const phase = paused ? "Paused" : overtime ? "Overtime" : reached ? "Goal reached" : "Locked In";
   const immersive = !!session && !minimized;
   const showOverlay = useStaysFor(immersive, FADE_MS);
   // todaySec already holds this session up to when the page was rendered, so only add what's come since
