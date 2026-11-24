@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import "./clocks.css";
 import "./extra-clocks.css";
+import "./object-clocks.css";
 import {
   BarClock,
   BoldClock,

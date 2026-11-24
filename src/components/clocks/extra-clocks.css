@@ -11,13 +11,32 @@
   color: var(--streak);
 }
 
-/* ---- Digital ---- */
+/* ---- Digital: an LED behind smoked glass ---- */
 .clock-digital {
+  position: relative;
+  overflow: hidden;
+  padding: 0.13em 0.2em;
+  border-radius: 0.1em;
+  font-size: var(--clock-size, clamp(64px, min(11vw, 20vh), 320px));
+  background: linear-gradient(180deg, #111215, #060607);
+  box-shadow:
+    inset 0 0 0 max(1px, 0.012em) rgb(255 255 255 / 0.07),
+    inset 0 0.06em 0.18em rgb(0 0 0 / 0.85),
+    0 0.05em 0.16em rgb(0 0 0 / 0.5);
+}
+/* the glass over it, catching the light across one corner */
+.clock-digital::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgb(255 255 255 / 0.07) 0 30%, transparent 30.5%);
+}
+.seg-row {
   display: flex;
   align-items: center;
   gap: 0.09em;
   height: 1em;
-  font-size: var(--clock-size, clamp(64px, min(11vw, 20vh), 320px));
   transform: skewX(-6deg);
 }
 /* the glow sits on the whole digit: a filter on each segment stops Chrome painting them */
@@ -25,13 +44,15 @@
   width: 0.56em;
   height: 1em;
   overflow: visible;
-  filter: drop-shadow(0 0 0.05em var(--face));
+  filter: drop-shadow(0 0 0.04em var(--face));
 }
 .seg-on {
   fill: var(--face);
 }
+/* unlit segments are still there, just dark, the way a real display shows them */
 .seg-off {
-  fill: rgb(255 255 255 / 0.05);
+  fill: var(--face);
+  opacity: 0.08;
 }
 .seg-colon {
   display: flex;
@@ -42,11 +63,11 @@
   padding-inline: 0.03em;
 }
 .seg-colon i {
-  width: 0.09em;
-  height: 0.09em;
-  border-radius: 0.02em;
+  width: 0.08em;
+  height: 0.08em;
+  border-radius: 0.015em;
   background: var(--face);
-  box-shadow: 0 0 0.06em var(--face);
+  box-shadow: 0 0 0.05em var(--face);
 }
 .seg-sign {
   font-size: 0.6em;
@@ -159,22 +180,19 @@
   text-align: center;
   white-space: nowrap;
 }
-.bar-track {
-  position: relative;
-  height: max(4px, 0.05em);
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.12);
-}
 .bar-fill {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: inherit;
-  background: var(--face);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--face) 55%, white) 0%,
+    var(--face) 45%,
+    color-mix(in srgb, var(--face) 70%, black) 100%
+  );
   box-shadow: 0 0 0.12em var(--face);
   transition: width 900ms linear;
 }
-
 /* ---- Dots ---- */
 .clock-dots {
   display: flex;
@@ -226,18 +244,32 @@
   color: var(--stage-muted, rgb(255 255 255 / 0.7));
 }
 
-/* ---- Neon ---- */
+/* ---- Neon: a tube sign on a clear panel, lighting up the wall behind it ---- */
 .clock-neon {
+  --screw: rgb(255 255 255 / 0.5) 0 0.013em, rgb(255 255 255 / 0.1) 0.02em, transparent 0.026em;
+  position: relative;
+  padding: 0.1em 0.2em;
+  border-radius: 0.07em;
   font-size: var(--clock-size, clamp(68px, min(13vw, 22vh), 380px));
   font-weight: 300;
   line-height: 1;
   white-space: nowrap;
-  color: #fff;
+  color: color-mix(in srgb, var(--face) 22%, white);
+  /* the acrylic: a sheen, and a standoff screw in each corner */
+  background:
+    radial-gradient(circle at 0.07em 0.07em, var(--screw)), radial-gradient(circle at calc(100% - 0.07em) 0.07em, var(--screw)),
+    radial-gradient(circle at 0.07em calc(100% - 0.07em), var(--screw)),
+    radial-gradient(circle at calc(100% - 0.07em) calc(100% - 0.07em), var(--screw)),
+    linear-gradient(160deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.02) 40%, rgb(255 255 255 / 0.04));
+  box-shadow:
+    inset 0 0 0 max(1px, 0.006em) rgb(255 255 255 / 0.14),
+    0 0 0.5em color-mix(in srgb, var(--face) 22%, transparent);
   text-shadow:
-    0 0 0.03em #fff,
-    0 0 0.08em var(--face),
-    0 0 0.2em var(--face),
-    0 0 0.4em var(--face);
+    0 0 0.02em #fff,
+    0 0 0.06em var(--face),
+    0 0 0.14em var(--face),
+    0 0 0.3em var(--face),
+    0 0 0.55em color-mix(in srgb, var(--face) 60%, transparent);
   animation: neon-flicker 7s steps(1) infinite;
 }
 .clock-neon > span {
@@ -332,6 +364,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .clock-neon,
+  .term-time,
   .term-cursor,
   .bold-colon,
   .glass-stream {

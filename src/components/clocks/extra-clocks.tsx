@@ -26,45 +26,85 @@ const SEGMENTS: Record<string, string> = {
   "9": "abfgcd",
 };
 
-const SEGMENT_SHAPES: Record<string, { x: number; y: number; width: number; height: number }> = {
-  a: { x: 12, y: 4, width: 36, height: 8 },
-  b: { x: 50, y: 12, width: 8, height: 36 },
-  c: { x: 50, y: 52, width: 8, height: 36 },
-  d: { x: 12, y: 88, width: 36, height: 8 },
-  e: { x: 2, y: 52, width: 8, height: 36 },
-  f: { x: 2, y: 12, width: 8, height: 36 },
-  g: { x: 12, y: 46, width: 36, height: 8 },
+/** A segment as a real LED draws it: a bar with pointed ends, so neighbours meet in a mitre. */
+function segment(x1: number, y1: number, x2: number, y2: number, w = 4.2) {
+  const pts =
+    y1 === y2
+      ? [
+          [x1, y1],
+          [x1 + w, y1 - w],
+          [x2 - w, y1 - w],
+          [x2, y1],
+          [x2 - w, y1 + w],
+          [x1 + w, y1 + w],
+        ]
+      : [
+          [x1, y1],
+          [x1 + w, y1 + w],
+          [x1 + w, y2 - w],
+          [x1, y2],
+          [x1 - w, y2 - w],
+          [x1 - w, y1 + w],
+        ];
+  return pts.map((p) => p.join(",")).join(" ");
+}
+
+const SEGMENT_SHAPES: Record<string, string> = {
+  a: segment(10, 7, 50, 7),
+  b: segment(53, 10, 53, 48),
+  c: segment(53, 52, 53, 90),
+  d: segment(10, 93, 50, 93),
+  e: segment(7, 52, 7, 90),
+  f: segment(7, 10, 7, 48),
+  g: segment(10, 50, 50, 50),
 };
 
 function SegmentDigit({ digit }: { digit: string }) {
   const lit = SEGMENTS[digit] ?? "";
   return (
     <svg viewBox="0 0 60 100" className="seg-digit">
-      {Object.entries(SEGMENT_SHAPES).map(([id, r]) => (
-        <rect key={id} {...r} rx="4" className={lit.includes(id) ? "seg-on" : "seg-off"} />
+      {Object.entries(SEGMENT_SHAPES).map(([id, points]) => (
+        <polygon key={id} points={points} className={lit.includes(id) ? "seg-on" : "seg-off"} />
       ))}
     </svg>
   );
 }
 
-export function DigitalClock({ remainingSec, overtime }: ClockProps) {
+/**
+ * A bedside alarm clock: a seven-segment LED behind smoked glass, the unlit segments showing faintly,
+ * in a body with a snooze bar on top and a lamp that says what the session is doing.
+ */
+export function DigitalClock({ remainingSec, overtime, paused }: ClockProps) {
   const text = clockText(remainingSec, overtime);
   return (
-    <div className="clock-digital">
-      {[...text].map((ch, i) =>
-        /\d/.test(ch) ? (
-          <SegmentDigit key={i} digit={ch} />
-        ) : ch === ":" ? (
-          <span key={i} className="seg-colon">
-            <i />
-            <i />
-          </span>
-        ) : (
-          <span key={i} className="seg-sign">
-            {ch}
-          </span>
-        ),
-      )}
+    <div className="alarm-clock">
+      <span className="alarm-snooze" />
+      <div className="alarm-body">
+        <span className="alarm-lamps">
+          <span data-on={!paused || undefined}>FOCUS</span>
+          <span data-on={paused || undefined}>PAUSE</span>
+        </span>
+        <div className="clock-digital">
+          <div className="seg-row">
+            {[...text].map((ch, i) =>
+              /\d/.test(ch) ? (
+                <SegmentDigit key={i} digit={ch} />
+              ) : ch === ":" ? (
+                <span key={i} className="seg-colon">
+                  <i />
+                  <i />
+                </span>
+              ) : (
+                <span key={i} className="seg-sign">
+                  {ch}
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+        <span className="alarm-grille" />
+      </div>
+      <span className="object-feet" />
     </div>
   );
 }
@@ -223,16 +263,20 @@ export function HourglassClock({ remainingSec, totalSec, running, paused, overti
   );
 }
 
-/* ---- Bar: big numerals over a bar that drains ---- */
+/* ---- Bar: a battery, the charge running down with the session ---- */
 
 export function BarClock({ remainingSec, totalSec, overtime }: ClockProps) {
+  const share = overtime ? 1 : shareLeft(remainingSec, totalSec);
   return (
     <div className={`clock-bar ${thinDigits.className}`}>
       <p className="bar-time">
         <ClockDigits value={clockText(remainingSec, overtime)} />
       </p>
-      <span className="bar-track">
-        <span className="bar-fill" style={{ width: `${(overtime ? 1 : shareLeft(remainingSec, totalSec)) * 100}%` }} />
+      <span className="battery" data-low={(!overtime && share < 0.15) || undefined}>
+        <span className="battery-cells">
+          <span className="bar-fill" style={{ width: `${share * 100}%` }} />
+        </span>
+        <span className="battery-label">{Math.round(share * 100)}%</span>
       </span>
     </div>
   );
@@ -256,25 +300,32 @@ export function DotsClock({ remainingSec, totalSec, overtime }: ClockProps) {
   );
 }
 
-/* ---- Words: the time as a sentence ---- */
+/* ---- Words: the time scribbled on a sticky note ---- */
 
 export function WordsClock({ remainingSec, overtime }: ClockProps) {
   const { minutes, seconds, hours } = clockParts(remainingSec, overtime);
   return (
     <div className="clock-words">
+      <span className="note-tape" />
       <p className="words-line">{clockWords(remainingSec, overtime)}</p>
-      {(hours > 0 || minutes > 0) && <p className={`words-small ${thinDigits.className}`}>and {twoDigits(seconds)} seconds</p>}
+      {(hours > 0 || minutes > 0) && <p className="words-small">and {twoDigits(seconds)} seconds</p>}
     </div>
   );
 }
 
-/* ---- Neon: glowing tube numerals ---- */
+/* ---- Neon: a sign hung on two chains, "locked in" lit up over the time ---- */
 
 export function NeonClock({ remainingSec, overtime }: ClockProps) {
   return (
-    <p className={`clock-neon ${thinDigits.className}`}>
-      <ClockDigits value={clockText(remainingSec, overtime)} />
-    </p>
+    <div className="neon-sign">
+      <span className="neon-chains" />
+      <div className={`clock-neon ${thinDigits.className}`}>
+        <span className="neon-word">locked in</span>
+        <p className="neon-time">
+          <ClockDigits value={clockText(remainingSec, overtime)} />
+        </p>
+      </div>
+    </div>
   );
 }
 

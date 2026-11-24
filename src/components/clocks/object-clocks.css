@@ -1,0 +1,245 @@
+/*
+ * The clock faces as things you could put on a desk: an alarm clock, a battery,
+ * a sticky note, a neon sign. Everything is in em, so each object
+ * scales from --clock-size like the plain faces. A wrapper takes the face's size, and the face inside fills it.
+ */
+
+/* two little rubber feet */
+.object-feet {
+  display: block;
+  width: 70%;
+  height: 0.045em;
+  background:
+    linear-gradient(180deg, #2c2925, #121110) left / 0.22em 100% no-repeat,
+    linear-gradient(180deg, #2c2925, #121110) right / 0.22em 100% no-repeat;
+  border-radius: 0 0 0.04em 0.04em;
+}
+
+/* ---- Digital: a bedside alarm clock ---- */
+.alarm-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--clock-size, clamp(50px, min(8.5vw, 16vh), 260px));
+}
+.alarm-snooze {
+  width: 52%;
+  height: 0.05em;
+  border-radius: 0.03em 0.03em 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--face) 70%, white), color-mix(in srgb, var(--face) 75%, black));
+  box-shadow: inset 0 -0.01em 0 rgb(0 0 0 / 0.3);
+}
+.alarm-body {
+  display: flex;
+  align-items: center;
+  gap: 0.08em;
+  padding: 0.07em 0.1em;
+  border-radius: 0.2em;
+  background: linear-gradient(180deg, #34353b, #222327);
+  box-shadow:
+    inset 0 0.02em 0 rgb(255 255 255 / 0.14),
+    inset 0 -0.02em 0.04em rgb(0 0 0 / 0.35),
+    0 0.04em 0.12em rgb(0 0 0 / 0.28);
+}
+.alarm-clock .clock-digital {
+  font-size: 1em;
+}
+.alarm-lamps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  font-family: var(--font-brand);
+  font-size: max(0.085em, 6px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgb(255 255 255 / 0.22);
+}
+.alarm-lamps [data-on] {
+  color: var(--face);
+  text-shadow: 0 0 0.6em var(--face);
+}
+.alarm-grille {
+  width: 0.16em;
+  height: 0.55em;
+  border-radius: 0.05em;
+  background: radial-gradient(circle, #050506 0 0.018em, transparent 0.022em) 0 0 / 0.06em 0.06em;
+}
+.alarm-clock .object-feet {
+  width: 64%;
+}
+
+/* ---- Bar: a battery ---- */
+.battery {
+  position: relative;
+  display: flex;
+  height: 0.32em;
+  margin-right: 0.06em;
+  padding: 0.025em;
+  border: max(1.5px, 0.018em) solid rgb(235 237 242 / 0.85);
+  border-radius: 0.08em;
+  background: rgb(0 0 0 / 0.2);
+}
+/* the terminal nub */
+.battery::after {
+  content: "";
+  position: absolute;
+  top: 28%;
+  bottom: 28%;
+  right: -0.065em;
+  width: 0.04em;
+  border-radius: 0 0.03em 0.03em 0;
+  background: rgb(235 237 242 / 0.85);
+}
+.battery-cells {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 0.05em;
+}
+/* the cell walls, over the charge */
+.battery-cells::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 0.012em), rgb(0 0 0 / 0.25) calc(20% - 0.01em) 20%);
+}
+.battery .bar-fill {
+  border-radius: 0.04em;
+}
+.battery-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-brand);
+  font-size: 0.2em;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0.05em 0.15em rgb(0 0 0 / 0.8);
+}
+/* nearly flat: it goes red and pulses, like a phone at 5% */
+.battery[data-low] {
+  --face: var(--danger);
+}
+.battery[data-low] .bar-fill {
+  animation: battery-low 1.2s ease-in-out infinite;
+}
+@keyframes battery-low {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ---- Words: a sticky note ---- */
+.clock-words {
+  /* smaller type than the bare sentence had, so the note takes about the room the words did */
+  font-size: var(--clock-size, clamp(22px, min(3.6vw, 6.5vh), 80px));
+  position: relative;
+  margin-top: 0.3em;
+  padding: 0.5em 0.6em 0.55em;
+  border-radius: 0.03em 0.03em 0.08em 0.35em / 0.03em 0.03em 0.08em 0.12em;
+  background: linear-gradient(180deg, #fff4a8, #fde36c 80%, #f5d24f);
+  color: #2b2a26;
+  font-family: "Segoe Print", "Bradley Hand", "Noteworthy", "Comic Sans MS", cursive;
+  transform: rotate(-2.5deg);
+  box-shadow:
+    0 0.2em 0.3em -0.12em rgb(0 0 0 / 0.35),
+    inset 0 -0.4em 0.5em -0.4em rgb(190 150 0 / 0.35);
+}
+.clock-words .words-line {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.clock-words .words-small {
+  color: #6a6452;
+  font-weight: 400;
+}
+.clock[data-overtime] .clock-words .words-line {
+  color: #b3261e;
+}
+/* a strip of tape holding it up */
+.note-tape {
+  position: absolute;
+  top: -0.2em;
+  left: 50%;
+  width: 1.7em;
+  height: 0.42em;
+  background: rgb(255 255 255 / 0.42);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  transform: translateX(-50%) rotate(3deg);
+}
+
+/* ---- Neon: a sign on two chains ---- */
+.neon-sign {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.42em;
+  font-size: var(--clock-size, clamp(56px, min(11vw, 18vh), 320px));
+}
+.neon-chains {
+  position: absolute;
+  top: 0;
+  left: 0.5em;
+  right: 0.5em;
+  height: 0.46em;
+  background:
+    repeating-linear-gradient(180deg, #9a9ba1 0 0.035em, transparent 0.035em 0.06em) left / 0.014em 100% no-repeat,
+    repeating-linear-gradient(180deg, #9a9ba1 0 0.035em, transparent 0.035em 0.06em) right / 0.014em 100% no-repeat;
+}
+.neon-sign .clock-neon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.14em 0.24em 0.12em;
+  font-size: 1em;
+}
+.neon-word {
+  margin-bottom: -0.04em;
+  font-family: var(--font-brand);
+  font-size: 0.28em;
+  font-weight: 700;
+  color: #ffe3f1;
+  text-shadow:
+    0 0 0.04em #fff,
+    0 0 0.15em #ff4fa3,
+    0 0 0.4em #ff4fa3,
+    0 0 0.8em #ff4fa3;
+  transform: rotate(-4deg);
+  transition:
+    color 300ms,
+    text-shadow 300ms;
+}
+/* paused: that part of the sign switches off */
+.clock[data-paused] .neon-word {
+  color: #5d4652;
+  text-shadow: none;
+}
+
+/* ---- Bold: chunky toy-block numbers, in Lockin's rounded face, standing out in 3D ---- */
+.clock .clock-bold {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #fff;
+  text-shadow:
+    0.012em 0.012em 0 color-mix(in srgb, var(--face) 80%, black),
+    0.024em 0.024em 0 color-mix(in srgb, var(--face) 70%, black),
+    0.036em 0.036em 0 color-mix(in srgb, var(--face) 60%, black),
+    0.05em 0.07em 0.08em rgb(0 0 0 / 0.3);
+}
+.clock .clock-bold .bold-colon {
+  color: var(--face);
+}
+
+/* a picker card is small: the lamps and labels would only be noise there */
+.clock-preview :is(.alarm-lamps, .battery-label) {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battery[data-low] .bar-fill {
+    animation: none;
+  }
+}
