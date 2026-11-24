@@ -13,7 +13,7 @@ export const metadata = { title: "Focus buddies" };
 const PERKS: { icon: IconName; title: string; body: string }[] = [
   { icon: "focusingNow", title: "See them live", body: "Know the moment your buddy sits down to focus." },
   { icon: "streak", title: "Streaks side by side", body: "Nobody wants to be the one who breaks the chain." },
-  { icon: "notifications", title: "Nudge each other", body: "One tap tells them it’s time to lock in." },
+  { icon: "notifications", title: "Nudge each other", body: "One tap emails them it’s time to lock in. Once a day each." },
 ];
 
 export default async function BuddiesPage() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, passwordResetEmail, verificationEmail } from "./email-templates";
+import { escapeHtml, nudgeEmail, passwordResetEmail, verificationEmail } from "./email-templates";
 
 const site = "https://lockin.example";
 const url = `${site}/verify-email?token=abc_DEF-123`;
@@ -19,7 +19,7 @@ describe("verificationEmail", () => {
   });
 
   it("shows the logo from the site and one button", () => {
-    expect(mail.html).toContain(`src="${site}/pwa-icon/192"`);
+    expect(mail.html).toContain(`src="${site}/email-mark/mark"`);
     expect(mail.html.match(/>Verify email<\/a>/g)).toHaveLength(1);
   });
 
@@ -47,5 +47,46 @@ describe("passwordResetEmail", () => {
 describe("escapeHtml", () => {
   it("escapes the five HTML characters", () => {
     expect(escapeHtml(`&<>"'`)).toBe("&amp;&lt;&gt;&quot;&#39;");
+  });
+});
+
+describe("nudgeEmail", () => {
+  const timer = `${site}/dashboard/timer`;
+  const mail = nudgeEmail({ name: "Abel Tesfaye", actorName: "Sara Bekele", url: timer, siteUrl: site });
+
+  it("says who nudged, in the subject, heading and text", () => {
+    expect(mail.subject).toBe("Sara Bekele nudged you to lock in");
+    expect(mail.html).toContain("Sara nudged you to lock in");
+    expect(mail.text).toContain("Hey Abel, Sara Bekele thinks it's time to lock in.");
+  });
+
+  it("has one Lock in now button to the timer, in the html and the text", () => {
+    expect(mail.html.match(/>Lock in now<\/a>/g)).toHaveLength(1);
+    expect(mail.html).toContain(`href="${timer}"`);
+    expect(mail.text).toContain(timer);
+  });
+
+  it("shows the open padlock, the logo and the nudge badge in green", () => {
+    expect(mail.html).toContain("Nudge</td>");
+    expect(mail.html).toContain("#4ade80");
+    expect(mail.html).toContain(`src="${site}/email-mark/open"`);
+    expect(mail.html).toContain(`src="${site}/email-mark/mark"`);
+  });
+
+  it("says nudges are once a day", () => {
+    expect(mail.text).toContain("once a day");
+  });
+
+  it("escapes the names", () => {
+    const evil = nudgeEmail({ name: "<b>x</b>", actorName: `<script>alert(1)</script>`, url: timer, siteUrl: site });
+    expect(evil.html).not.toContain("<script>");
+  });
+});
+
+describe("renderEmail without a hero", () => {
+  it("keeps the plain emails left-aligned and blue", () => {
+    const plain = verificationEmail({ name: "Abel", url, siteUrl: site });
+    expect(plain.html).not.toContain("text-align:center");
+    expect(plain.html).toContain("#4f8ff7");
   });
 });

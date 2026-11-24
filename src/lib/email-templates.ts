@@ -1,21 +1,32 @@
 import { brand } from "./brand";
 
 /**
- * Transactional emails: one dark card, the logo, one button, and a plain-text twin.
+ * Transactional emails: one dark card with the Lockin logo, one button, and a plain-text twin.
  * Colors are set explicitly (not left to the client), so dark-mode mail apps have nothing to invert badly.
+ * The logo's padlock comes from /email-mark as a PNG, because mail apps won't show SVG.
  */
 
 export type EmailContent = { subject: string; text: string; html: string };
 
 const COLORS = {
-  page: "#0d0d0f",
-  card: "#1c1c20",
-  border: "#2a2a30",
+  page: "#0a0a0b",
+  card: "#141416",
+  border: "#26262b",
   text: "#ececf1",
   muted: "#a1a1aa",
-  button: "#4f8ff7",
+  faint: "#71717a",
+  primary: "#4f8ff7",
+  primaryShadow: "#2563c9",
   buttonText: "#111113",
+  live: "#4ade80",
+  liveShadow: "#22a355",
+  liveBg: "#0f1f15",
+  liveBorder: "#1f4a2c",
 };
+
+const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+/** The logo's round face. Mail apps that can't load Fredoka fall back to the nearest rounded bold. */
+const BRAND_FONT = "Fredoka,'Arial Rounded MT Bold','Helvetica Rounded',Arial,sans-serif";
 
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -29,12 +40,40 @@ type Layout = {
   paragraphs: string[];
   button: { label: string; url: string };
   footer: string;
+  /** The "lock in" emails: an open green padlock over the heading, waiting to be shut, with a pill above it. */
+  hero?: { badge: string };
 };
+
+/** The logo as the app shows it: the padlock, then "lock" in blue and "in" in white, in the round face. */
+function logo(site: string, size: number) {
+  const name = brand.name.toLowerCase();
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="vertical-align:middle;"><img src="${site}/email-mark/mark" width="${size}" height="${size}" alt="" style="display:block;"></td>
+<td style="vertical-align:middle;padding-left:${Math.round(size * 0.3)}px;font-family:${BRAND_FONT};font-size:${Math.round(size * 0.86)}px;line-height:1;font-weight:700;letter-spacing:-0.01em;color:${COLORS.text};"><span style="color:${COLORS.primary};">${escapeHtml(name.slice(0, 4))}</span>${escapeHtml(name.slice(4))}</td>
+</tr></table>`;
+}
 
 export function renderEmail(l: Layout): string {
   const e = escapeHtml;
+  const site = e(l.siteUrl);
   const url = e(l.button.url);
-  const p = (s: string) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${COLORS.text}">${e(s)}</p>`;
+  const hero = !!l.hero;
+  const accent = hero ? COLORS.live : COLORS.primary;
+  const accentShadow = hero ? COLORS.liveShadow : COLORS.primaryShadow;
+  const align = hero ? "center" : "left";
+  const p = (s: string) =>
+    `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:${COLORS.muted};text-align:${align};">${e(s)}</p>`;
+  const heroBlock = l.hero
+    ? `<tr><td style="padding:8px 24px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.liveBg};background-image:radial-gradient(circle at 50% 0%,#1d3d27 0%,${COLORS.liveBg} 70%);border:1px solid ${COLORS.liveBorder};border-radius:20px;">
+<tr><td align="center" style="padding:28px 16px 24px;">
+<img src="${site}/email-mark/open" width="72" height="72" alt="" style="display:block;margin:0 auto;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px auto 0;"><tr>
+<td style="border-radius:999px;border:1px solid ${COLORS.liveBorder};background:${COLORS.card};padding:6px 14px;font-family:${SANS};font-size:11px;line-height:1;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${COLORS.live};">${e(l.hero.badge)}</td>
+</tr></table>
+</td></tr></table>
+</td></tr>`
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -42,33 +81,33 @@ export function renderEmail(l: Layout): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="supported-color-schemes" content="dark">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&display=swap" rel="stylesheet">
 <title>${e(l.heading)}</title>
 </head>
 <body style="margin:0;padding:0;background:${COLORS.page};">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${e(l.preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.page};">
 <tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<tr><td style="padding:32px 32px 8px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="vertical-align:middle;"><img src="${e(l.siteUrl)}/pwa-icon/192" width="36" height="36" alt="" style="display:block;border-radius:10px;"></td>
-<td style="vertical-align:middle;padding-left:10px;font-size:18px;font-weight:800;color:${COLORS.text};">${e(brand.name.toLowerCase())}</td>
-</tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:24px;font-family:${SANS};">
+<tr><td align="${align}" style="padding:28px 28px 20px;">
+${logo(site, 28)}
 </td></tr>
-<tr><td style="padding:16px 32px 8px;">
-<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:800;color:${COLORS.text}">${e(l.heading)}</h1>
+${heroBlock}
+<tr><td style="padding:${hero ? 24 : 4}px 28px 4px;">
+<h1 style="margin:0 0 12px;font-size:${hero ? 26 : 22}px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;color:${COLORS.text};text-align:${align};">${e(l.heading)}</h1>
 ${l.paragraphs.map(p).join("\n")}
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"><tr>
-<td style="border-radius:999px;background:${COLORS.button};">
-<a href="${url}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:${COLORS.buttonText};text-decoration:none;border-radius:999px;">${e(l.button.label)}</a>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px ${hero ? "auto" : "0"} 24px;"><tr>
+<td style="border-radius:999px;background:${accent};border-bottom:4px solid ${accentShadow};">
+<a href="${url}" style="display:inline-block;padding:14px 32px;font-size:16px;line-height:1;font-weight:800;color:${COLORS.buttonText};text-decoration:none;border-radius:999px;">${e(l.button.label)}</a>
 </td></tr></table>
-<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:${COLORS.muted}">Button not working? Paste this link into your browser:</p>
-<p style="margin:0 0 24px;font-size:13px;line-height:1.5;word-break:break-all;"><a href="${url}" style="color:${COLORS.button};">${url}</a></p>
+<p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:${COLORS.faint};text-align:${align};">Button not working? Paste this link into your browser:</p>
+<p style="margin:0 0 24px;font-size:12px;line-height:1.5;word-break:break-all;text-align:${align};"><a href="${url}" style="color:${accent};">${url}</a></p>
 </td></tr>
-<tr><td style="padding:16px 32px 28px;border-top:1px solid ${COLORS.border};">
-<p style="margin:0;font-size:12px;line-height:1.5;color:${COLORS.muted}">${e(l.footer)}</p>
+<tr><td style="padding:18px 28px 24px;border-top:1px solid ${COLORS.border};">
+<p style="margin:0;font-size:12px;line-height:1.6;color:${COLORS.faint};text-align:${align};">${e(l.footer)}</p>
 </td></tr>
 </table>
+<p style="margin:18px 0 0;font-family:${SANS};font-size:12px;color:${COLORS.faint};">${e(brand.name)} · ${e(brand.tagline)}</p>
 </td></tr>
 </table>
 </body>
@@ -107,6 +146,27 @@ export function passwordResetEmail(o: { url: string; siteUrl: string }): EmailCo
       paragraphs: [intro, expiry],
       button: { label: "Choose a new password", url: o.url },
       footer,
+    }),
+  };
+}
+
+/** A buddy nudged you: the open padlock waiting to be shut, their name, and one button straight to the timer. */
+export function nudgeEmail(o: { name: string; actorName: string; url: string; siteUrl: string }): EmailContent {
+  const first = o.actorName.split(" ")[0] || o.actorName;
+  const intro = `Hey ${o.name.split(" ")[0] || o.name}, ${o.actorName} thinks it's time to lock in. Put your phone face down, pick a length and start a session.`;
+  const push = `Every minute counts toward your streak, and ${first} will see you go live.`;
+  const footer = `You're getting this because ${o.actorName} is your buddy on ${brand.name}. Each buddy can nudge you once a day.`;
+  return {
+    subject: `${o.actorName} nudged you to lock in`,
+    text: `${o.actorName} nudged you to lock in\n\n${intro}\n\n${push}\n\nLock in now: ${o.url}\n\n${footer}\n`,
+    html: renderEmail({
+      siteUrl: o.siteUrl,
+      preheader: `${first} is waiting on you. Time to lock in.`,
+      heading: `${first} nudged you to lock in`,
+      paragraphs: [intro, push],
+      button: { label: "Lock in now", url: o.url },
+      footer,
+      hero: { badge: "👋 Nudge" },
     }),
   };
 }
