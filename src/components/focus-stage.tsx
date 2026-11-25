@@ -41,8 +41,8 @@ export function StagePill({ children, strong = false, className = "" }: { childr
 /** The way out of the focus page, which has no top bar or dock. */
 export function HomeLink() {
   return (
-    <Link href="/dashboard" aria-label="Home" title="Home" className="stage-pill px-2.5">
-      <Icon name="home" size={17} />
+    <Link href="/dashboard" aria-label="Home" title="Home" className="stage-pill size-9 justify-center px-0">
+      <Icon name="home" size={19} />
     </Link>
   );
 }
