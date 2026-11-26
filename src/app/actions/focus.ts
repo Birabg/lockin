@@ -9,7 +9,7 @@ import { verifyGate } from "@/lib/email-verify";
 import { hasBlockedWords } from "@/lib/moderation";
 import { notifySessionStart } from "@/lib/notifications";
 import { finishSession, reapStaleSessions } from "@/lib/sessions";
-import { isExpired } from "@/lib/session-math";
+import { POMODORO_LIMITS, isExpired, pomodoroOf, type Pomodoro } from "@/lib/session-math";
 
 async function me() {
   const user = await getCurrentUser();
@@ -24,9 +24,25 @@ export type ActiveSession = {
   label: string | null;
   pausedSec: number;
   pausedAt: string | null;
+  /** The four Pomodoro settings, all null on a plain timer. */
+  workMin: number | null;
+  breakMin: number | null;
+  longBreakMin: number | null;
+  rounds: number | null;
 };
 
-type SessionRow = { id: string; startedAt: Date; goalMin: number; label: string | null; pausedSec: number; pausedAt: Date | null };
+type SessionRow = {
+  id: string;
+  startedAt: Date;
+  goalMin: number;
+  label: string | null;
+  pausedSec: number;
+  pausedAt: Date | null;
+  workMin: number | null;
+  breakMin: number | null;
+  longBreakMin: number | null;
+  rounds: number | null;
+};
 
 const toActive = (s: SessionRow): ActiveSession => ({
   id: s.id,
@@ -35,6 +51,7 @@ const toActive = (s: SessionRow): ActiveSession => ({
   label: s.label,
   pausedSec: s.pausedSec,
   pausedAt: s.pausedAt?.toISOString() ?? null,
+  ...(pomodoroOf(s) ?? { workMin: null, breakMin: null, longBreakMin: null, rounds: null }),
 });
 
 const idSchema = z.string().min(1).max(64);
@@ -45,6 +62,10 @@ const startSchema = z.object({
     .transform((n) => Math.min(Math.max(Math.round(n) || 25, 5), 12 * 60)),
   label: z.string().trim().max(40),
 });
+const setting = (key: keyof Pomodoro) => z.number().int().min(POMODORO_LIMITS[key].min).max(POMODORO_LIMITS[key].max);
+const pomodoroSchema = z
+  .object({ workMin: setting("workMin"), breakMin: setting("breakMin"), longBreakMin: setting("longBreakMin"), rounds: setting("rounds") })
+  .nullable();
 const stopSchema = z.object({ share: z.boolean(), note: z.string().trim().max(280) });
 
 export async function getActiveSession(): Promise<ActiveSession | null> {
@@ -55,14 +76,22 @@ export async function getActiveSession(): Promise<ActiveSession | null> {
   return s ? toActive(s) : null;
 }
 
-export async function startFocus(goalMin: number, label: string): Promise<ActiveSession> {
+/** Starts a session: a plain timer counting down `goalMin`, or a Pomodoro when one is given (its rounds then set the goal). */
+export async function startFocus(goalMin: number, label: string, pomodoro: Pomodoro | null = null): Promise<ActiveSession> {
   const user = await me();
   const input = startSchema.parse({ goalMin, label });
+  const pomo = pomodoroSchema.parse(pomodoro);
   const existing = await getActiveSession();
   if (existing) return existing;
   try {
     const s = await db.focusSession.create({
-      data: { userId: user.id, activeKey: user.id, goalMin: input.goalMin, label: input.label || null },
+      data: {
+        userId: user.id,
+        activeKey: user.id,
+        label: input.label || null,
+        // a Pomodoro's goal is the focus it plans: every round, breaks left out
+        ...(pomo ? { ...pomo, goalMin: pomo.workMin * pomo.rounds } : { goalMin: input.goalMin }),
+      },
     });
     await notifySessionStart(user.id, s.id);
     revalidatePath("/dashboard", "layout");

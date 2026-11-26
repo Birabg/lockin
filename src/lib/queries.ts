@@ -4,7 +4,7 @@ import { hiddenPeople, reportedBy } from "./blocks";
 import { db } from "./db";
 import { hiddenAuthors } from "./safety";
 import { rankTotals } from "./leaderboard";
-import { LIVE_MS, remainingSeconds, runningSeconds } from "./session-math";
+import { LIVE_MS, PLAN_FIELDS, remainingSeconds, runningSeconds } from "./session-math";
 import { computeStreak } from "./streak";
 import { dayKey, hourOf, shiftDayKey, weekStartKey, weekdayLetter } from "./time";
 import { leaderboardUserFilter, verificationEnforced } from "./verification";
@@ -26,7 +26,7 @@ async function dayTotalsFor(people: Person[], fromDay?: string) {
     }),
     db.focusSession.findMany({
       where: { userId: { in: ids }, status: "ACTIVE" },
-      select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true },
+      select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, ...PLAN_FIELDS },
     }),
   ]);
   const totals = new Map<string, DayTotals>(ids.map((id) => [id, new Map()]));
@@ -125,7 +125,7 @@ export async function getFocusingNow(limit = 12, viewerId: string | null = null)
       pausedSec: true,
       pausedAt: true,
       label: true,
-      goalMin: true,
+      ...PLAN_FIELDS,
       user: { select: { id: true, username: true, name: true, avatar: true } },
     },
   });
@@ -134,7 +134,14 @@ export async function getFocusingNow(limit = 12, viewerId: string | null = null)
     count: live.length,
     sessions: live
       .slice(0, limit)
-      .map(({ label, goalMin, user, ...timing }) => ({ label, goalMin, user, remaining: remainingSeconds({ ...timing, goalMin }, now) })),
+      .map(({ label, user, ...s }) => ({
+        label,
+        goalMin: s.goalMin,
+        user,
+        remaining: remainingSeconds(s, now),
+        // enough for a page to keep the time right as it runs, through a Pomodoro's breaks too
+        timing: { ...s, startedAt: s.startedAt.toISOString(), pausedAt: s.pausedAt?.toISOString() ?? null },
+      })),
   };
 }
 
@@ -200,7 +207,7 @@ async function rankedTotals(range: Range, timeZone: string, take?: (running: num
 
   const sessions = await db.focusSession.findMany({
     where: { status: "ACTIVE", user: eligible },
-    select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, user: { select: { timeZone: true } } },
+    select: { userId: true, startedAt: true, lastBeatAt: true, pausedSec: true, pausedAt: true, ...PLAN_FIELDS, user: { select: { timeZone: true } } },
   });
   const running = sessions.map(({ user, ...s }) => ({ ...s, timeZone: user.timeZone }));
 

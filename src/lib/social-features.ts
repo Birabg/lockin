@@ -1,10 +1,10 @@
 import "server-only";
 import { db } from "./db";
 import { getStreaksAndToday } from "./queries";
-import { LIVE_MS, isExpired } from "./session-math";
+import { LIVE_MS, PLAN_FIELDS, isExpired, pomodoroOf } from "./session-math";
 
 const person = { select: { id: true, username: true, name: true, avatar: true, timeZone: true } };
-const timing = { label: true, goalMin: true, startedAt: true, pausedSec: true, pausedAt: true, lastBeatAt: true } as const;
+const timing = { label: true, ...PLAN_FIELDS, startedAt: true, pausedSec: true, pausedAt: true, lastBeatAt: true } as const;
 
 /** Whether a session counts as live right now: running, not paused, and heard from recently. */
 const isLive = (s: { pausedAt: Date | null; lastBeatAt: Date } | undefined) =>
@@ -146,6 +146,7 @@ export async function getRoom(code: string, viewerId: string | null) {
             ? {
                 label: s.label,
                 goalMin: s.goalMin,
+                ...(pomodoroOf(s) ?? { workMin: null, breakMin: null, longBreakMin: null, rounds: null }),
                 startedAt: s.startedAt.toISOString(),
                 pausedSec: s.pausedSec,
                 pausedAt: s.pausedAt?.toISOString() ?? null,

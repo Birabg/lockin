@@ -20,9 +20,12 @@ import {
 import { Icon } from "./icon";
 import { LengthTape } from "./length-tape";
 import { MusicButton, MusicPanel, YouTubePill } from "./music-panel";
+import { ModeSwitch, PomodoroSettings } from "./pomodoro-setup";
+import type { FocusMode } from "@/lib/focus-mode";
 import { SceneGrid } from "./scene-picker";
 import { reachesDailyGoal } from "@/lib/dial";
 import type { ClockStyle } from "@/lib/clock-styles";
+import { planSeconds, type Pomodoro } from "@/lib/session-math";
 import { playLock, wakeSound } from "@/lib/dial-sound";
 import { prefersReducedMotion } from "@/lib/motion";
 import type { Scene } from "@/lib/scenes";
@@ -180,6 +183,11 @@ function LockButton({ locked, ref, ...rest }: LockProps) {
 
 type Props = {
   scene: Scene;
+  /** Timelapse: one stretch of `goal` minutes. Pomodoro: focus rounds with breaks, as `pomodoro` sets them. */
+  mode: FocusMode;
+  onMode: (mode: FocusMode) => void;
+  pomodoro: Pomodoro;
+  onPomodoro: (p: Pomodoro) => void;
   goal: number;
   onGoal: (minutes: number) => void;
   label: string;
@@ -203,7 +211,7 @@ type Props = {
 };
 
 export function FocusSetup(props: Props) {
-  const { scene, goal, onGoal, label, onLabel, labels, liveCount, todaySec, dailyGoalMin, timeZone, starting } = props;
+  const { scene, mode, pomodoro, goal, onGoal, label, onLabel, labels, liveCount, todaySec, dailyGoalMin, timeZone, starting } = props;
   const [now, setNow] = useState(props.serverNow); // same on server and client, so hydration matches
   const screen = useFullscreen();
   const menu = useDockMenu<"music" | "scene" | "clock" | "settings">();
@@ -270,10 +278,16 @@ export function FocusSetup(props: Props) {
     };
   }, []);
 
-  const total = goal * 60;
+  const pomo = mode === "pomodoro";
+  // a Pomodoro's clock shows one focus round, and its plan is every round
+  const total = (pomo ? pomodoro.workMin : goal) * 60;
+  const focusMin = pomo ? pomodoro.workMin * pomodoro.rounds : goal;
+  const runMin = pomo ? planSeconds({ goalMin: focusMin, ...pomodoro }) / 60 : goal;
+  const rounds = `${pomodoro.rounds} ${pomodoro.rounds === 1 ? "round" : "rounds"} · `;
   const caption = (
     <>
-      Ends at {endsAt(now, goal, timeZone)} · Today {formatDuration(todaySec)} of {formatDuration(dailyGoalMin * 60)} goal
+      {pomo && rounds}
+      Ends at {endsAt(now, runMin, timeZone)} · Today {formatDuration(todaySec)} of {formatDuration(dailyGoalMin * 60)} goal
     </>
   );
 
@@ -313,12 +327,17 @@ export function FocusSetup(props: Props) {
             />
           }
           caption={caption}
-          note={reachesDailyGoal(goal, todaySec, dailyGoalMin) ? "This session hits your daily goal" : null}
+          note={reachesDailyGoal(focusMin, todaySec, dailyGoalMin) ? "This session hits your daily goal" : null}
         />
 
         <div className="stage-mid stage-fade" data-setup-only>
           <div className="stage-setup-card">
-            <LengthTape goal={goal} onGoal={onGoal} locked={starting} />
+            <ModeSwitch mode={mode} onMode={props.onMode} locked={starting} />
+            {pomo ? (
+              <PomodoroSettings value={pomodoro} onChange={props.onPomodoro} locked={starting} />
+            ) : (
+              <LengthTape goal={goal} onGoal={onGoal} locked={starting} />
+            )}
             <LabelChips labels={labels} label={label} onChange={onLabel} locked={starting} />
           </div>
         </div>

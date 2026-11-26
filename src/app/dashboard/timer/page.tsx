@@ -1,12 +1,16 @@
 import { requireUser } from "@/lib/auth";
 import { getActiveSession } from "@/app/actions/focus";
 import { getFocusingNow, getStreak, getTodaySeconds, getTopLabels } from "@/lib/queries";
+import { isFocusMode } from "@/lib/focus-mode";
 import { TimerClient } from "./timer-client";
 
 export const metadata = { title: "Focus" };
 
-export default async function TimerPage() {
-  const user = await requireUser("/dashboard/timer");
+export default async function TimerPage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+  const { mode: param } = await searchParams;
+  // Timelapse or Pomodoro, picked from the Lock in menu
+  const mode = isFocusMode(param) ? param : null;
+  const user = await requireUser(mode ? `/dashboard/timer?mode=${mode}` : "/dashboard/timer");
   const [active, todaySec, live, streak, labels] = await Promise.all([
     getActiveSession(),
     getTodaySeconds(user),
@@ -28,6 +32,7 @@ export default async function TimerPage() {
         savedClockStyle={user.clockStyle}
         streak={streak.current}
         timeZone={user.timeZone}
+        initialMode={mode}
       />
     </div>
   );

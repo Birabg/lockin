@@ -68,6 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           live: { count: live.count, sessions: live.sessions.map(({ label, user }) => ({ label, user })) },
           board: board.rows.slice(0, DOCK_ROWS),
           myRank: (user && board.rows.find((r) => r.user.id === user.id)?.rank) ?? null,
+          inSession: !!active,
         }}
       >
         {children}

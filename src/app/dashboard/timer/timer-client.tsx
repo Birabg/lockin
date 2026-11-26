@@ -17,7 +17,22 @@ import { FloatingTimer, useFloatingWindow } from "@/components/floating-timer";
 import { DEFAULT_CLOCK_STYLE, clockText, isClockStyle, resolveClockStyle, type ClockStyle } from "@/lib/clock-styles";
 import { snapMinutes } from "@/lib/dial";
 import { isSceneId, resolveScene } from "@/lib/scenes";
-import { GOAL_PROMPT_SEC, activeSeconds, goalEndsAt, remainingSeconds, sessionTiming } from "@/lib/session-math";
+import {
+  DEFAULT_POMODORO,
+  GOAL_PROMPT_SEC,
+  activeSeconds,
+  clampPomodoro,
+  focusOf,
+  focusedSeconds,
+  goalEndsAt,
+  planSeconds,
+  pomodoroOf,
+  pomodoroPhase,
+  remainingSeconds,
+  sessionTiming,
+  type Pomodoro,
+} from "@/lib/session-math";
+import { isFocusMode, type FocusMode } from "@/lib/focus-mode";
 import { buildTimelapse, canRecordScreen, discardRecording, hasFrames, isRecording, startRecording, stopRecording } from "@/lib/timelapse";
 import { uploadBlob } from "@/lib/upload";
 import { useWakeLock } from "@/lib/use-wake-lock";
@@ -28,13 +43,16 @@ import { brand } from "@/lib/brand";
 const SCENE_KEY = "lockin-scene";
 const CLOCK_KEY = "lockin-clock-style";
 const KEPT_GOING_KEY = "lockin-kept-going";
+const MODE_KEY = "lockin-focus-mode";
+const POMODORO_KEY = "lockin-pomodoro";
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 const FADE_MS = 400;
 /** Long enough for the lock to click shut and its pulse to play before the session takes over. */
 const LOCK_MS = 600;
 
-const elapsedSeconds = (s: ActiveSession, now: number) => activeSeconds(sessionTiming(s), new Date(now));
+/** Focused seconds: pauses left out, and a Pomodoro's breaks too. */
+const elapsedSeconds = (s: ActiveSession, now: number) => focusedSeconds(sessionTiming(s), new Date(now));
 
 async function publishTimelapse(postId: string) {
   try {
@@ -71,6 +89,8 @@ type Props = {
   savedClockStyle: string;
   streak: number;
   timeZone: string;
+  /** The mode picked from the Lock in menu, if the page was opened from it. */
+  initialMode: FocusMode | null;
 };
 
 export function TimerClient(props: Props) {
@@ -96,31 +116,71 @@ export function TimerClient(props: Props) {
   // arriving at a running session opens straight into it, with no fade from the page
   const [fadeIn, setFadeIn] = useState(!active);
   const [keptGoing, setKeptGoing] = useState<string | null>(null);
+  // a running Pomodoro comes back to Pomodoro when it ends
+  const startedAs: FocusMode | null = active ? (pomodoroOf(active) ? "pomodoro" : "timelapse") : null;
+  const [mode, setMode] = useState<FocusMode>(props.initialMode ?? startedAs ?? "timelapse");
+  const [pomodoro, setPomodoro] = useState<Pomodoro>(DEFAULT_POMODORO);
   const [pending, start] = useTransition();
 
   const scene = resolveScene(sceneId);
-  const elapsed = session ? elapsedSeconds(session, now) : 0;
+  const timing = session ? sessionTiming(session) : null;
+  const pomo = session ? pomodoroOf(session) : null;
+  const ranSec = timing ? activeSeconds(timing, new Date(now)) : 0; // breaks included, pauses not
+  const elapsed = session ? focusOf(session, ranSec) : 0;
   const paused = !!session?.pausedAt;
   const goalSec = (session?.goalMin ?? goal) * 60;
-  const remaining = session ? remainingSeconds(sessionTiming(session), new Date(now)) : goalSec;
-  const over = Math.max(0, -remaining);
+  const remaining = timing ? remainingSeconds(timing, new Date(now)) : goalSec;
+  // how far past the goal: in focus on a timer, and in running time on a Pomodoro, whose breaks still move it along
+  const over = session && pomo ? Math.max(0, ranSec - planSeconds(session)) : Math.max(0, -remaining);
   const reached = !!session && remaining <= 0;
   const overtime = reached && (keptGoing === session.id || over >= GOAL_PROMPT_SEC);
   const asking = reached && !overtime && !finishing;
-  const clock = clockText(remaining, overtime);
-  const shownRemaining = overtime ? remaining : Math.max(0, remaining);
+  // a Pomodoro's clock counts down the round or break it's in, and carries on with the next ones after the goal
+  const step = pomo ? pomodoroPhase(pomo, ranSec) : null;
+  const stepLeft = step ? Math.max(0, Math.ceil(step.length - step.into)) : 0;
+  const onBreak = !!step && step.kind !== "focus";
+  const clock = step ? clockText(asking ? 0 : stepLeft, false) : clockText(remaining, overtime);
+  const shownRemaining = step ? (asking ? 0 : stepLeft) : overtime ? remaining : Math.max(0, remaining);
+  const shownTotal = step ? step.length : goalSec;
+  const shownOvertime = !step && overtime;
   const running = !!session && !paused && (!reached || overtime);
-  const endsAt = session ? formatClock(goalEndsAt(sessionTiming(session)), timeZone) : "";
-  const phase = paused ? "Paused" : overtime ? "Overtime" : reached ? "Goal reached" : "Locked In";
+  const endsAt = timing ? formatClock(goalEndsAt(timing), timeZone) : "";
+  const roundOf = step && pomo ? `Round ${step.round}${step.round <= pomo.rounds ? ` of ${pomo.rounds}` : ""}` : "";
+  const phase = paused
+    ? "Paused"
+    : step
+      ? asking
+        ? "All rounds done"
+        : step.kind === "focus"
+          ? roundOf
+          : step.kind === "long"
+            ? "Long break"
+            : "Break"
+      : overtime
+        ? "Overtime"
+        : reached
+          ? "Goal reached"
+          : "Locked In";
   const immersive = !!session && !minimized;
   const showOverlay = useStaysFor(immersive, FADE_MS);
   // todaySec already holds this session up to when the page was rendered, so only add what's come since
   const todayNow = todaySec + (session ? Math.max(0, elapsed - elapsedSeconds(session, serverNow)) : 0);
   const today = `Today ${formatDuration(todayNow)} of ${formatDuration(dailyGoalMin * 60)} goal`;
-  const caption = paused || reached ? today : `Ends at ${endsAt} · ${today}`;
+  const stepEnds = formatClock(new Date(now + stepLeft * 1000), timeZone);
+  const caption =
+    paused || asking
+      ? today
+      : step
+        ? onBreak
+          ? `Focus again at ${stepEnds} · ${today}`
+          : // the plan's last round ends at the goal rather than in a break
+            `${!reached && step.round === pomo?.rounds ? "Done" : "Break"} at ${stepEnds} · ${today}`
+        : reached
+          ? today
+          : `Ends at ${endsAt} · ${today}`;
 
   // what the overlay keeps showing while it fades out after the session has gone
-  const view = { remainingSec: shownRemaining, totalSec: goalSec, running, phase, caption, overtime, paused };
+  const view = { remainingSec: shownRemaining, totalSec: shownTotal, running, phase, caption, overtime: shownOvertime, paused };
   const lastView = useRef({ ...view, label: session?.label ?? null });
   if (session) lastView.current = { ...view, label: session.label };
 
@@ -203,6 +263,42 @@ export function TimerClient(props: Props) {
     }
   }, [savedClockStyle]);
 
+  // the last mode and Pomodoro settings are kept per browser. A mode picked from the Lock in menu wins.
+  const initialMode = props.initialMode;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MODE_KEY);
+      if (initialMode) localStorage.setItem(MODE_KEY, initialMode);
+      else if (!startedAs && isFocusMode(saved)) setMode(saved);
+      const raw = localStorage.getItem(POMODORO_KEY);
+      if (raw) setPomodoro(clampPomodoro(JSON.parse(raw)));
+    } catch {
+      // storage blocked or a bad value: the defaults are fine
+    }
+  }, [initialMode, startedAs]);
+
+  function onPickMode(next: FocusMode) {
+    setMode(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      // it just starts on Timelapse next time
+    }
+    // keep the address in step, so a refresh stays on the same mode
+    const url = new URL(window.location.href);
+    url.searchParams.set("mode", next);
+    window.history.replaceState(window.history.state, "", url);
+  }
+
+  function onPickPomodoro(next: Pomodoro) {
+    setPomodoro(next);
+    try {
+      localStorage.setItem(POMODORO_KEY, JSON.stringify(next));
+    } catch {
+      // the settings just reset next time
+    }
+  }
+
   function onPickClock(style: ClockStyle) {
     setClockStyle(style);
     try {
@@ -275,9 +371,19 @@ export function TimerClient(props: Props) {
     if (!hasSession) endFocusMusic();
   }, [hasSession]);
   useEffect(() => {
-    const time = !hasSession ? "Focus" : overtime ? clock : reached ? "Goal reached" : `${clock} left`;
+    const time = !hasSession
+      ? "Focus"
+      : pomo
+        ? asking
+          ? "All rounds done"
+          : `${clock} ${onBreak ? "break" : "focus"}`
+        : overtime
+          ? clock
+          : reached
+            ? "Goal reached"
+            : `${clock} left`;
     document.title = `${time} · ${brand.name}`;
-  }, [hasSession, overtime, reached, clock, now]); // on every tick, because Next puts its own title back when the page refreshes
+  }, [hasSession, overtime, reached, clock, now, pomo, asking, onBreak]); // on every tick, because Next puts its own title back when the page refreshes
 
   function onStart() {
     setError(null);
@@ -291,7 +397,7 @@ export function TimerClient(props: Props) {
           setRecording(isRecording());
         }
         const lockPlayed = new Promise((done) => setTimeout(done, prefersReducedMotion() ? 0 : LOCK_MS));
-        const [s] = await Promise.all([startFocus(goal, label), lockPlayed]);
+        const [s] = await Promise.all([startFocus(goal, label, mode === "pomodoro" ? pomodoro : null), lockPlayed]);
         setNow(Date.now());
         captureHandoff(); // where the time sits now, so the session view can open from it
         setSession(s);
@@ -427,8 +533,10 @@ export function TimerClient(props: Props) {
   const goalPrompt = (
     <>
       <div>
-        <p className="font-bold">Goal reached 🎯</p>
-        <p className="text-sm text-[var(--stage-muted)]">You focused for {formatDuration(elapsed)}.</p>
+        <p className="font-bold">{pomo ? `All ${pomo.rounds} ${pomo.rounds === 1 ? "round" : "rounds"} done 🎯` : "Goal reached 🎯"}</p>
+        <p className="text-sm text-[var(--stage-muted)]">
+          You focused for {formatDuration(elapsed)}.{pomo && " Keep going for more rounds, or wrap up."}
+        </p>
       </div>
       <div className="flex gap-2">
         <button onClick={keepGoing} className="stage-btn">
@@ -477,10 +585,10 @@ export function TimerClient(props: Props) {
           caption={caption}
           streak={streak}
           remainingSec={shownRemaining}
-          totalSec={goalSec}
+          totalSec={shownTotal}
           running={running}
           paused={paused}
-          overtime={overtime}
+          overtime={shownOvertime}
           pending={pending}
           onTogglePause={onTogglePause}
           onFinish={() => setFinishing(true)}
@@ -521,6 +629,10 @@ export function TimerClient(props: Props) {
       ) : (
         <FocusSetup
           scene={scene}
+          mode={mode}
+          onMode={onPickMode}
+          pomodoro={pomodoro}
+          onPomodoro={onPickPomodoro}
           goal={goal}
           onGoal={setGoal}
           label={label}
