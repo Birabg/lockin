@@ -97,7 +97,11 @@ test("signup, focus, share, like, leaderboard", async ({ browser }) => {
   await page.mouse.move(300, 300); // the controls stay hidden until there's activity
   await page.mouse.move(320, 320);
   await page.getByRole("button", { name: "Finish session" }).click();
-  await page.getByPlaceholder(/how did it go/i).fill(note);
+  // click and type like a person: fill() would skip the click that used to take focus away
+  const noteField = page.getByPlaceholder(/how did it go/i);
+  await noteField.click();
+  await page.keyboard.type(note);
+  await expect(noteField).toHaveValue(note);
   await page.getByRole("button", { name: "Save session" }).click();
   await expect(page.getByRole("button", { name: "Hold to lock in" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Home" })).toBeVisible();

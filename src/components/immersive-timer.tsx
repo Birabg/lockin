@@ -142,9 +142,11 @@ export function ImmersiveTimer(props: ImmersiveProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // after a click the button keeps focus, and space would then press it instead of pausing
+  // after a click the button keeps focus, and space would then press it instead of pausing.
+  // Only buttons and links, though: a clicked text field has to keep focus so you can type in it.
   function releaseFocus(e: MouseEvent) {
-    if (e.detail > 0 && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    const active = document.activeElement;
+    if (e.detail > 0 && active instanceof HTMLElement && active.matches("button, a, summary")) active.blur();
   }
 
   const date = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", month: "short", day: "numeric" }).format(now);
