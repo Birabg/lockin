@@ -134,6 +134,12 @@
   .app-menu-row[aria-current="page"] {
     background: var(--inset);
   }
+  /* a row with a second line under its title */
+  .app-menu-row[data-tall] {
+    height: auto;
+    align-items: flex-start;
+    padding-block: 10px;
+  }
 
   /* ---- Floating dock (768px and up) ---- */
   /* centred with flex, not a transform, so its fixed popovers measure from the window */

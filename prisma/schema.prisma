@@ -129,6 +129,12 @@ model FocusSession {
   pausedAt    DateTime?
   /// Holds userId while ACTIVE and null after, so the unique index allows one ACTIVE session per user.
   activeKey   String?   @unique
+  /// Pomodoro sessions only: all four are null on a plain timer. goalMin is then workMin × rounds, the focus planned.
+  /// Focus and breaks take turns, with a long break after every 4th round, and only the focus counts.
+  workMin      Int?
+  breakMin     Int?
+  longBreakMin Int?
+  rounds       Int?
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post?

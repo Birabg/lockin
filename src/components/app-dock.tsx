@@ -3,12 +3,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { isActive, usePopover, type ChromeData } from "./app-shell";
+import { FocusModeMenu } from "./focus-mode-menu";
 import { Icon, type IconName } from "./icon";
 import { LeaderboardCard, StreakCard } from "./rail";
 import { Avatar, LockMark } from "./ui";
 import { formatDuration } from "@/lib/time";
 
-type Pop = "streak" | "more" | "live" | "rank";
+type Pop = "streak" | "more" | "live" | "rank" | "focus";
 
 const MORE = [
   { href: "/dashboard/locked-in", label: "Locked In", icon: "focusingNow" },
@@ -118,9 +119,22 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
         <DockLink href="/dashboard/stats" icon="stats" label="Stats" path={path} />
         <DockLink href="/dashboard/people" icon="people" label="People" path={path} />
 
-        <Link href="/dashboard/timer" data-dock-item className="app-dock-primary">
-          <LockMark className="size-[24px] shrink-0 overflow-visible" /> Lock in
-        </Link>
+        {/* in a session it goes straight back to it; otherwise it asks which kind of focus */}
+        {data.inSession ? (
+          <Link href="/dashboard/timer" data-dock-item className="app-dock-primary">
+            <LockMark className="size-[24px] shrink-0 overflow-visible" /> Lock in
+          </Link>
+        ) : (
+          <button
+            aria-expanded={pop.open === "focus"}
+            aria-haspopup="dialog"
+            data-dock-item
+            onClick={() => click("focus")}
+            className="app-dock-primary"
+          >
+            <LockMark className="size-[24px] shrink-0 overflow-visible" /> Lock in
+          </button>
+        )}
 
         <DockLink href="/dashboard/buddies" icon="buddies" label="Buddies" path={path} badge={data.activity.buddies} />
         <DockLink href="/dashboard/rooms" icon="liveRooms" label="Live rooms" path={path} badge={data.activity.rooms} />
@@ -160,7 +174,7 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
           dock={bar}
           onPointerEnter={() => clearTimeout(timer.current)}
           onPointerLeave={(e) => e.pointerType === "mouse" && hover(null)}
-          label={{ streak: "Your streak", more: "More pages", live: "Locked In", rank: "Today's leaderboard" }[pop.open]}
+          label={{ streak: "Your streak", more: "More pages", live: "Locked In", rank: "Today's leaderboard", focus: "Lock in" }[pop.open]}
         >
           {pop.open === "streak" && (
             <StreakCard streak={data.streak} todaySec={data.todaySec} goalMin={data.goalMin} week={data.week} bare />
@@ -174,6 +188,7 @@ export function AppDock({ data, path }: { data: ChromeData; path: string }) {
               ))}
             </div>
           )}
+          {pop.open === "focus" && <FocusModeMenu onPick={() => pop.setOpen(null)} />}
           {pop.open === "live" && <LiveList data={data} />}
           {pop.open === "rank" && (
             <>

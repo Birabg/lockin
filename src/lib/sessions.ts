@@ -1,14 +1,15 @@
 import "server-only";
 import { applyQuestProgress } from "./community";
 import { db } from "./db";
-import { activeSeconds, isExpired, pausedSeconds, STALE_MS } from "./session-math";
+import { focusedSeconds, isExpired, pausedSeconds, STALE_MS, type Plan } from "./session-math";
 import { dayKey } from "./time";
 
-type Closable = { id: string; userId: string; startedAt: Date; pausedSec: number; pausedAt: Date | null; label?: string | null };
+type Closable = Plan & { id: string; userId: string; startedAt: Date; pausedSec: number; pausedAt: Date | null; label?: string | null };
 
 /** End a session at `end` and add it to the owner's day. Safe to call twice: only the first call counts. */
 export async function finishSession(s: Closable, end: Date, timeZone: string) {
-  const durationSec = activeSeconds(s, end);
+  // a Pomodoro's breaks aren't focus, so only its focus rounds count
+  const durationSec = focusedSeconds(s, end);
   const { seconds, counted } = await db.$transaction(async (tx) => {
     const { count } = await tx.focusSession.updateMany({
       where: { id: s.id, status: "ACTIVE" },

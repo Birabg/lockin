@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AppDock } from "./app-dock";
+import { FocusModeMenu } from "./focus-mode-menu";
 import { Icon, type IconName } from "./icon";
 import { StreakCard } from "./rail";
 import { Avatar, Logo } from "./ui";
@@ -27,6 +28,8 @@ export type ChromeData = {
   board: { rank: number; sec: number; user: Person }[];
   /** Your place on today's board, when you're in the top 50. */
   myRank: number | null;
+  /** You have a session running, so Lock in goes straight back to it instead of asking which kind. */
+  inSession: boolean;
 };
 
 export const isActive = (path: string, href: string) => (href === "/dashboard" ? path === href : path.startsWith(href));
@@ -87,7 +90,7 @@ export function AppShell({ data, banner, children }: { data: ChromeData; banner?
         {children}
       </main>
       <AppDock data={data} path={path} />
-      <MobileNav path={path} />
+      <MobileNav path={path} inSession={data.inSession} />
     </>
   );
 }
@@ -236,7 +239,7 @@ function MenuLink({
   );
 }
 
-function StreakSheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+function StreakSheet({ onClose, children, label = "Your streak" }: { onClose: () => void; children: ReactNode; label?: string }) {
   const close = useRef(onClose);
   close.current = onClose;
   const path = usePathname();
@@ -253,7 +256,7 @@ function StreakSheet({ onClose, children }: { onClose: () => void; children: Rea
   return createPortal(
     <>
       <div className="app-sheet-backdrop" onClick={onClose} aria-hidden />
-      <div role="dialog" aria-label="Your streak" className="app-sheet">
+      <div role="dialog" aria-label={label} className="app-sheet">
         <div className="mb-1 flex justify-end">
           <button autoFocus onClick={onClose} aria-label="Close" className="app-icon-btn">
             <Icon name="close" size={18} />
@@ -273,7 +276,8 @@ const MOBILE: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard/settings", label: "Profile", icon: "profile" },
 ];
 
-function MobileNav({ path }: { path: string }) {
+function MobileNav({ path, inSession }: { path: string; inSession: boolean }) {
+  const [picking, setPicking] = useState(false);
   const item = ({ href, label, icon }: (typeof MOBILE)[number]) => {
     const active = isActive(path, href);
     return (
@@ -287,11 +291,29 @@ function MobileNav({ path }: { path: string }) {
     <nav aria-label="Main" className="app-mobile-nav">
       <div className="app-mobile-bar">
         {MOBILE.slice(0, 2).map(item)}
-        <Link href="/dashboard/timer" aria-label="Focus" className="app-mobile-focus">
-          <Icon name="startFocus" size={28} solid />
-        </Link>
+        {inSession ? (
+          <Link href="/dashboard/timer" aria-label="Back to your session" className="app-mobile-focus">
+            <Icon name="startFocus" size={28} solid />
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            aria-label="Lock in"
+            aria-haspopup="dialog"
+            aria-expanded={picking}
+            className="app-mobile-focus"
+          >
+            <Icon name="startFocus" size={28} solid />
+          </button>
+        )}
         {MOBILE.slice(2).map(item)}
       </div>
+      {picking && (
+        <StreakSheet label="Lock in" onClose={() => setPicking(false)}>
+          <FocusModeMenu onPick={() => setPicking(false)} />
+        </StreakSheet>
+      )}
     </nav>
   );
 }
