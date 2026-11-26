@@ -170,3 +170,74 @@ export function nudgeEmail(o: { name: string; actorName: string; url: string; si
     }),
   };
 }
+
+/** Sent to the new address when someone asks to change their email. The change only happens when this is clicked. */
+export function emailChangeEmail(o: { name: string; newEmail: string; url: string; siteUrl: string }): EmailContent {
+  const intro = `Hi ${o.name}, confirm that ${o.newEmail} should be the email address for your ${brand.name} account.`;
+  const expiry = "The link works once and expires in 24 hours. Until you click it, your old address stays in place.";
+  const footer = `If you didn't ask for this, ignore this email and nothing will change.`;
+  return {
+    subject: `Confirm your new email for ${brand.name}`,
+    text: `${intro}\n\n${expiry}\n\n${o.url}\n\n${footer}\n`,
+    html: renderEmail({
+      siteUrl: o.siteUrl,
+      preheader: "One click to switch your account to this address.",
+      heading: "Confirm your new email",
+      paragraphs: [intro, expiry],
+      button: { label: "Confirm new email", url: o.url },
+      footer,
+    }),
+  };
+}
+
+export type SecurityEvent = "password-changed" | "password-set" | "email-change-requested" | "email-changed" | "signed-out-everywhere";
+
+const SECURITY_COPY: Record<SecurityEvent, { subject: string; heading: string; body: (detail?: string) => string }> = {
+  "password-changed": {
+    subject: `Your ${brand.name} password was changed`,
+    heading: "Your password was changed",
+    body: () => "The password on your account was just changed, and every other device was signed out.",
+  },
+  "password-set": {
+    subject: `A password was added to your ${brand.name} account`,
+    heading: "A password was added",
+    body: () => "Your account now has a password, so you can sign in with your email or username as well as Google or GitHub.",
+  },
+  "email-change-requested": {
+    subject: `Someone asked to change your ${brand.name} email`,
+    heading: "Email change requested",
+    body: (detail) =>
+      `Someone signed in to your account asked to change its email to ${detail ?? "a new address"}. It only changes once that address confirms.`,
+  },
+  "email-changed": {
+    subject: `Your ${brand.name} email was changed`,
+    heading: "Your email was changed",
+    body: (detail) => `Your account's email is now ${detail ?? "a new address"}. This address won't get account emails any more.`,
+  },
+  "signed-out-everywhere": {
+    subject: `You were signed out of ${brand.name} on other devices`,
+    heading: "Signed out on other devices",
+    body: () => "Every device except the one you used was just signed out of your account.",
+  },
+};
+
+/** A heads-up to the account's address after something sensitive changes, with a way back in if it wasn't them. */
+export function securityNoticeEmail(o: { name: string; event: SecurityEvent; detail?: string; siteUrl: string }): EmailContent {
+  const copy = SECURITY_COPY[o.event];
+  const intro = `Hi ${o.name}. ${copy.body(o.detail)}`;
+  const advice = "If this was you, there's nothing to do. If it wasn't, reset your password straight away.";
+  const url = `${o.siteUrl}/forgot-password`;
+  const footer = `This is a security notice about your ${brand.name} account. We send these whenever your sign-in details change.`;
+  return {
+    subject: copy.subject,
+    text: `${intro}\n\n${advice}\n\n${url}\n\n${footer}\n`,
+    html: renderEmail({
+      siteUrl: o.siteUrl,
+      preheader: copy.heading,
+      heading: copy.heading,
+      paragraphs: [intro, advice],
+      button: { label: "Reset password", url },
+      footer,
+    }),
+  };
+}

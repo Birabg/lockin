@@ -40,6 +40,15 @@ export async function destroySession() {
 }
 
 /**
+ * Signs out every other device, and keeps this one signed in with a fresh session. Sessions are stateless, so this
+ * moves the account's cut-off forward: tokens issued before it stop working on their next request.
+ */
+export async function revokeOtherSessions(userId: string, data: { passwordHash?: string } = {}) {
+  await db.user.update({ where: { id: userId }, data: { ...data, passwordChangedAt: new Date() } });
+  await createSession(userId);
+}
+
+/**
  * Short-lived signed values (OAuth state, a pending signup). The audience names the purpose, and none carry a
  * `sub`, so one can never be read as a login session or as each other.
  */

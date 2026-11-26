@@ -7,16 +7,17 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { destroySession, getCurrentUser } from "@/lib/auth";
+import { destroySession, getCurrentUser, revokeOtherSessions } from "@/lib/auth";
 import { canSendEmail, sendEmail } from "@/lib/email";
 import { passwordResetEmail } from "@/lib/email-templates";
-import { sendVerificationEmail } from "@/lib/email-verify";
+import { sendEmailChangeLink, sendSecurityNotice, sendVerificationEmail } from "@/lib/email-verify";
+import { checkNewEmail } from "@/lib/email-domain";
 import { isProvider, loginMethods, providerName } from "@/lib/oauth-flow";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
 import { siteUrl } from "@/lib/site";
 import { storage } from "@/lib/storage";
 
-type FormState = { error?: string; sent?: boolean } | undefined;
+type FormState = { error?: string; sent?: boolean; added?: boolean } | undefined;
 
 const TOO_MANY = "Too many attempts. Try again later.";
 const RESET_MS = 60 * 60_000;
@@ -156,4 +157,81 @@ export async function deleteAccount(_prev: FormState, form: FormData): Promise<F
 
   await destroySession();
   redirect("/");
+}
+
+const newPasswordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  // bcrypt only reads the first 72 bytes
+  .max(72, "Password must be 72 characters or fewer");
+
+/**
+ * Settings → Password. Changing it needs the current one; Google/GitHub-only accounts can add one without.
+ * Either way every other device is signed out, this one stays in, and the account's address gets a heads-up.
+ */
+export async function changePassword(_prev: FormState, form: FormData): Promise<FormState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first" };
+  if (!(await allow(`password-change:${user.id}`, limits.loginAccount))) return { error: TOO_MANY };
+
+  const next = newPasswordSchema.safeParse(form.get("newPassword"));
+  if (!next.success) return { error: next.error.issues[0].message };
+  if (form.get("confirmPassword") !== next.data) return { error: "The new passwords don't match" };
+
+  const row = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+  if (!row) return { error: "Sign in first" };
+  if (row.passwordHash) {
+    const current = z.string().min(1).max(200).safeParse(form.get("currentPassword"));
+    if (!current.success || !(await bcrypt.compare(current.data, row.passwordHash))) return { error: "Your current password isn't right" };
+    if (await bcrypt.compare(next.data, row.passwordHash)) return { error: "That's already your password. Pick a new one." };
+  }
+
+  await revokeOtherSessions(user.id, { passwordHash: await bcrypt.hash(next.data, 10) });
+  const event = row.passwordHash ? "password-changed" : "password-set";
+  after(() => sendSecurityNotice(user, event));
+  revalidatePath("/dashboard/settings");
+  return { sent: true, added: !row.passwordHash };
+}
+
+/**
+ * Settings → Email. Nothing changes until the new address clicks its link; the old address is told about the request.
+ * Password accounts confirm with their password, so a borrowed session can't quietly move the account.
+ */
+export async function requestEmailChange(_prev: FormState, form: FormData): Promise<FormState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first" };
+  if (!canSendEmail()) return { error: "Changing email isn't available right now" };
+  if (!(await allow(`email-change:${user.id}`, limits.emailChange))) return { error: TOO_MANY };
+
+  const row = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+  if (!row) return { error: "Sign in first" };
+  if (row.passwordHash) {
+    const password = z.string().min(1).max(200).safeParse(form.get("password"));
+    if (!password.success || !(await bcrypt.compare(password.data, row.passwordHash))) return { error: "That password isn't right" };
+  }
+
+  const checked = await checkNewEmail(String(form.get("email") ?? ""));
+  if (!checked.ok) return { error: checked.suggestion ? `${checked.error} Did you mean ${checked.suggestion}?` : checked.error };
+  const email = checked.email;
+  if (email === user.email) return { error: "That's already your email" };
+  if (await db.user.findUnique({ where: { email }, select: { id: true } })) return { error: "That email already has an account" };
+
+  try {
+    await sendEmailChangeLink(user, email);
+  } catch (e) {
+    console.error("Email change link failed", e);
+    return { error: "Couldn't send the email. Try again in a minute." };
+  }
+  after(() => sendSecurityNotice(user, "email-change-requested", email));
+  return { sent: true };
+}
+
+/** Settings → Account: signs out every device but this one. */
+export async function signOutOtherDevices(): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first" };
+  if (!(await allow(`sign-out-all:${user.id}`, limits.loginAccount))) return { error: TOO_MANY };
+  await revokeOtherSessions(user.id);
+  after(() => sendSecurityNotice(user, "signed-out-everywhere"));
+  return {};
 }

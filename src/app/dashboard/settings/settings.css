@@ -236,6 +236,11 @@
   .set-danger > summary::-webkit-details-marker {
     display: none;
   }
+  .set-danger.set-plain {
+    margin-top: 0;
+    border-color: var(--border);
+    background: var(--inset);
+  }
   .set-danger-chev {
     font-size: 20px;
     font-weight: 700;

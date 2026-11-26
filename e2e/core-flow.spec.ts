@@ -34,7 +34,7 @@ test("counts down to the goal, then offers overtime, and saves the real time", a
   await page.goto("/dashboard/timer");
   await holdToStart(page);
   const view = page.locator("[data-immersive-view]");
-  await expect(view).toContainText("Focusing");
+  await expect(view).toContainText("Locked In");
   await expect(view).toContainText("Ends at");
   await expect(page).toHaveTitle(/^(25:00|24:5\d) left/);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, nudgeEmail, passwordResetEmail, verificationEmail } from "./email-templates";
+import { emailChangeEmail, escapeHtml, nudgeEmail, passwordResetEmail, securityNoticeEmail, verificationEmail } from "./email-templates";
 
 const site = "https://lockin.example";
 const url = `${site}/verify-email?token=abc_DEF-123`;
@@ -88,5 +88,37 @@ describe("renderEmail without a hero", () => {
     const plain = verificationEmail({ name: "Abel", url, siteUrl: site });
     expect(plain.html).not.toContain("text-align:center");
     expect(plain.html).toContain("#4f8ff7");
+  });
+});
+
+describe("emailChangeEmail", () => {
+  const mail = emailChangeEmail({ name: "Abel", newEmail: "new@lockin.example", url, siteUrl: site });
+
+  it("names the new address and carries the link", () => {
+    expect(mail.text).toContain("new@lockin.example");
+    expect(mail.text).toContain(url);
+    expect(mail.html).toContain(`href="${url}"`);
+    expect(mail.html.match(/>Confirm new email<\/a>/g)).toHaveLength(1);
+  });
+
+  it("escapes the new address", () => {
+    const evil = emailChangeEmail({ name: "A", newEmail: `"><script>x</script>`, url, siteUrl: site });
+    expect(evil.html).not.toContain("<script>x");
+  });
+});
+
+describe("securityNoticeEmail", () => {
+  const events = ["password-changed", "password-set", "email-change-requested", "email-changed", "signed-out-everywhere"] as const;
+
+  it.each(events)("%s points to a password reset", (event) => {
+    const mail = securityNoticeEmail({ name: "Abel", event, detail: "new@lockin.example", siteUrl: site });
+    expect(mail.subject.length).toBeGreaterThan(0);
+    expect(mail.text).toContain(`${site}/forgot-password`);
+    expect(mail.html).toContain(`href="${site}/forgot-password"`);
+  });
+
+  it("mentions the new address on email changes", () => {
+    const mail = securityNoticeEmail({ name: "Abel", event: "email-changed", detail: "new@lockin.example", siteUrl: site });
+    expect(mail.text).toContain("new@lockin.example");
   });
 });
