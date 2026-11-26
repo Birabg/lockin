@@ -52,15 +52,15 @@ export function OAuthButtons({ providers, next, intent = "login" }: { providers:
   );
 }
 
-export function OrDivider() {
+export function OrDivider({ label = "or" }: { label?: string }) {
   return (
     <div
-      className="flex items-center gap-3 py-1 text-xs font-semibold tracking-wide text-subtle uppercase"
+      className={`flex items-center gap-3 py-1 text-xs font-semibold text-subtle ${label === "or" ? "tracking-wide uppercase" : ""}`}
       role="separator"
       aria-label="or"
     >
       <span className="h-px flex-1 bg-border" />
-      or
+      {label}
       <span className="h-px flex-1 bg-border" />
     </div>
   );
