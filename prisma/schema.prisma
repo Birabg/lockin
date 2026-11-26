@@ -19,6 +19,7 @@ model User {
   avatar            String?
   sceneId           String?
   clockStyle        String    @default("ring")
+  /// Sessions issued before this are signed out. Set by a password change or reset, and by "sign out other devices".
   passwordChangedAt DateTime?
   dailyGoalMin      Int       @default(60)
   /// IANA zone from the browser at signup. "Today", streaks and day totals use it.

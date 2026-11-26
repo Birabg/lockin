@@ -6,6 +6,7 @@ import { AccentPicker } from "@/components/accent-picker";
 import { Icon } from "@/components/icon";
 import { PageHeader, btnGhost } from "@/components/ui";
 import { db } from "@/lib/db";
+import { canSendEmail } from "@/lib/email";
 import { isAdmin } from "@/lib/moderation";
 import { enabledProviders } from "@/lib/oauth";
 import { isProvider, oauthErrorMessage, providerName } from "@/lib/oauth-flow";
@@ -13,6 +14,7 @@ import { AvatarForm } from "./avatar-form";
 import { BlockedPeople } from "./blocked-people";
 import { ConnectedAccounts } from "./connected-accounts";
 import { DeleteAccount } from "./delete-account";
+import { EmailForm, PasswordForm, SignOutOthers } from "./security-forms";
 import { FocusForm, IdentityForm } from "./profile-form";
 import { SettingsNav } from "./settings-nav";
 
@@ -104,6 +106,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             title="Sign-in"
             body={`Ways into your account, as well as ${login.passwordHash ? "your password" : "each other"}. You always keep at least one.`}
           >
+            <div className="mb-3 space-y-2">
+              <EmailForm email={user.email} hasPassword={!!login.passwordHash} canEmail={canSendEmail()} />
+              <PasswordForm hasPassword={!!login.passwordHash} username={user.username} />
+            </div>
             <ConnectedAccounts linked={linked} available={enabledProviders()} hasPassword={!!login.passwordHash} notice={notice} />
           </Section>
 
@@ -123,6 +129,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 </button>
               </form>
             </div>
+            <SignOutOthers />
             <DeleteAccount hasPassword={!!login.passwordHash} username={user.username} />
           </Section>
 

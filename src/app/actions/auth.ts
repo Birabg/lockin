@@ -20,6 +20,11 @@ import { usernameSchema } from "@/lib/username";
 export type FormState = { error?: string; suggestion?: string } | undefined;
 
 const TOO_MANY = "Too many attempts. Try again in a few minutes.";
+const WRONG_LOGIN = "Wrong email/username or password";
+
+// made once per server instance, at the same cost as real hashes
+let dummy: Promise<string> | undefined;
+const dummyHash = () => (dummy ??= bcrypt.hash("lockin-no-such-account", 10));
 
 const timeZoneSchema = z
   .string()
@@ -93,7 +98,12 @@ export async function login(_prev: FormState, form: FormData): Promise<FormState
     const names = user.oauthAccounts.map((a) => providerName(a.provider === "github" ? "github" : "google"));
     return { error: `This account uses ${names.join(" or ") || "Google"} sign-in. Use the button above.` };
   }
-  if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return { error: "Wrong email/username or password" };
+  if (!user) {
+    // still spend a bcrypt compare, so the response time doesn't tell which emails and usernames have accounts
+    await bcrypt.compare(password, await dummyHash());
+    return { error: WRONG_LOGIN };
+  }
+  if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return { error: WRONG_LOGIN };
   // only said after the right password, so it doesn't tell strangers which accounts are suspended
   if (user.bannedAt) return { error: BANNED_MESSAGE };
 

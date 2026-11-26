@@ -20,6 +20,7 @@ export const limits = {
   resetIp: { max: 20, windowSec: 60 * 60 },
   resetEmail: { max: 3, windowSec: 60 * 60 },
   verifyResend: { max: 3, windowSec: 60 * 60 },
+  emailChange: { max: 5, windowSec: 60 * 60 },
   oauth: { max: 30, windowSec: 15 * 60 },
   usernameCheck: { max: 60, windowSec: 60 },
   safety: { max: 60, windowSec: 60 * 60 },
