@@ -8,6 +8,49 @@ import { btnPrimary, inputCls } from "@/components/ui";
 import { suggestEmail } from "@/lib/email-check";
 import type { Provider } from "@/lib/oauth-flow";
 
+const labelCls = "mb-1.5 block text-[13px] font-bold";
+
+function Field({ label, aside, children }: { label: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="flex items-baseline justify-between gap-3">
+        <span className={labelCls}>{label}</span>
+        {aside}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function EyeIcon({ crossed }: { crossed: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      {crossed && <path d="M4 4l16 16" />}
+    </svg>
+  );
+}
+
+/** A password box with an eye to check what you typed. */
+function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [shown, setShown] = useState(false);
+  return (
+    <span className="relative block">
+      <input {...props} type={shown ? "text" : "password"} className={`${inputCls} pr-12`} />
+      <button
+        type="button"
+        onClick={() => setShown((s) => !s)}
+        aria-label={shown ? "Hide password" : "Show password"}
+        aria-pressed={shown}
+        className="absolute inset-y-0 right-1.5 my-auto grid size-9 place-items-center rounded-lg text-subtle hover:bg-card hover:text-foreground"
+      >
+        <EyeIcon crossed={shown} />
+      </button>
+    </span>
+  );
+}
+
 export function AuthForm({
   mode,
   next,
@@ -35,39 +78,65 @@ export function AuthForm({
   useEffect(() => setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone), []);
 
   return (
-    <div className="panel space-y-3 p-5">
-      <h1 className="mb-2 text-xl font-extrabold">{isSignup ? "Create your account" : "Welcome back"}</h1>
+    <div className="space-y-5">
+      <header className="text-center">
+        <h1 className="text-[28px] leading-tight font-extrabold tracking-tight">
+          {isSignup ? "Create your account" : "Sign in to Lockin"}
+        </h1>
+        <p className="mt-1.5 text-[14.5px] text-muted">
+          {isSignup ? "Free forever. Your first session is a tap away." : "Pick up your streak where you left off."}
+        </p>
+      </header>
+
       {providers.length > 0 && (
         <>
           <OAuthButtons providers={providers} next={next} />
-          <OrDivider />
+          <OrDivider label="or use your email" />
         </>
       )}
-      <form action={action} className="space-y-3">
+
+      <form action={action} className="space-y-4">
         <input type="hidden" name="next" value={next} />
         {isSignup && <input type="hidden" name="timeZone" value={timeZone} />}
         {isSignup ? (
           <>
-            <input name="name" aria-label="Name" placeholder="Name" autoComplete="name" required className={inputCls} />
-            <input name="username" aria-label="Username" placeholder="Username" autoComplete="username" required className={inputCls} />
-            <input
-              name="email"
-              aria-label="Email"
-              type="email"
-              placeholder="Email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setHint(null);
-              }}
-              onBlur={() => setHint(suggestEmail(email))}
-              aria-describedby={suggestion ? "email-hint" : undefined}
-              className={inputCls}
-            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Name">
+                <input name="name" aria-label="Name" placeholder="Your name" autoComplete="name" required className={inputCls} />
+              </Field>
+              <Field label="Username">
+                <input
+                  name="username"
+                  aria-label="Username"
+                  placeholder="yourname"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            <Field label="Email">
+              <input
+                name="email"
+                aria-label="Email"
+                type="email"
+                placeholder="name@example.com"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setHint(null);
+                }}
+                onBlur={() => setHint(suggestEmail(email))}
+                aria-describedby={suggestion ? "email-hint" : undefined}
+                className={inputCls}
+              />
+            </Field>
             {suggestion && (
-              <p id="email-hint" className="-mt-1 text-sm text-muted">
+              <p id="email-hint" className="-mt-2 text-sm text-muted">
                 Did you mean{" "}
                 <button
                   type="button"
@@ -82,33 +151,43 @@ export function AuthForm({
                 ?
               </p>
             )}
-            <input
-              name="password"
-              aria-label="Password"
-              type="password"
-              placeholder="Password (8+ characters)"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              maxLength={72}
-              className={inputCls}
-            />
+            <Field label="Password">
+              <PasswordInput
+                name="password"
+                aria-label="Password"
+                placeholder="8 characters or more"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+              />
+            </Field>
           </>
         ) : (
           <>
-            <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-muted">Email or username</span>
-              <input name="identifier" placeholder="you@example.com or yourname" autoComplete="username" required className={inputCls} />
-            </label>
-            <input
-              name="password"
-              aria-label="Password"
-              type="password"
-              placeholder="Password"
-              autoComplete="current-password"
-              required
-              className={inputCls}
-            />
+            <Field label="Email or username">
+              <input
+                name="identifier"
+                placeholder="name@example.com"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                className={inputCls}
+              />
+            </Field>
+            <Field
+              label="Password"
+              aside={
+                canReset && (
+                  <Link href="/forgot-password" className="text-[13px] font-semibold text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                )
+              }
+            >
+              <PasswordInput name="password" aria-label="Password" placeholder="Your password" autoComplete="current-password" required />
+            </Field>
           </>
         )}
         {notice && !state?.error && <p className={`text-sm ${noticeTone === "error" ? "text-danger" : "text-primary-text"}`}>{notice}</p>}
@@ -117,17 +196,11 @@ export function AuthForm({
             {state.error}
           </p>
         )}
-        <button disabled={pending} className={`${btnPrimary} h-12 w-full`}>
+        <button disabled={pending} className={`${btnPrimary} mt-1 h-12 w-full`}>
           {pending ? "One sec…" : isSignup ? "Join free" : "Sign in"}
         </button>
       </form>
-      {canReset && (
-        <p className="text-center text-sm">
-          <Link href="/forgot-password" className="font-semibold text-primary">
-            Forgot your password?
-          </Link>
-        </p>
-      )}
+
       {isSignup && (
         <p className="text-center text-xs text-subtle">
           By joining you agree to our{" "}
@@ -137,12 +210,6 @@ export function AuthForm({
           . Your profile and focus stats are public.
         </p>
       )}
-      <p className="pt-1 text-center text-sm text-muted">
-        {isSignup ? "Already have an account? " : "New here? "}
-        <Link href={`/${isSignup ? "login" : "signup"}?next=${encodeURIComponent(next)}`} className="font-semibold text-primary">
-          {isSignup ? "Sign in" : "Join free"}
-        </Link>
-      </p>
     </div>
   );
 }
