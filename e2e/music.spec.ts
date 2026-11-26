@@ -33,8 +33,8 @@ test("pick a sound on the focus screen, keep it through a session, and come back
   const music = setupDock.getByRole("button", { name: "Music" });
   await music.click();
   const panel = page.getByRole("dialog", { name: "Music" });
-  await panel.getByRole("button", { name: /^Rain/ }).click();
-  await expect(panel.getByRole("button", { name: /^Rain/ })).toHaveAttribute("aria-pressed", "true");
+  await panel.getByRole("button", { name: /^Rain Steady/ }).click();
+  await expect(panel.getByRole("button", { name: /^Rain Steady/ })).toHaveAttribute("aria-pressed", "true");
   await expect(panel.getByRole("button", { name: /^Off/ })).toHaveAttribute("aria-pressed", "false");
   // lit once the browser has really started the audio
   await expect(music).toHaveAttribute("data-on", "true");
@@ -124,7 +124,7 @@ test("paste a YouTube link and it plays as sound only, with a now-playing pill a
 
   // picking a generated sound stops YouTube, and the link stays for later
   await music.click();
-  await panel.getByRole("button", { name: /^Rain/ }).click();
+  await panel.getByRole("button", { name: /^Rain Steady/ }).click();
   await expect(frame).toHaveCount(0);
   await panel.getByRole("button", { name: /^Your YouTube link/ }).click();
   await expect(frame).toHaveCount(1);
