@@ -68,6 +68,36 @@ function Choice({ on, title, hint, onPick }: { on: boolean; title: string; hint:
   );
 }
 
+/** The "Off" choice: full width, warm tint and a raised shadow so it reads as the stop control, not another sound. */
+function OffChoice({ on, onPick }: { on: boolean; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onPick}
+      className={`group col-span-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 transition-all duration-150 active:translate-y-px ${
+        on
+          ? "bg-[linear-gradient(180deg,rgb(244_63_94/0.32),rgb(244_63_94/0.16))] shadow-[0_10px_28px_rgb(244_63_94/0.28),inset_0_1px_0_rgb(255_255_255/0.14)] ring-2 ring-[rgb(251_113_133)]"
+          : "bg-[linear-gradient(180deg,rgb(244_63_94/0.18),rgb(244_63_94/0.07))] shadow-[0_6px_18px_rgb(0_0_0/0.45),inset_0_1px_0_rgb(255_255_255/0.08)] ring-[rgb(244_63_94/0.38)] hover:-translate-y-px hover:shadow-[0_10px_26px_rgb(244_63_94/0.22),inset_0_1px_0_rgb(255_255_255/0.1)] hover:ring-[rgb(251_113_133/0.7)]"
+      }`}
+    >
+      <span
+        aria-hidden="true"
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-[rgb(244_63_94/0.22)] text-[rgb(253_164_175)] shadow-[inset_0_1px_0_rgb(255_255_255/0.12)]"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 5 6 9H2v6h4l5 4V5z" />
+          <path d="m22 9-6 6M16 9l6 6" />
+        </svg>
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[15px] font-bold text-[rgb(255_228_230)]">Off</span>
+        <span className="block truncate text-[12px] text-[rgb(253_164_175/0.85)]">Just the quiet</span>
+      </span>
+    </button>
+  );
+}
+
 const heading = "text-[11.5px] font-bold tracking-wide text-[var(--stage-faint)] uppercase";
 
 /** Goes in a dock popover: instruments, nature sounds, a YouTube link, and the volume. */
@@ -92,7 +122,7 @@ export function MusicPanel() {
         {AMBIENCES.filter((a) => a.kind === kind).map((a) => (
           <Choice key={a.id} on={sound === a.id} title={a.title} hint={a.hint} onPick={() => playAmbience(a.id)} />
         ))}
-        {kind === "nature" && <Choice on={sound === null} title="Off" hint="Just the quiet" onPick={() => playAmbience(null)} />}
+        {kind === "nature" && <OffChoice on={sound === null} onPick={() => playAmbience(null)} />}
       </div>
     </section>
   );
