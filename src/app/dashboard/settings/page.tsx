@@ -15,7 +15,7 @@ import { BlockedPeople } from "./blocked-people";
 import { ConnectedAccounts } from "./connected-accounts";
 import { DeleteAccount } from "./delete-account";
 import { EmailForm, PasswordForm, SignOutOthers } from "./security-forms";
-import { FocusForm, IdentityForm } from "./profile-form";
+import { FocusForm, IdentityForm, UsernameForm } from "./profile-form";
 import { SettingsNav } from "./settings-nav";
 
 export const metadata = { title: "Settings" };
@@ -91,6 +91,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <Section id="profile" title="Profile" body="What people see on your profile, in rooms and on the leaderboard.">
             <AvatarForm name={user.name} avatar={user.avatar} username={user.username} />
             <IdentityForm saved={saved} />
+            <UsernameForm current={user.username} admin={admin} />
           </Section>
 
           <Section id="focus" title="Focus" body="Your daily target and the clock your days run on.">
