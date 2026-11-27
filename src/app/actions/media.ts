@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { isAvatarPreset, isPresetUrl, presetUrl, type AvatarPresetId } from "@/lib/avatar-presets";
 import { resizePhoto } from "@/lib/photo";
 import { allow, limits } from "@/lib/rate-limit";
 import { UPLOADS, UPLOADS_OFF, isSafeKey, storage, uploadsEnabled, type UploadTicket } from "@/lib/storage";
@@ -44,15 +45,24 @@ const ownsKey = (key: string, kind: string, userId: string) => key.startsWith(`$
 
 export async function saveAvatar(key: string | null) {
   const user = await me();
+  const parsed = key === null ? null : keySchema.parse(key);
+  if (parsed && !ownsKey(parsed, "avatar", user.id)) throw new Error("Not your file");
+  await setAvatar(user, parsed && storage().publicUrl(parsed));
+}
+
+/** Picks one of the built-in pictures. Works even where uploads are switched off. */
+export async function chooseAvatar(id: AvatarPresetId) {
+  const user = await me();
+  if (!isAvatarPreset(id)) throw new Error("That picture isn’t one of ours");
+  await setAvatar(user, presetUrl(id));
+}
+
+async function setAvatar(user: { id: string; avatar: string | null }, url: string | null) {
   const previous = user.avatar;
-  if (key === null) {
-    await db.user.update({ where: { id: user.id }, data: { avatar: null } });
-  } else {
-    const parsed = keySchema.parse(key);
-    if (!ownsKey(parsed, "avatar", user.id)) throw new Error("Not your file");
-    await db.user.update({ where: { id: user.id }, data: { avatar: storage().publicUrl(parsed) } });
-  }
-  if (previous)
+  if (previous === url) return;
+  await db.user.update({ where: { id: user.id }, data: { avatar: url } });
+  // a built-in picture is shared by everyone who picked it, so only uploads get deleted
+  if (previous && !isPresetUrl(previous))
     await storage()
       .remove(previous)
       .catch((e) => console.error("Old avatar not deleted", e));
