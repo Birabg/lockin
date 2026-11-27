@@ -17,6 +17,8 @@ model User {
   passwordHash      String?
   bio               String?
   avatar            String?
+  /// The wide picture across the top of their profile: a built-in one (/banners/…) or an upload. Null shows a colour wash.
+  banner            String?
   sceneId           String?
   clockStyle        String    @default("ring")
   /// Sessions issued before this are signed out. Set by a password change or reset, and by "sign out other devices".

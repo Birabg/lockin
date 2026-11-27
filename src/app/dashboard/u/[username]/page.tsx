@@ -74,7 +74,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   return (
     <div className="mx-auto max-w-[720px]">
       <section className="panel profile-card">
-        <div className="profile-cover" style={{ ["--cover" as string]: colorFor(profile.name) }} aria-hidden />
+        <div
+          className="profile-cover"
+          data-banner={profile.banner ? "" : undefined}
+          style={{
+            ["--cover" as string]: colorFor(profile.name),
+            ...(profile.banner && { backgroundImage: `url(${JSON.stringify(profile.banner)})` }),
+          }}
+          aria-hidden
+        />
 
         <div className="profile-top">
           <span className="profile-avatar" data-live={!!live || undefined}>

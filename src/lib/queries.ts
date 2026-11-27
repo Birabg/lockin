@@ -435,6 +435,7 @@ export async function getProfile(username: string, viewerId: string | null) {
       name: true,
       bio: true,
       avatar: true,
+      banner: true,
       timeZone: true,
       dailyGoalMin: true,
       createdAt: true,

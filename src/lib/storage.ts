@@ -6,6 +6,7 @@ import { presignUrl } from "./s3-presign";
 
 export const UPLOADS = {
   avatar: { maxBytes: 2 * 1024 * 1024, types: { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" } },
+  banner: { maxBytes: 2 * 1024 * 1024, types: { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" } },
   timelapse: { maxBytes: 80 * 1024 * 1024, types: { "video/webm": "webm", "video/mp4": "mp4" } },
   photo: { maxBytes: 5 * 1024 * 1024, types: { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png" } },
 } as const;
