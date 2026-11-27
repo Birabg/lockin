@@ -1,6 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { Prisma } from "@prisma/client";
@@ -10,6 +11,7 @@ import { createSession, destroySession, getCurrentUser } from "@/lib/auth";
 import { brand } from "@/lib/brand";
 import { checkNewEmail } from "@/lib/email-domain";
 import { sendVerificationEmail } from "@/lib/email-verify";
+import { isAdmin } from "@/lib/moderation";
 import { BANNED_MESSAGE, providerName } from "@/lib/oauth-flow";
 import { clearPending, finishPendingLink, readPending } from "@/lib/oauth-session";
 import { allow, clientIp, limits } from "@/lib/rate-limit";
@@ -118,13 +120,45 @@ export async function logout() {
   redirect("/dashboard");
 }
 
-/** For the username picker's live check. */
+/** For the username picker's live check, at signup and when renaming in settings. */
 export async function checkUsername(raw: string): Promise<{ ok: boolean; message: string }> {
   const parsed = usernameSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   if (!(await allow(`username-check:${await clientIp()}`, limits.usernameCheck))) return { ok: false, message: "Slow down a little" };
+  const viewer = await getCurrentUser();
+  if (viewer?.username === parsed.data) return { ok: false, message: "That’s your username now" };
+  // signed in means renaming; admin names can only be claimed at signup (see changeUsername)
+  if (viewer && isAdmin(parsed.data)) return { ok: false, message: "That username is taken" };
   const taken = await db.user.findUnique({ where: { username: parsed.data }, select: { id: true } });
   return taken ? { ok: false, message: "That username is taken" } : { ok: true, message: `@${parsed.data} is free` };
+}
+
+export type UsernameState = { error?: string; username?: string } | undefined;
+
+/**
+ * Renames the signed-in person. Sessions and everything they made are tied to their id, so only links
+ * with the old @name stop working. Admin rights come from ADMIN_USERNAMES, so nobody can rename into
+ * one of those: that would hand them admin.
+ */
+export async function changeUsername(_prev: UsernameState, form: FormData): Promise<UsernameState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Sign in first" };
+  const parsed = usernameSchema.safeParse(form.get("username"));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const username = parsed.data;
+  if (username === user.username) return { username };
+  if (isAdmin(username)) return { error: "That username is taken" };
+  if (!(await allow(`username-change:${user.id}`, limits.usernameChange))) {
+    return { error: "You’ve changed your username a lot today. Try again tomorrow." };
+  }
+  try {
+    await db.user.update({ where: { id: user.id }, data: { username } });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "That username was just taken. Try another." };
+    throw e;
+  }
+  revalidatePath("/dashboard", "layout");
+  return { username };
 }
 
 const welcomeSchema = z.object({

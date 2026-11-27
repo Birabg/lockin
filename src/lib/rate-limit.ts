@@ -23,6 +23,7 @@ export const limits = {
   emailChange: { max: 5, windowSec: 60 * 60 },
   oauth: { max: 30, windowSec: 15 * 60 },
   usernameCheck: { max: 60, windowSec: 60 },
+  usernameChange: { max: 3, windowSec: 24 * 60 * 60 },
   safety: { max: 60, windowSec: 60 * 60 },
   admin: { max: 300, windowSec: 60 * 60 },
   quest: { max: 3, windowSec: 24 * 60 * 60 },

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
+import { changeUsername, checkUsername, type UsernameState } from "@/app/actions/auth";
 import { updateProfile } from "@/app/actions/social";
 import { toast } from "@/components/toaster";
 import { btnPrimary, inputCls } from "@/components/ui";
@@ -20,7 +21,19 @@ function useSave() {
   }, undefined);
 }
 
-function SaveRow({ dirty, pending, error, onReset }: { dirty: boolean; pending: boolean; error?: string; onReset: () => void }) {
+function SaveRow({
+  dirty,
+  pending,
+  error,
+  disabled,
+  onReset,
+}: {
+  dirty: boolean;
+  pending: boolean;
+  error?: string;
+  disabled?: boolean;
+  onReset: () => void;
+}) {
   return (
     <div className="set-save">
       <span className="min-w-0 flex-1 text-[12.5px] font-semibold">
@@ -31,7 +44,7 @@ function SaveRow({ dirty, pending, error, onReset }: { dirty: boolean; pending: 
           Undo
         </button>
       )}
-      <button disabled={!dirty || pending} className={`${btnPrimary} h-10 px-5 text-sm`}>
+      <button disabled={!dirty || pending || disabled} className={`${btnPrimary} h-10 px-5 text-sm`}>
         {pending ? "Saving…" : "Save"}
       </button>
     </div>
@@ -76,6 +89,88 @@ export function IdentityForm({ saved }: { saved: Saved }) {
           setName(saved.name);
           setBio(saved.bio);
         }}
+      />
+    </form>
+  );
+}
+
+type Check = { ok: boolean; message: string; for: string } | null;
+
+/** Renaming, with the same live "is it free?" check as signup. */
+export function UsernameForm({ current, admin }: { current: string; admin: boolean }) {
+  const [saved, setSaved] = useState(current);
+  const [username, setUsername] = useState(current);
+  const [state, action, pending] = useActionState(async (prev: UsernameState, form: FormData) => {
+    const res = await changeUsername(prev, form);
+    if (res?.username) {
+      setSaved(res.username);
+      setUsername(res.username);
+      toast(`You’re @${res.username} now`);
+    }
+    return res;
+  }, undefined);
+  const [check, setCheck] = useState<Check>(null);
+  const value = username.trim().toLowerCase();
+  const dirty = value !== saved;
+
+  // checks a moment after they stop typing; an answer for an older value is ignored
+  useEffect(() => {
+    if (!value || value === saved) return;
+    let live = true;
+    const t = setTimeout(async () => {
+      const res = await checkUsername(value);
+      if (live) setCheck({ ...res, for: value });
+    }, 350);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [value, saved]);
+
+  const result = dirty && check?.for === value ? check : null;
+
+  return (
+    <form action={action} className="space-y-2">
+      <label className="block">
+        <span className="set-label">Username</span>
+        <span className="flex items-center gap-1 rounded-[inherit]">
+          <span aria-hidden className="text-[15px] font-semibold text-subtle">
+            @
+          </span>
+          <input
+            name="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
+            maxLength={20}
+            aria-describedby="username-status"
+            className={inputCls}
+          />
+        </span>
+      </label>
+      <p
+        id="username-status"
+        aria-live="polite"
+        className={`min-h-5 text-[12.5px] ${result ? (result.ok ? "text-primary-text" : "text-danger") : "text-subtle"}`}
+      >
+        {result
+          ? result.message
+          : `3–20 letters, numbers or _. Your profile link becomes /u/${value || "…"}; links with @${saved} stop working.`}
+      </p>
+      {admin && dirty && (
+        <p role="note" className="text-[12.5px] font-semibold text-danger">
+          Admin access goes by username. Renaming takes it away until ADMIN_USERNAMES lists the new name.
+        </p>
+      )}
+      <SaveRow
+        dirty={dirty}
+        pending={pending}
+        error={state?.error}
+        disabled={result?.ok === false}
+        onReset={() => setUsername(saved)}
       />
     </form>
   );
