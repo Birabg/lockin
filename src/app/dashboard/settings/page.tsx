@@ -15,6 +15,7 @@ import { BlockedPeople } from "./blocked-people";
 import { ConnectedAccounts } from "./connected-accounts";
 import { DeleteAccount } from "./delete-account";
 import { EmailForm, PasswordForm, SignOutOthers } from "./security-forms";
+import { BannerForm } from "./banner-form";
 import { FocusForm, IdentityForm, UsernameForm } from "./profile-form";
 import { SettingsNav } from "./settings-nav";
 
@@ -54,6 +55,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     where: { id: user.id },
     select: {
       passwordHash: true,
+      banner: true,
       oauthAccounts: { select: { provider: true, email: true }, orderBy: { createdAt: "asc" } },
       blocking: { select: { blocked: { select: person } }, orderBy: { createdAt: "desc" } },
       muting: { select: { muted: { select: person } }, orderBy: { createdAt: "desc" } },
@@ -89,6 +91,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
         <div className="min-w-0 space-y-3">
           <Section id="profile" title="Profile" body="What people see on your profile, in rooms and on the leaderboard.">
+            <BannerForm banner={login.banner} name={user.name} />
             <AvatarForm name={user.name} avatar={user.avatar} username={user.username} />
             <IdentityForm saved={saved} />
             <UsernameForm current={user.username} admin={admin} />

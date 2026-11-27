@@ -20,6 +20,14 @@
       radial-gradient(90% 140% at 100% 100%, color-mix(in srgb, var(--primary) 30%, transparent), transparent 60%),
       color-mix(in srgb, var(--cover) 10%, var(--card));
   }
+  /* a chosen banner: the wide 4:1 picture, with the colour wash showing while it loads */
+  .profile-cover[data-banner] {
+    height: auto;
+    aspect-ratio: 4 / 1;
+    background-color: color-mix(in srgb, var(--cover) 10%, var(--card));
+    background-size: cover;
+    background-position: center;
+  }
   .profile-top {
     display: flex;
     align-items: flex-end;

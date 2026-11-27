@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { isPresetUrl } from "@/lib/avatar-presets";
+import { isBannerPresetUrl } from "@/lib/banner-presets";
 import { db } from "@/lib/db";
 import { destroySession, getCurrentUser, revokeOtherSessions } from "@/lib/auth";
 import { canSendEmail, sendEmail } from "@/lib/email";
@@ -137,7 +138,12 @@ export async function deleteAccount(_prev: FormState, form: FormData): Promise<F
 
   const posts = await db.post.findMany({ where: { userId: user.id, mediaUrl: { not: null } }, select: { mediaUrl: true } });
   // built-in pictures are shared, so they never go with an account
-  const files = [isPresetUrl(user.avatar) ? null : user.avatar, ...posts.map((p) => p.mediaUrl)].filter((url): url is string => !!url);
+  const { banner } = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { banner: true } });
+  const files = [
+    isPresetUrl(user.avatar) ? null : user.avatar,
+    isBannerPresetUrl(banner) ? null : banner,
+    ...posts.map((p) => p.mediaUrl),
+  ].filter((url): url is string => !!url);
 
   await db.$transaction(async (tx) => {
     // rooms outlive their creator, so the people still in them aren't thrown out

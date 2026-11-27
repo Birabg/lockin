@@ -8,7 +8,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { isAvatarPreset, isPresetUrl, presetUrl, type AvatarPresetId } from "@/lib/avatar-presets";
 import { resizePhoto } from "@/lib/photo";
 import { allow, limits } from "@/lib/rate-limit";
-import { UPLOADS, UPLOADS_OFF, isSafeKey, storage, uploadsEnabled, type UploadTicket } from "@/lib/storage";
+import { bannerUrl, isBannerPreset, isBannerPresetUrl, type BannerPresetId } from "@/lib/banner-presets";
+import { UPLOADS, UPLOADS_OFF, isSafeKey, storage, uploadsEnabled, type UploadKind, type UploadTicket } from "@/lib/storage";
 
 async function me() {
   const user = await getCurrentUser();
@@ -17,13 +18,13 @@ async function me() {
 }
 
 const requestSchema = z.object({
-  kind: z.enum(["avatar", "timelapse", "photo"]),
+  kind: z.enum(["avatar", "banner", "timelapse", "photo"]),
   contentType: z.string().max(40),
   size: z.number().int().positive(),
 });
 
 export async function requestUpload(
-  kind: "avatar" | "timelapse" | "photo",
+  kind: UploadKind,
   contentType: string,
   size: number,
 ): Promise<UploadTicket | { error: string }> {
@@ -66,6 +67,31 @@ async function setAvatar(user: { id: string; avatar: string | null }, url: strin
     await storage()
       .remove(previous)
       .catch((e) => console.error("Old avatar not deleted", e));
+  revalidatePath("/dashboard", "layout");
+}
+
+export async function saveBanner(key: string | null) {
+  const user = await me();
+  const parsed = key === null ? null : keySchema.parse(key);
+  if (parsed && !ownsKey(parsed, "banner", user.id)) throw new Error("Not your file");
+  await setBanner(user.id, parsed && storage().publicUrl(parsed));
+}
+
+/** Picks one of the built-in banners. Works even where uploads are switched off. */
+export async function chooseBanner(id: BannerPresetId) {
+  const user = await me();
+  if (!isBannerPreset(id)) throw new Error("That banner isn’t one of ours");
+  await setBanner(user.id, bannerUrl(id));
+}
+
+async function setBanner(userId: string, url: string | null) {
+  const { banner: previous } = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { banner: true } });
+  if (previous === url) return;
+  await db.user.update({ where: { id: userId }, data: { banner: url } });
+  if (previous && !isBannerPresetUrl(previous))
+    await storage()
+      .remove(previous)
+      .catch((e) => console.error("Old banner not deleted", e));
   revalidatePath("/dashboard", "layout");
 }
 
