@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { usePopover } from "./app-shell";
 import { Icon } from "./icon";
+import { EmojiButton } from "./emoji-picker";
 import { SessionPlayer } from "./session-card";
 import { ReportDialog } from "./report-dialog";
 import { toast } from "./toaster";
@@ -42,6 +43,22 @@ export function PostCard({ post, viewer }: { post: FeedPost; viewer: Viewer | nu
   useEffect(() => setLike({ liked: post.liked, count: post.likeCount }), [post.liked, post.likeCount]);
   const [showComments, setShowComments] = useState(false);
   const [draft, setDraft] = useState("");
+  const commentBox = useRef<HTMLInputElement>(null);
+
+  /** Puts the emoji where the cursor was (or at the end), then puts the cursor right after it. */
+  function addEmoji(emoji: string) {
+    const input = commentBox.current;
+    const from = input?.selectionStart ?? draft.length;
+    const to = input?.selectionEnd ?? draft.length;
+    const next = draft.slice(0, from) + emoji + draft.slice(to);
+    if (next.length > 280) return;
+    setDraft(next);
+    requestAnimationFrame(() => {
+      if (!input) return;
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(from + emoji.length, from + emoji.length);
+    });
+  }
   const card = useRef<HTMLElement>(null);
   const s = post.session;
   const newComments = added.filter((c) => !post.comments.some((x) => x.id === c.id));
@@ -234,14 +251,18 @@ export function PostCard({ post, viewer }: { post: FeedPost; viewer: Viewer | nu
           </ul>
           {signedIn ? (
             <form onSubmit={onComment} className="mt-3 flex items-center gap-2">
-              <input
-                aria-label="Add a comment"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Add a comment…"
-                maxLength={280}
-                className="flex-1 rounded-full border border-border bg-inset px-4 py-2 text-sm outline-none focus:border-primary"
-              />
+              <div className="flex flex-1 items-center rounded-full border border-border bg-inset pr-1.5 focus-within:border-primary">
+                <input
+                  ref={commentBox}
+                  aria-label="Add a comment"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Add a comment…"
+                  maxLength={280}
+                  className="min-w-0 flex-1 bg-transparent py-2 pl-4 text-sm outline-none"
+                />
+                <EmojiButton onPick={addEmoji} />
+              </div>
               <button
                 disabled={!draft.trim()}
                 className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
